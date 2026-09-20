@@ -88,28 +88,37 @@ case "$COMMAND" in
     fi
     ;;
   proto:gen)
-    echo "==> Generating Protobuf stubs with buf..."
-    if command -v buf >/dev/null 2>&1; then
-      buf generate proto
-    elif command -v pnpm >/dev/null 2>&1; then
-      pnpm exec buf generate proto
+    if [ -f "$SCRIPT_DIR/scripts/proto_gen.sh" ]; then
+      "$SCRIPT_DIR/scripts/proto_gen.sh" "$@"
     else
-      echo "Error: Neither 'buf' nor 'pnpm' found."
-      exit 1
+      echo "==> Generating Protobuf stubs with buf..."
+      pnpm exec buf generate proto
     fi
     ;;
   envi)
-    echo "==> Starting local infrastructure containers..."
-    docker compose up -d
+    if [ -f "$SCRIPT_DIR/scripts/envi.sh" ]; then
+      "$SCRIPT_DIR/scripts/envi.sh" "$@"
+    else
+      echo "==> Starting local infrastructure containers..."
+      docker compose up -d campus-db
+    fi
     ;;
   uenvi)
-    echo "==> Tearing down local infrastructure containers..."
-    docker compose down
+    if [ -f "$SCRIPT_DIR/scripts/uenvi.sh" ]; then
+      "$SCRIPT_DIR/scripts/uenvi.sh" "$@"
+    else
+      echo "==> Tearing down local infrastructure containers..."
+      docker compose down
+    fi
     ;;
   flush)
-    echo "==> Flushing local test database..."
-    docker compose down -v
-    docker compose up -d campus-db
+    if [ -f "$SCRIPT_DIR/scripts/flush_db.sh" ]; then
+      "$SCRIPT_DIR/scripts/flush_db.sh" "$@"
+    else
+      echo "==> Flushing local test database..."
+      docker compose down -v
+      docker compose up -d campus-db
+    fi
     ;;
   help|--help|-h)
     show_help

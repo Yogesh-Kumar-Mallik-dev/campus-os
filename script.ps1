@@ -30,61 +30,52 @@ function Show-Help {
 
 switch ($Command) {
     "dev" {
-        Write-Host "==> Starting development environment..." -ForegroundColor Green
-        docker compose up -d campus-db
+        if (Test-Path "$ScriptDir\scripts\dev.ps1") { & "$ScriptDir\scripts\dev.ps1" @args }
+        else { docker compose up -d campus-db; Push-Location "$ScriptDir\db-layer"; pnpm run dev; Pop-Location }
     }
     "build" {
-        Write-Host "==> Building Campus OS artifacts..." -ForegroundColor Green
-        if (Test-Path "$ScriptDir\backend") {
+        if (Test-Path "$ScriptDir\scripts\build.ps1") { & "$ScriptDir\scripts\build.ps1" @args }
+        else {
             Push-Location "$ScriptDir\backend"; go build -v ./...; Pop-Location
-        }
-        if (Test-Path "$ScriptDir\db-layer") {
-            Push-Location "$ScriptDir\db-layer"; npm run build; Pop-Location
+            Push-Location "$ScriptDir\db-layer"; pnpm run build; Pop-Location
         }
     }
     "check" {
-        Write-Host "==> Running static analysis..." -ForegroundColor Green
-        if (Test-Path "$ScriptDir\backend") {
+        if (Test-Path "$ScriptDir\scripts\check.ps1") { & "$ScriptDir\scripts\check.ps1" @args }
+        else {
             Push-Location "$ScriptDir\backend"; go vet ./...; Pop-Location
-        }
-        if (Test-Path "$ScriptDir\db-layer") {
-            Push-Location "$ScriptDir\db-layer"; npm run lint; Pop-Location
+            Push-Location "$ScriptDir\db-layer"; pnpm run check; Pop-Location
         }
     }
     "test" {
-        Write-Host "==> Running test suites..." -ForegroundColor Green
-        if (Test-Path "$ScriptDir\backend") {
-            Push-Location "$ScriptDir\backend"; go test -v -race ./...; Pop-Location
-        }
-        if (Test-Path "$ScriptDir\db-layer") {
-            Push-Location "$ScriptDir\db-layer"; npm test; Pop-Location
+        if (Test-Path "$ScriptDir\scripts\test.ps1") { & "$ScriptDir\scripts\test.ps1" @args }
+        else {
+            go test -v -race ./backend/... ./apps/client/...
+            Push-Location "$ScriptDir\db-layer"; pnpm test; Pop-Location
         }
     }
     "deps" {
-        Write-Host "==> Installing dependencies..." -ForegroundColor Green
-        if (Test-Path "$ScriptDir\backend") {
+        if (Test-Path "$ScriptDir\scripts\deps.ps1") { & "$ScriptDir\scripts\deps.ps1" @args }
+        else {
+            pnpm install
             Push-Location "$ScriptDir\backend"; go mod download; Pop-Location
-        }
-        if (Test-Path "$ScriptDir\db-layer") {
-            Push-Location "$ScriptDir\db-layer"; npm install; Pop-Location
         }
     }
     "proto:gen" {
-        Write-Host "==> Generating Protobuf stubs..." -ForegroundColor Green
-        buf generate
+        if (Test-Path "$ScriptDir\scripts\proto_gen.ps1") { & "$ScriptDir\scripts\proto_gen.ps1" @args }
+        else { pnpm exec buf generate proto --template proto/buf.gen.yaml }
     }
     "envi" {
-        Write-Host "==> Starting Docker Compose services..." -ForegroundColor Green
-        docker compose up -d
+        if (Test-Path "$ScriptDir\scripts\envi.ps1") { & "$ScriptDir\scripts\envi.ps1" @args }
+        else { docker compose up -d campus-db }
     }
     "uenvi" {
-        Write-Host "==> Tearing down Docker Compose services..." -ForegroundColor Green
-        docker compose down
+        if (Test-Path "$ScriptDir\scripts\uenvi.ps1") { & "$ScriptDir\scripts\uenvi.ps1" @args }
+        else { docker compose down }
     }
     "flush" {
-        Write-Host "==> Flushing local test database..." -ForegroundColor Yellow
-        docker compose down -v
-        docker compose up -d campus-db
+        if (Test-Path "$ScriptDir\scripts\flush_db.ps1") { & "$ScriptDir\scripts\flush_db.ps1" @args }
+        else { docker compose down -v; docker compose up -d campus-db }
     }
     Default {
         Show-Help

@@ -22,9 +22,11 @@
 5. Synthesized `docs/09-engineering-standards.md` into the canonical documentation set.
 6. Initialized `pnpm-workspace.yaml` and root `package.json` with `@bufbuild/buf`, `typescript`, and approved package builds.
 7. Initialized multi-module `go.work` linking `backend/` and `apps/client/` (Fyne).
-8. Configured `proto/buf.yaml`, `proto/buf.gen.yaml`, and foundational `common.proto` persistence contracts.
-9. Created Prisma multi-schema configuration with `auth_schema` and `audit_schema`.
-10. Added Docker Compose topology (`docker-compose.yml`) with Unix Domain Socket shared volume.
+8. Upgraded Prisma and `@prisma/client` to Prisma 8 (`8.1.0-dev.7`).
+9. Implemented actual core scripts in `scripts/` (`scripts/*.sh` and `scripts/*.ps1`) for `dev`, `build`, `check`, `test`, `deps`, `proto_gen`, `envi`, `uenvi`, and `flush_db` per engineering standards.
+10. Added Go gRPC & Protobuf dependencies (`google.golang.org/grpc v1.84.0`).
+11. Generated Protobuf stubs into `backend/pkg/proto/` and `packages/ts-proto/src/` with `buf generate`.
+12. Verified all lifecycle commands (`./script.sh check`, `./script.sh test`, `./script.sh build`, `./script.sh deps`) pass cleanly.
 
 ---
 
