@@ -7,11 +7,14 @@
 ---
 
 ## Context
+
 Permissions must not be granted directly to individuals. Furthermore, individuals often hold authority over specific segments (e.g. one section or one subject) without possessing department- or campus-wide authority.
 
 ## Decision
+
 We implement a **Scoped RBAC** model:
 `Person -> Role Assignment [Scope Dimensions] -> Role -> Permissions`.
+
 * Scopes are predefined dimensions: `Department`, `Course`, `Semester`, `Section`, `Subject`, `Lab`, `HostelBlockFloor`.
 * When an assignment contains multiple dimensions, they combine using strict **AND semantics**.
 * A person may hold multiple distinct assignments for the same or different roles.
@@ -19,5 +22,6 @@ We implement a **Scoped RBAC** model:
 * Assignments are delisted manually via workflow; no silent automatic expiration.
 
 ## Consequences
+
 * **Positive:** Eliminates permission explosion (no need for `TEACHER_DAA_SECTION_B` roles). Prevents privilege creep.
 * **Negative:** Requires multi-attribute evaluation logic on every sensitive authorization check.

@@ -1,0 +1,65 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE & Editor Files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.crt
+secrets/
+
+# Logs & Diagnostics
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# Node / TypeScript / SvelteKit
+node_modules/
+dist/
+build/
+.svelte-kit/
+.turbo/
+.cache/
+coverage/
+*.tsbuildinfo
+
+# Go
+bin/
+pkg/
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# Cross-platform Desktop/Mobile (Fyne)
+fyne-cross/
+
+# Runtime & Sockets
+*.sock
+run/
+tmp/
+pgdata/
+
+# Generated Protobuf / Buf Cache (keep committed stubs if tracked, ignore local caches)
+.buf/

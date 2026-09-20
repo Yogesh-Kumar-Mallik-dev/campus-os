@@ -12,6 +12,7 @@ Permissions are assigned exclusively to **Roles**, never directly to users. A us
 $$\text{Person} \longrightarrow \text{Role Assignment} \left[\text{Predefined Scope Filters}\right] \longrightarrow \text{Role} \longrightarrow \text{Permissions}$$
 
 ### 1.1 Multi-Role & Additive Authority
+
 * A user may hold multiple active roles simultaneously (e.g. `Teacher` and `Warden`).
 * Authorizations are strictly **additive** across active assignments.
 * Assignments are independent; there are no complex boolean OR expressions across distinct assignments.
@@ -40,6 +41,7 @@ flowchart LR
 ```
 
 ### 2.1 Predefined Scope Dimensions
+
 1. `DepartmentId`
 2. `CourseId`
 3. `SemesterId`

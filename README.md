@@ -18,6 +18,7 @@ Before code generation, the system architecture and domain models must be intern
 * [Data Governance Specification](file:///home/yogesh/campus_os/docs/06-data-governance-specification.md) — Master/Operational/Reference data classification, migration, and discrepancies.
 * [API & IPC Contracts Specification](file:///home/yogesh/campus_os/docs/07-api-and-ipc-contracts.md) — Go $\leftrightarrow$ TypeScript gRPC boundary over Unix Domain Socket, Protobuf schemas, and TxToken transactions.
 * [AI Development Constitution](file:///home/yogesh/campus_os/docs/08-ai-agent-instructions.md) — Mandatory governing rules and guardrails for AI coding assistants.
+* [Engineering Standards & AI Anti-Pattern Prevention](file:///home/yogesh/campus_os/docs/09-engineering-standards.md) — Authoritative engineering standards, block construction (`BLOCK_<DOMAIN>_<ACTION>_<ID>`), testing rigor, RFC 7807, and mobile-first rules.
 * [Architecture Decision Records (ADRs)](file:///home/yogesh/campus_os/docs/adrs) — Chronological index of locked architectural decisions.
 
 ---

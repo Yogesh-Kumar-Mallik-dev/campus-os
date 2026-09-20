@@ -50,11 +50,13 @@ stateDiagram-v2
 ```
 
 ### 4.1 Invocation Protocol
+
 * **Sole Authority:** Exclusive to Developer authority. Neither Super Admin nor institutional leadership can invoke break-glass.
 * **Tooling:** Invoked via the secure CLI: `campus-os-admin break-glass --key <developer.key> --reason "<rationale>"`.
 * **Instant Audit Entry:** Automatically writes an unalterable incident record to `audit_schema.break_glass_incidents`.
 
 ### 4.2 Lifecycle & Post-Incident Freeze
+
 * **Explicit Termination Only:** The emergency session has no automatic timeout; it remains active until the Developer explicitly terminates it.
 * **Post-Break-Glass Freeze:** Immediately upon termination, all tables and records modified during the session are marked with a freeze flag, restricting institutional users to read-only access.
 * **Mandatory Post-Incident Review (PIR):** A formal PIR document must be recorded detailing root cause, actions taken, and verification evidence prior to releasing the freeze.

@@ -33,6 +33,7 @@ flowchart TD
 ```
 
 ### 2.1 Presets Catalog
+
 1. **Single-Decisive:** Exactly one designated role holds final authority. Additional participants provide advisory input.
 2. **All-Must-Approve (Unanimous):** Every participant in the approval chain must vote in favor. A single rejection terminates or returns the workflow.
 3. **Majority-Rules (>50%):** Requires more than half of the eligible committee votes.
@@ -51,6 +52,7 @@ flowchart TD
 ## 4. Phase 1 Core Workflow Scenarios
 
 ### 4.1 Hostel Leave & Gate Outpass
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -73,9 +75,11 @@ sequenceDiagram
 ```
 
 ### 4.2 Academic Marks & Assessment Finalization
+
 $$\text{Teacher Submits Marks} \longrightarrow \text{HOD Departmental Review} \longrightarrow \text{Registrar / Dean Verification} \longrightarrow \text{Academic Records Locked}$$
 
 ### 4.3 Master Data Governance Pipeline
+
 $$\text{Registrar / Dean Academics Proposes} \longrightarrow \text{Director Formally Approves} \longrightarrow \text{Super Admin Atomically Commits}$$
 
 ---

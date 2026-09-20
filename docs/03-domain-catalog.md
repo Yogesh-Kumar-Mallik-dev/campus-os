@@ -8,6 +8,7 @@
 ## 1. Domain Ownership Model
 
 In accordance with architectural principles:
+
 * Each domain **strictly owns** its PostgreSQL schema.
 * No domain may directly query or mutate another domain's database tables.
 * Read/write interactions across domains must traverse canonical domain contracts (synchronous operations or asynchronous domain events).
@@ -27,6 +28,7 @@ erDiagram
 ```
 
 ### 2.1 `auth_schema` (Identity & Access Domain)
+
 * **Domain Owner:** Identity & Access Team / Security Services.
 * **Tables:**
   * `users` — Base identity records (UUID, institutional email, phone, hashed credentials, status).
@@ -39,6 +41,7 @@ erDiagram
   * `super_admin_seat` — Singleton table guaranteeing exactly one active Super Admin seat.
 
 ### 2.2 `academic_schema` (Academic Domain)
+
 * **Domain Owner:** Academic Affairs / Office of Dean Academics.
 * **Tables:**
   * `departments` — Academic departments (e.g., Computer Science, Mechanical).
@@ -54,6 +57,7 @@ erDiagram
   * `student_marks` — Submitted, reviewed, and finalized student grade records.
 
 ### 2.3 `student_schema` (Student Domain)
+
 * **Domain Owner:** Registrar / Student Affairs.
 * **Tables:**
   * `student_profiles` — Canonical student demographics, roll number, PRN, registration date.
@@ -63,6 +67,7 @@ erDiagram
   * `student_attendance` — Attendance registers and individual session logs.
 
 ### 2.4 `hostel_schema` (Campus Life & Hostel Domain)
+
 * **Domain Owner:** Chief Warden / Hostel Administration.
 * **Tables:**
   * `hostels` — Hostel buildings/blocks.
@@ -73,6 +78,7 @@ erDiagram
   * `gate_logs` — Guard checkpoint physical departure and arrival timestamps.
 
 ### 2.5 `finance_schema` (Finance Domain)
+
 * **Domain Owner:** Accounts & Finance Office.
 * **Tables:**
   * `fee_structures` — Master tuition, hostel, and lab fee heads mapped to courses and batches.
@@ -81,6 +87,7 @@ erDiagram
   * `fee_concession_requests` — Audited discount and scholarship workflow states.
 
 ### 2.6 `document_schema` (Document Domain)
+
 * **Domain Owner:** Central Document Custodian.
 * **Tables:**
   * `document_metadata` — Content hashes, MIME types, storage paths, encryption keys.
@@ -88,6 +95,7 @@ erDiagram
   * `verification_records` — Sign-offs and cryptographic verification marks.
 
 ### 2.7 `audit_schema` (Platform Cross-Cutting Domain)
+
 * **Domain Owner:** Independent Platform Governance.
 * **Tables:**
   * `audit_logs` — Immutable transactional event log (`who`, `when`, `action`, `target_resource`, `diff`).

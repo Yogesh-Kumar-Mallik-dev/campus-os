@@ -10,6 +10,7 @@
 Campus OS is an institutional operating system designed to serve as the system of record and execution engine for a single collegiate institution.
 
 ### 1.1 Guiding Tenets
+
 * **Transparency:** Users clearly see the live status of any request, responsible authority, current stage, and required next action within their authorized scope.
 * **Paperwork Elimination:** Manual forms and repeated data collection are converted into typed digital workflows with contextual pre-filling.
 * **Frictionless Operation:** Administrative overhead is minimized through rule-based automation, while preserving mandatory institutional checks.
@@ -42,22 +43,26 @@ Campus OS is an institutional operating system designed to serve as the system o
 ## 3. Core Functional Scopes (Phase 1 Priority)
 
 ### 3.1 Academic Delivery & Administration
+
 * Curriculum modeling: Courses $\rightarrow$ Semesters $\rightarrow$ Subjects and Labs.
 * Departmental semester hosting and operational configuration (Sections, Timetables, Slots).
 * Teacher-to-Subject/Section assignment workflow.
 * Internal assessments and marks submission with multi-tier verification.
 
 ### 3.2 Student Lifecycle Management
+
 * State progression: `APPLICANT` $\rightarrow$ `ENROLLED` $\rightarrow$ `ACTIVE` $\rightarrow$ `SUSPENDED_OR_ON_LEAVE` $\rightarrow$ `ALUMNI_GRADUATED`.
 * Terminal state exits: `TERMINATED_DISCONTINUED` and `EXPELLED`.
 * Student profile, departmental enrollment, and historical transcript maintenance.
 
 ### 3.3 Campus Life & Hostel Administration
+
 * Hostel block, room, and bed allocation workflows.
 * Outpass and Leave workflow: Student application $\rightarrow$ Warden digital approval $\rightarrow$ Guard gate verification and logging.
 * Student grievance submission and supervisory review by Moderator.
 
 ### 3.4 Institutional Governance & Master Data
+
 * Controlled creation and editing of institutional structures (Departments, Courses, Academic Years).
 * Single Super Admin atomic handover workflow.
 * Developer break-glass emergency response system.
