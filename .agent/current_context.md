@@ -33,6 +33,7 @@
 16. Established Go Logical Backend architecture (`backend/`): runtime config loader, RFC 7807 problem details error envelopes, HTTP 200 OK collection query semantics, request tracing and panic recovery middlewares, graceful OS signal shutdown, and gRPC UDS persistence client.
 17. Established Go Frontend Framework (`apps/client/`): cross-platform native client powered by Fyne v2 with tabbed navigation (Time-Series Attendance Ledger, Hostel Outpass submission, Academic Profile), backend API client, and headless test suite.
 18. Updated build pipeline (`scripts/build.sh`) to compile both `bin/campus-backend` and `bin/campus-client` natively.
+19. Designed and formalized Canonical Identity Conventions and Onboarding Architecture in `docs/adrs/ADR-0005-canonical-identity-and-onboarding.md`: Option A student usernames (`first.course.YYYY[.l][.increment]`), faculty usernames (`first.last.YYYY[.increment]`), account claiming via PRN + DOB + OTP, and token family rotation.
 
 ---
 

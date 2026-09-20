@@ -81,3 +81,26 @@ Campus OS enforces a **Strict Need-to-Know** access boundary:
 * **Singleton Principle:** Exactly **one** active Super Admin seat exists at any point in time.
 * **Atomic Succession:** Succession occurs via an atomic database transaction where the incumbent seat is retired and the successor is crowned simultaneously.
 * **Separation from Developer:** The Super Admin is an institutional administrator and cannot invoke Developer-exclusive capabilities (such as break-glass emergency procedures).
+
+---
+
+## 6. Canonical Identity & Onboarding Architecture
+
+### 6.1 Student Username Convention (Option A)
+$$\mathbf{\left[\text{first}\right]} \boldsymbol{.} \mathbf{\left[\text{course}\right]} \boldsymbol{.} \mathbf{\left[\text{YYYY}\right]} \left[\boldsymbol{.} \mathbf{\text{l}}\right] \left[\boldsymbol{.} \mathbf{\text{increment}}\right]$$
+
+* Regular Student: `yogesh.cse.2024` $\rightarrow$ Collision: `yogesh.cse.2024.1`
+* Lateral Entry: `yogesh.cse.2024.l` $\rightarrow$ Collision: `yogesh.cse.2024.l.1`
+* Official Email: `<username>@campus.edu`
+
+### 6.2 Faculty & Staff Username Convention
+$$\mathbf{\left[\text{first}\right]} \boldsymbol{.} \mathbf{\left[\text{last}\right]} \boldsymbol{.} \mathbf{\left[\text{YYYY}\right]} \left[\boldsymbol{.} \mathbf{\text{increment}}\right]$$
+
+* Example: `amit.sharma.2026` $\rightarrow$ Collision: `amit.sharma.2026.1`
+* Official Email: `<username>@campus.edu`
+
+### 6.3 Onboarding & Authentication Invariants
+* **No Public Self-Registration:** All identities are pre-provisioned via Admissions or HR.
+* **Account Claiming:** Students verify via `PRN + Date of Birth + Mobile OTP`, confirm lateral entry state (if applicable), and set their permanent credentials.
+* **Faculty MFA:** Mandatory TOTP Multi-Factor Authentication enrolled during invitation activation.
+* **Session Lifecycle:** 15-minute JWT Access Tokens paired with 7-day HttpOnly Refresh Tokens enforcing automatic Family Token rotation breach detection.
