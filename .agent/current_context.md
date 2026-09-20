@@ -33,7 +33,8 @@
 16. Established Go Logical Backend architecture (`backend/`): runtime config loader, RFC 7807 problem details error envelopes, HTTP 200 OK collection query semantics, request tracing and panic recovery middlewares, graceful OS signal shutdown, and gRPC UDS persistence client.
 17. Established Go Frontend Framework (`apps/client/`): cross-platform native client powered by Fyne v2 with tabbed navigation (Time-Series Attendance Ledger, Hostel Outpass submission, Academic Profile), backend API client, and headless test suite.
 18. Updated build pipeline (`scripts/build.sh`) to compile both `bin/campus-backend` and `bin/campus-client` natively.
-19. Designed and formalized Canonical Identity Conventions and Onboarding Architecture in `docs/adrs/ADR-0005-canonical-identity-and-onboarding.md`: Option A student usernames (`first.course.YYYY[.l][.increment]`), faculty usernames (`first.last.YYYY[.increment]`), Zero-Faculty-Knowledge QR code credential delivery, immediate mandatory password update, and 3-day progressive grace period.
+19. Designed and formalized Canonical Identity Conventions and Onboarding Architecture in `docs/adrs/ADR-0005-canonical-identity-and-onboarding.md` and `docs/04-authorization-specification.md`: Option A student usernames (`first.course.YYYY[.l][.increment]`), faculty usernames (`first.last.YYYY[.increment]`), Zero-Faculty-Knowledge QR code credential delivery, immediate mandatory password update, and 3-day progressive grace period.
+20. Formalized Bulk Credential Generation Authority Matrix (Registrar for students, HR for faculty/staff, CSO/Estate for operational staff with immutable manifests) and Hardware SIM-Presence Binding with Mobile OTP Verification during onboarding, plus audited post-onboarding contact change workflows.
 
 ---
 

@@ -101,8 +101,25 @@ $$\mathbf{\left[\text{first}\right]} \boldsymbol{.} \mathbf{\left[\text{last}\ri
 
 ### 6.3 Onboarding & Authentication Invariants
 * **No Public Self-Registration:** All identities are pre-provisioned via Admissions or HR.
-* **Zero-Faculty-Knowledge QR Delivery:** Student initial credentials/claim tokens are delivered via sealed QR codes on admission slips. Faculty and department staff never see or handle student initial passwords.
-* **First-Scan Mandatory Password Reset:** Scanning the onboarding QR prompts the student to immediately set their personal password.
-* **3-Day Grace Period:** During the initial 72 hours, students may set a simplified password (minimum 6 characters). After 3 days, standard institutional password complexity is strictly enforced before granting access to sensitive modules.
+* **Zero-Faculty-Knowledge QR Delivery:** Student initial credentials/claim tokens are delivered via sealed, tamper-evident QR codes on admission slips. Faculty and department staff never see or handle student initial passwords.
+* **First-Scan Mandatory Password Reset:** Scanning the onboarding QR prompts the user to immediately set their personal password before accessing any institutional data.
+* **3-Day Grace Period:** During the initial 72 hours, users may set a simplified password (minimum 6 characters). After 3 days, enterprise password complexity (10+ characters, mixed case, numbers, symbols) is strictly enforced.
 * **Faculty MFA:** Mandatory TOTP Multi-Factor Authentication enrolled during invitation activation.
 * **Session Lifecycle:** 15-minute JWT Access Tokens paired with 7-day HttpOnly Refresh Tokens enforcing automatic Family Token rotation breach detection.
+
+### 6.4 Bulk Credential Generation Authority Matrix
+Bulk credential generation and QR printing are strictly segregated administrative operations governed by Scoped RBAC. General teaching faculty and staff have zero authority to generate student or peer QR credentials:
+
+| Target Cohort | Authorized Generation Role | Permission Code | Mandatory Prerequisite |
+| :--- | :--- | :--- | :--- |
+| **Students (UG, PG, Lateral)** | **Registrar / Admissions Office** | `admissions.qr.generate_bulk` | Approved gazetted admission roll with verified phone & email |
+| **Faculty & Academic Staff** | **Human Resources (HR) / Dean** | `hr.faculty_qr.generate_bulk` | Executed appointment orders & personnel file |
+| **Operational Staff (Guards, Estate)** | **Chief Security Officer (CSO) / Estate** | `staff.qr.generate_bulk` | Background check clearance & operational roster |
+
+* **Immutable Batch Manifest:** Each bulk QR generation action is recorded in `audit.qr_batch_manifest` containing `batch_id`, operator `user_id`, cohort type, target record count, cryptographic checksum, timestamp, and print station terminal ID.
+
+### 6.5 Hardware SIM-Binding & Mobile Number Verification
+* **SIM Telephony Presence Check:** Onboarding QR claim requires the Campus OS native mobile client to verify that the device hardware contains the active SIM matching the phone number registered during admissions.
+* **Mobile OTP Handshake:** A single-use cryptographic token dispatched via SMS must be verified directly on the device hosting the SIM.
+* **Physical Theft Defense:** Possession of the physical QR paper slip alone is insufficient to claim an account; any claim attempt on a device lacking the registered SIM is blocked (`ERR_SIM_ABSENT_OR_MISMATCH`).
+* **Post-Onboarding Mobile Updates:** Users may update their contact phone number post-onboarding via authenticated self-service requiring step-up re-authentication and Dual-OTP verification (OTP to both old and new numbers), or via Registrar/HR biometric verification if the old SIM is lost.
