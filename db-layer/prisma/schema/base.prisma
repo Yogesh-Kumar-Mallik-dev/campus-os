@@ -1,0 +1,8 @@
+datasource db {
+  provider = "postgresql"
+  schemas  = ["auth_schema", "academic_schema", "student_schema", "hostel_schema", "finance_schema", "document_schema", "audit_schema"]
+}
+
+generator client {
+  provider = "prisma-client-js"
+}

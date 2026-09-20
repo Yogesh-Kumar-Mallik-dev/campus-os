@@ -1,0 +1,45 @@
+// ==============================================================================
+// audit_schema: Immutable Logs, Decision Records & Break-Glass Governance
+// ==============================================================================
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  actorId        String   @map("actor_id")
+  action         String
+  targetResource String   @map("target_resource")
+  payloadDiff    Json     @map("payload_diff")
+  clientIp       String?  @map("client_ip")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+  @@schema("audit_schema")
+}
+
+model DecisionRecord {
+  id                String   @id @default(uuid())
+  workflowId        String?  @map("workflow_id")
+  rulePolicyVersion String   @map("rule_policy_version")
+  evaluatedCriteria Json     @map("evaluated_criteria")
+  inputsSummary     Json     @map("inputs_summary")
+  decisionResult    String   @map("decision_result") // "APPROVED", "REJECTED", "ESCALATED"
+  resultingAction   String   @map("resulting_action")
+  evaluatedBy       String   @map("evaluated_by") // Actor ID or "SYSTEM_ENGINE"
+  timestamp         DateTime @default(now())
+
+  @@map("decision_records")
+  @@schema("audit_schema")
+}
+
+model BreakGlassIncident {
+  id           String    @id @default(uuid())
+  developerId  String    @map("developer_id")
+  reason       String
+  targetScope  String    @map("target_scope")
+  invokedAt    DateTime  @default(now()) @map("invoked_at")
+  terminatedAt DateTime? @map("terminated_at")
+  isFrozen     Boolean   @default(true) @map("is_frozen")
+  reviewNotes  String?   @map("review_notes")
+
+  @@map("break_glass_incidents")
+  @@schema("audit_schema")
+}

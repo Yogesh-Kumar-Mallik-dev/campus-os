@@ -1,0 +1,86 @@
+// ==============================================================================
+// student_schema: Student Demographics, Lifecycle History & Attendance
+// ==============================================================================
+
+model StudentProfile {
+  id                    String                     @id @default(uuid())
+  userId                String                     @unique @map("user_id")
+  rollNumber            String                     @unique @map("roll_number")
+  prn                   String                     @unique @map("prn") // Permanent Registration Number
+  batchYear             String                     @map("batch_year") // e.g. "2023-2027"
+  departmentId          String                     @map("department_id")
+  currentSemesterNumber Int                        @default(1) @map("current_semester_number")
+  lifecycleState        String                     @default("APPLICANT") @map("lifecycle_state")
+  dateOfBirth           DateTime?                  @map("date_of_birth")
+  gender                String?
+  emergencyContact      String?                    @map("emergency_contact")
+  createdAt             DateTime                   @default(now()) @map("created_at")
+  updatedAt             DateTime                   @updatedAt @map("updated_at")
+  lifecycleHistory      StudentLifecycleHistory[]
+  enrollments           StudentEnrollment[]
+  sectionMemberships    StudentSectionMembership[]
+  attendanceRecords     StudentAttendance[]
+
+  @@map("student_profiles")
+  @@schema("student_schema")
+}
+
+model StudentLifecycleHistory {
+  id               String         @id @default(uuid())
+  studentId        String         @map("student_id")
+  fromState        String         @map("from_state")
+  toState          String         @map("to_state")
+  reason           String
+  changedByUserId  String         @map("changed_by_user_id")
+  evidenceDocId    String?        @map("evidence_doc_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  student          StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_lifecycle_history")
+  @@schema("student_schema")
+}
+
+model StudentEnrollment {
+  id               String         @id @default(uuid())
+  studentId        String         @map("student_id")
+  courseId         String         @map("course_id")
+  semesterId       String         @map("semester_id")
+  academicSession  String         @map("academic_session")
+  enrollmentStatus String         @default("ACTIVE") @map("enrollment_status")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  student          StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId, semesterId, academicSession])
+  @@map("student_enrollments")
+  @@schema("student_schema")
+}
+
+model StudentSectionMembership {
+  id        String         @id @default(uuid())
+  studentId String         @map("student_id")
+  sectionId String         @map("section_id")
+  isActive  Boolean        @default(true) @map("is_active")
+  joinedAt  DateTime       @default(now()) @map("joined_at")
+  leftAt    DateTime?      @map("left_at")
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_section_memberships")
+  @@schema("student_schema")
+}
+
+model StudentAttendance {
+  id              String         @id @default(uuid())
+  studentId       String         @map("student_id")
+  timetableSlotId String         @map("timetable_slot_id")
+  sessionDate     DateTime       @map("session_date")
+  isPresent       Boolean        @map("is_present")
+  isExempted      Boolean        @default(false) @map("is_exempted")
+  exemptionReason String?        @map("exemption_reason")
+  markedByUserId  String         @map("marked_by_user_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, timetableSlotId, sessionDate])
+  @@map("student_attendance")
+  @@schema("student_schema")
+}

@@ -1,0 +1,64 @@
+// ==============================================================================
+// finance_schema: Fee Structures, Student Ledgers & Receipts
+// ==============================================================================
+
+model FeeStructure {
+  id           String          @id @default(uuid())
+  courseId     String          @map("course_id")
+  academicYear String          @map("academic_year")
+  feeHead      String          @map("fee_head") // "TUITION", "HOSTEL", "MESS", "LAB"
+  amount       Float
+  dueDate      DateTime        @map("due_date")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  ledgers      StudentLedger[]
+
+  @@map("fee_structures")
+  @@schema("finance_schema")
+}
+
+model StudentLedger {
+  id             String           @id @default(uuid())
+  studentId      String           @map("student_id")
+  feeStructureId String           @map("fee_structure_id")
+  debitAmount    Float            @map("debit_amount")
+  creditAmount   Float            @default(0) @map("credit_amount")
+  balance        Float
+  status         String           @default("DUE") @map("status") // "PAID", "PARTIAL", "DUE"
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  feeStructure   FeeStructure     @relation(fields: [feeStructureId], references: [id])
+  receipts       PaymentReceipt[]
+
+  @@map("student_ledgers")
+  @@schema("finance_schema")
+}
+
+model PaymentReceipt {
+  id               String        @id @default(uuid())
+  studentId        String        @map("student_id")
+  ledgerId         String        @map("ledger_id")
+  transactionRef   String        @unique @map("transaction_ref")
+  paymentMode      String        @map("payment_mode") // "ONLINE", "NEFT", "CASH", "CHALLAN"
+  amountPaid       Float         @map("amount_paid")
+  receiptNumber    String        @unique @map("receipt_number")
+  verifiedByUserId String?       @map("verified_by_user_id")
+  paidAt           DateTime      @default(now()) @map("paid_at")
+  ledger           StudentLedger @relation(fields: [ledgerId], references: [id])
+
+  @@map("payment_receipts")
+  @@schema("finance_schema")
+}
+
+model FeeConcession {
+  id               String    @id @default(uuid())
+  studentId        String    @map("student_id")
+  concessionType   String    @map("concession_type") // "MERIT", "EWS", "SPORTS"
+  amountDiscounted Float     @map("amount_discounted")
+  reason           String
+  status           String    @default("REQUESTED") @map("status") // "REQUESTED", "APPROVED", "REJECTED"
+  approvedByUserId String?   @map("approved_by_user_id")
+  approvedAt       DateTime? @map("approved_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@map("fee_concessions")
+  @@schema("finance_schema")
+}

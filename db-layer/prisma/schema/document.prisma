@@ -1,0 +1,49 @@
+// ==============================================================================
+// document_schema: Document Storage Metadata & Verification
+// ==============================================================================
+
+model Document {
+  id            String                 @id @default(uuid())
+  ownerUserId   String                 @map("owner_user_id")
+  documentType  String                 @map("document_type") // "TRANSCRIPT", "LEAVE_PROOF", "ID_CARD", "CERTIFICATE"
+  title         String
+  mimeType      String                 @map("mime_type")
+  fileSizeBytes Int                    @map("file_size_bytes")
+  sha256Hash    String                 @map("sha256_hash")
+  storagePath   String                 @map("storage_path")
+  isArchived    Boolean                @default(false) @map("is_archived")
+  createdAt     DateTime               @default(now()) @map("created_at")
+  versions      DocumentVersion[]
+  verifications DocumentVerification[]
+
+  @@map("documents")
+  @@schema("document_schema")
+}
+
+model DocumentVersion {
+  id               String   @id @default(uuid())
+  documentId       String   @map("document_id")
+  versionNumber    Int      @map("version_number")
+  sha256Hash       String   @map("sha256_hash")
+  storagePath      String   @map("storage_path")
+  uploadedByUserId String   @map("uploaded_by_user_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  document         Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, versionNumber])
+  @@map("document_versions")
+  @@schema("document_schema")
+}
+
+model DocumentVerification {
+  id                String   @id @default(uuid())
+  documentId        String   @map("document_id")
+  verifierUserId    String   @map("verifier_user_id")
+  status            String   @map("status") // "VERIFIED", "REJECTED"
+  verificationNotes String?  @map("verification_notes")
+  verifiedAt        DateTime @default(now()) @map("verified_at")
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("document_verifications")
+  @@schema("document_schema")
+}

@@ -1,0 +1,220 @@
+// ==============================================================================
+// academic_schema: Curriculum, Department Hosting, Timetables & Grading
+// ==============================================================================
+
+model Department {
+  id              String           @id @default(uuid())
+  code            String           @unique
+  name            String
+  description     String?
+  hodUserId       String?          @map("hod_user_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  retiredAt       DateTime?        @map("retired_at")
+  hostedSemesters HostedSemester[]
+
+  @@map("departments")
+  @@schema("academic_schema")
+}
+
+model Course {
+  id             String           @id @default(uuid())
+  code           String           @unique
+  name           String
+  degreeLevel    String           @map("degree_level") // e.g. "UG", "PG", "DIPLOMA"
+  totalSemesters Int              @map("total_semesters")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  retiredAt      DateTime?        @map("retired_at")
+  semesters      Semester[]
+  hostedSemesters HostedSemester[]
+
+  @@map("courses")
+  @@schema("academic_schema")
+}
+
+model Semester {
+  id              String            @id @default(uuid())
+  courseId        String            @map("course_id")
+  semesterNumber  Int               @map("semester_number")
+  totalCredits    Int               @default(0) @map("total_credits")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  course          Course            @relation(fields: [courseId], references: [id])
+  subjects        SemesterSubject[]
+  labs            SemesterLab[]
+  hostedSemesters HostedSemester[]
+
+  @@unique([courseId, semesterNumber])
+  @@map("semesters")
+  @@schema("academic_schema")
+}
+
+model Subject {
+  id           String               @id @default(uuid())
+  code         String               @unique
+  name         String
+  credits      Int
+  isElective   Boolean              @default(false) @map("is_elective")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  retiredAt    DateTime?            @map("retired_at")
+  semesters    SemesterSubject[]
+  assignments  TeachingAssignment[]
+  slots        TimetableSlot[]
+  assessments  InternalAssessment[]
+
+  @@map("subjects")
+  @@schema("academic_schema")
+}
+
+model Lab {
+  id          String               @id @default(uuid())
+  code        String               @unique
+  name        String
+  capacity    Int
+  roomNumber  String               @map("room_number")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  retiredAt   DateTime?            @map("retired_at")
+  semesters   SemesterLab[]
+  assignments TeachingAssignment[]
+  slots       TimetableSlot[]
+
+  @@map("labs")
+  @@schema("academic_schema")
+}
+
+model SemesterSubject {
+  id         String   @id @default(uuid())
+  semesterId String   @map("semester_id")
+  subjectId  String   @map("subject_id")
+  semester   Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([semesterId, subjectId])
+  @@map("semester_subjects")
+  @@schema("academic_schema")
+}
+
+model SemesterLab {
+  id         String   @id @default(uuid())
+  semesterId String   @map("semester_id")
+  labId      String   @map("lab_id")
+  semester   Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  lab        Lab      @relation(fields: [labId], references: [id], onDelete: Cascade)
+
+  @@unique([semesterId, labId])
+  @@map("semester_labs")
+  @@schema("academic_schema")
+}
+
+model HostedSemester {
+  id              String               @id @default(uuid())
+  departmentId    String               @map("department_id")
+  courseId        String               @map("course_id")
+  semesterId      String               @map("semester_id")
+  academicSession String               @map("academic_session") // e.g. "2026-2027-ODD"
+  isActive        Boolean              @default(true) @map("is_active")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  retiredAt       DateTime?            @map("retired_at")
+  department      Department           @relation(fields: [departmentId], references: [id])
+  course          Course               @relation(fields: [courseId], references: [id])
+  semester        Semester             @relation(fields: [semesterId], references: [id])
+  sections        Section[]
+  assignments     TeachingAssignment[]
+  assessments     InternalAssessment[]
+
+  @@unique([departmentId, courseId, semesterId, academicSession])
+  @@map("hosted_semesters")
+  @@schema("academic_schema")
+}
+
+model Section {
+  id               String               @id @default(uuid())
+  hostedSemesterId String               @map("hosted_semester_id")
+  code             String // e.g. "A", "B", "C"
+  name             String // e.g. "Section A"
+  capacity         Int                  @default(60)
+  createdAt        DateTime             @default(now()) @map("created_at")
+  hostedSemester   HostedSemester       @relation(fields: [hostedSemesterId], references: [id], onDelete: Cascade)
+  slots            TimetableSlot[]
+  assignments      TeachingAssignment[]
+  assessments      InternalAssessment[]
+
+  @@unique([hostedSemesterId, code])
+  @@map("sections")
+  @@schema("academic_schema")
+}
+
+model TimetableSlot {
+  id            String   @id @default(uuid())
+  sectionId     String   @map("section_id")
+  dayOfWeek     Int      @map("day_of_week") // 1 = Monday ... 7 = Sunday
+  periodNumber  Int      @map("period_number")
+  startTime     String   @map("start_time") // "09:00"
+  endTime       String   @map("end_time") // "09:50"
+  subjectId     String?  @map("subject_id")
+  labId         String?  @map("lab_id")
+  teacherUserId String   @map("teacher_user_id")
+  roomNumber    String   @map("room_number")
+  section       Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  subject       Subject? @relation(fields: [subjectId], references: [id])
+  lab           Lab?     @relation(fields: [labId], references: [id])
+
+  @@map("timetable_slots")
+  @@schema("academic_schema")
+}
+
+model TeachingAssignment {
+  id               String         @id @default(uuid())
+  hostedSemesterId String         @map("hosted_semester_id")
+  sectionId        String         @map("section_id")
+  subjectId        String?        @map("subject_id")
+  labId            String?        @map("lab_id")
+  teacherUserId    String         @map("teacher_user_id")
+  isPrimary        Boolean        @default(true) @map("is_primary")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  retiredAt        DateTime?      @map("retired_at")
+  hostedSemester   HostedSemester @relation(fields: [hostedSemesterId], references: [id])
+  section          Section        @relation(fields: [sectionId], references: [id])
+  subject          Subject?       @relation(fields: [subjectId], references: [id])
+  lab              Lab?           @relation(fields: [labId], references: [id])
+
+  @@map("teaching_assignments")
+  @@schema("academic_schema")
+}
+
+model InternalAssessment {
+  id               String         @id @default(uuid())
+  hostedSemesterId String         @map("hosted_semester_id")
+  subjectId        String         @map("subject_id")
+  sectionId        String         @map("section_id")
+  name             String // e.g. "Mid-Term 1", "Assignment 2"
+  maxMarks         Float          @map("max_marks")
+  weightage        Float
+  assessmentType   String         @map("assessment_type") // "THEORY", "PRACTICAL", "QUIZ"
+  createdAt        DateTime       @default(now()) @map("created_at")
+  hostedSemester   HostedSemester @relation(fields: [hostedSemesterId], references: [id])
+  subject          Subject        @relation(fields: [subjectId], references: [id])
+  section          Section        @relation(fields: [sectionId], references: [id])
+  marks            StudentMark[]
+
+  @@map("internal_assessments")
+  @@schema("academic_schema")
+}
+
+model StudentMark {
+  id                String             @id @default(uuid())
+  assessmentId      String             @map("assessment_id")
+  studentId         String             @map("student_id")
+  marksObtained     Float?             @map("marks_obtained")
+  isAbsent          Boolean            @default(false) @map("is_absent")
+  submittedByUserId String             @map("submitted_by_user_id")
+  status            String             @default("DRAFT") @map("status") // DRAFT, SUBMITTED, APPROVED, LOCKED
+  approvedByUserId  String?            @map("approved_by_user_id")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  assessment        InternalAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@unique([assessmentId, studentId])
+  @@map("student_marks")
+  @@schema("academic_schema")
+}

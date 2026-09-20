@@ -1,0 +1,93 @@
+// ==============================================================================
+// hostel_schema: Hostels, Rooms, Outpasses & Gate Checkpoints
+// ==============================================================================
+
+model Hostel {
+  id            String       @id @default(uuid())
+  name          String
+  blockCode     String       @unique @map("block_code")
+  gender        String // "MALE", "FEMALE"
+  wardenUserId  String       @map("warden_user_id")
+  totalCapacity Int          @map("total_capacity")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  retiredAt     DateTime?    @map("retired_at")
+  rooms         HostelRoom[]
+
+  @@map("hostels")
+  @@schema("hostel_schema")
+}
+
+model HostelRoom {
+  id          String          @id @default(uuid())
+  hostelId    String          @map("hostel_id")
+  roomNumber  String          @map("room_number")
+  floorNumber Int             @map("floor_number")
+  capacity    Int             @default(3)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  retiredAt   DateTime?       @map("retired_at")
+  hostel      Hostel          @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  allocations BedAllocation[]
+
+  @@unique([hostelId, roomNumber])
+  @@map("hostel_rooms")
+  @@schema("hostel_schema")
+}
+
+model BedAllocation {
+  id          String     @id @default(uuid())
+  roomId      String     @map("room_id")
+  studentId   String     @map("student_id")
+  bedNumber   Int        @map("bed_number")
+  allocatedAt DateTime   @default(now()) @map("allocated_at")
+  vacatedAt   DateTime?  @map("vacated_at")
+  isActive    Boolean    @default(true) @map("is_active")
+  room        HostelRoom @relation(fields: [roomId], references: [id])
+
+  @@map("bed_allocations")
+  @@schema("hostel_schema")
+}
+
+model OutpassRequest {
+  id                    String            @id @default(uuid())
+  studentId             String            @map("student_id")
+  destination           String
+  purpose               String
+  departureTimeExpected DateTime          @map("departure_time_expected")
+  arrivalTimeExpected   DateTime          @map("arrival_time_expected")
+  emergencyContact      String            @map("emergency_contact")
+  status                String            @default("PENDING") @map("status") // PENDING, APPROVED_WARDEN, REJECTED_WARDEN, DEPARTED_CHECKPOINT, RETURNED_CHECKPOINT, CANCELLED
+  qrToken               String?           @unique @map("qr_token")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  approvals             OutpassApproval[]
+  gateLogs              GateLog[]
+
+  @@map("outpass_requests")
+  @@schema("hostel_schema")
+}
+
+model OutpassApproval {
+  id             String         @id @default(uuid())
+  outrequestId   String         @map("outpass_request_id")
+  approverUserId String         @map("approver_user_id")
+  decision       String         @map("decision") // "APPROVED", "REJECTED"
+  comments       String?
+  decidedAt      DateTime       @default(now()) @map("decided_at")
+  outpassRequest OutpassRequest @relation(fields: [outrequestId], references: [id], onDelete: Cascade)
+
+  @@map("outpass_approvals")
+  @@schema("hostel_schema")
+}
+
+model GateLog {
+  id                 String         @id @default(uuid())
+  outrequestId       String         @map("outpass_request_id")
+  guardUserId        String         @map("guard_user_id")
+  checkpointType     String         @map("checkpoint_type") // "EXIT", "ENTRY"
+  timestamp          DateTime       @default(now())
+  verificationMethod String         @default("QR_SCAN") @map("verification_method") // "QR_SCAN", "MANUAL_SCREEN"
+  outpassRequest     OutpassRequest @relation(fields: [outrequestId], references: [id], onDelete: Cascade)
+
+  @@map("gate_logs")
+  @@schema("hostel_schema")
+}
