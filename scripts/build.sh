@@ -13,4 +13,7 @@ echo "==> [build] Building Go Logical Backend..."
 echo "==> [build] Building TypeScript DB Layer..."
 (cd "$SCRIPT_DIR/db-layer" && pnpm run build)
 
+echo "==> [build] Building Native Go Client (Fyne)..."
+(cd "$SCRIPT_DIR/apps/client" && go build -v -o "$SCRIPT_DIR/bin/campus-client" .)
+
 echo "==> [build] All production artifacts built successfully."

@@ -6,15 +6,14 @@ model StudentProfile {
   id                    String                     @id @default(uuid())
   userId                String                     @unique @map("user_id")
   rollNumber            String                     @unique @map("roll_number")
-  prn                   String                     @unique @map("prn") // Permanent Registration Number
-  batchYear             String                     @map("batch_year") // e.g. "2023-2027" or "2024-2027" for lateral
+  prn                   String                     @unique @map("prn")
+  batchYear             String                     @map("batch_year")
   departmentId          String                     @map("department_id")
   currentSemesterNumber Int                        @default(1) @map("current_semester_number")
   
-  // Admission & Lateral Entry Governance
-  admissionType         String                     @default("REGULAR") @map("admission_type") // "REGULAR", "LATERAL_ENTRY", "TRANSFER"
-  entrySemesterNumber   Int                        @default(1) @map("entry_semester_number") // 1 for regular, 3 for lateral entry
-  lateralEntryDetails   Json?                      @map("lateral_entry_details") // Prior diploma, board, percentage, credit exemptions
+  admissionType         String                     @default("REGULAR") @map("admission_type") 
+  entrySemesterNumber   Int                        @default(1) @map("entry_semester_number")  
+  lateralEntryDetails   Json?                      @map("lateral_entry_details") 
   
   lifecycleState        String                     @default("APPLICANT") @map("lifecycle_state")
   dateOfBirth           DateTime?                  @map("date_of_birth")
@@ -79,18 +78,16 @@ model StudentSectionMembership {
   @@schema("student_schema")
 }
 
-// Time-series attendance ledger supporting daily, period-by-period roll-calls,
-// historical absence tracking, and official institutional duty/exemption logging.
 model StudentAttendance {
   id              String         @id @default(uuid())
   studentId       String         @map("student_id")
   timetableSlotId String         @map("timetable_slot_id")
   subjectId       String         @map("subject_id")
-  sessionDate     DateTime       @map("session_date") // Date of the class session
+  sessionDate     DateTime       @map("session_date") 
   
-  // Granular attendance state
-  status          String         @default("PRESENT") @map("status") // "PRESENT", "ABSENT", "LATE", "ON_DUTY", "MEDICAL_LEAVE"
-  isExempted      Boolean        @default(false) @map("is_exempted") // true if exempted from shortage calculation
+
+  status          String         @default("PRESENT") @map("status")
+  isExempted      Boolean        @default(false) @map("is_exempted")
   exemptionReason String?        @map("exemption_reason")
   remarks         String?
   
@@ -98,9 +95,9 @@ model StudentAttendance {
   createdAt       DateTime       @default(now()) @map("created_at")
   student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  // Enforces at most one attendance record per student per timetable slot per day
+ 
   @@unique([studentId, timetableSlotId, sessionDate])
-  // Fast time-series indexes for range queries (yesterday, today, tomorrow, full semester)
+
   @@index([studentId, sessionDate])
   @@index([studentId, subjectId, sessionDate])
   @@index([sessionDate, timetableSlotId])

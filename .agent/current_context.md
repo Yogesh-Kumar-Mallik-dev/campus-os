@@ -30,6 +30,9 @@
 13. Converted single `schema.prisma` into multi-file directory target `db-layer/prisma/schema/*.prisma` with dedicated domain models: `base.prisma`, `auth.prisma`, `academic.prisma`, `student.prisma`, `hostel.prisma`, `finance.prisma`, `document.prisma`, and `audit.prisma`.
 14. Validated and generated typed Prisma 8 Client from multi-file schemas (`prisma generate --schema=prisma/schema`).
 15. Extended `student.prisma` with first-class Lateral Entry support (`admissionType`, `entrySemesterNumber`, `lateralEntryDetails`) and granular time-series attendance ledger (`sessionDate`, `status: PRESENT/ABSENT/LATE/ON_DUTY/MEDICAL_LEAVE`, multi-column date range indexes).
+16. Established Go Logical Backend architecture (`backend/`): runtime config loader, RFC 7807 problem details error envelopes, HTTP 200 OK collection query semantics, request tracing and panic recovery middlewares, graceful OS signal shutdown, and gRPC UDS persistence client.
+17. Established Go Frontend Framework (`apps/client/`): cross-platform native client powered by Fyne v2 with tabbed navigation (Time-Series Attendance Ledger, Hostel Outpass submission, Academic Profile), backend API client, and headless test suite.
+18. Updated build pipeline (`scripts/build.sh`) to compile both `bin/campus-backend` and `bin/campus-client` natively.
 
 ---
 
