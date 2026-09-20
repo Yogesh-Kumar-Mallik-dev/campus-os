@@ -101,6 +101,8 @@ $$\mathbf{\left[\text{first}\right]} \boldsymbol{.} \mathbf{\left[\text{last}\ri
 
 ### 6.3 Onboarding & Authentication Invariants
 * **No Public Self-Registration:** All identities are pre-provisioned via Admissions or HR.
-* **Account Claiming:** Students verify via `PRN + Date of Birth + Mobile OTP`, confirm lateral entry state (if applicable), and set their permanent credentials.
+* **Zero-Faculty-Knowledge QR Delivery:** Student initial credentials/claim tokens are delivered via sealed QR codes on admission slips. Faculty and department staff never see or handle student initial passwords.
+* **First-Scan Mandatory Password Reset:** Scanning the onboarding QR prompts the student to immediately set their personal password.
+* **3-Day Grace Period:** During the initial 72 hours, students may set a simplified password (minimum 6 characters). After 3 days, standard institutional password complexity is strictly enforced before granting access to sensitive modules.
 * **Faculty MFA:** Mandatory TOTP Multi-Factor Authentication enrolled during invitation activation.
 * **Session Lifecycle:** 15-minute JWT Access Tokens paired with 7-day HttpOnly Refresh Tokens enforcing automatic Family Token rotation breach detection.

@@ -39,10 +39,18 @@ $$\mathbf{\left[\text{first}\right]} \boldsymbol{.} \mathbf{\left[\text{last}\ri
 
 ### 3. Onboarding & Account Claiming Protocols
 1. **Admissions Pre-Ingestion:** The Admissions / Registrar office ingests verified student records. Usernames and emails are pre-calculated and reserved.
-2. **Student Account Claim:** Students claim accounts via `PRN + Date of Birth + Mobile OTP`.
-   * Lateral entry students must review and acknowledge their prior diploma details, Semester 3 starting state, and course exemptions.
-3. **Faculty Account Invitation:** HR issues a 72-hour cryptographic invitation token (`/activate?token=...`). Faculty sets credentials and configures mandatory TOTP Multi-Factor Authentication (MFA).
-4. **Operational Staff Provisioning:** Estate and Gate Guards are onboarded via supervisor-provisioned Phone Number + PIN credentials.
+2. **Zero-Faculty-Knowledge QR Delivery:**
+   * Credentials/account claim payloads are delivered directly to students via **sealed/encrypted QR codes** printed on official admission slips or identity cards.
+   * **Zero-Knowledge Invariant:** Faculty, teachers, and department staff **never** see, handle, or generate student initial passwords. This eliminates faculty impersonation risks, coercion, and credential leakage.
+3. **First-Scan Mandatory Password Reset:**
+   * Scanning the QR code logs the student into an isolated onboarding context.
+   * The platform immediately prompts the student to set a personal password.
+   * **Lateral Entry Review:** Lateral entry students review and acknowledge their prior diploma details, Semester 3 starting state, and course exemptions before finalizing credentials.
+4. **3-Day Progressive Grace Period:**
+   * **Days 1–3 (Orientation Grace Period):** To eliminate friction during campus orientation, students may choose a simplified password (e.g. minimum 6 characters without strict special character rules).
+   * **Post Day 3 (Hard Compliance Enforcement):** After the 72-hour grace period expires, any user who hasn't set a full-strength password (minimum 10 characters, mixed case, numbers, special characters) is blocked with an enforced password update modal upon their next login.
+5. **Faculty Account Invitation:** HR issues a 72-hour cryptographic invitation token (`/activate?token=...`). Faculty sets credentials and configures mandatory TOTP Multi-Factor Authentication (MFA).
+6. **Operational Staff Provisioning:** Estate and Gate Guards are onboarded via supervisor-provisioned Phone Number + PIN credentials.
 
 ### 4. Authentication & Session Security
 * **Universal Login Identifiers:** Login accepts `username` (e.g. `yogesh.cse.2024.l` or `amit.sharma.2026`), institutional email, or PRN.
