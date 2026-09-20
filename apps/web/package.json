@@ -1,0 +1,22 @@
+{
+  "name": "@campus-os/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "lint": "prettier --check ."
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "^4.0.0",
+    "@sveltejs/kit": "^2.18.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "svelte": "^5.22.6",
+    "svelte-check": "^4.1.5",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0"
+  }
+}

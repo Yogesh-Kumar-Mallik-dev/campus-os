@@ -90,9 +90,11 @@ case "$COMMAND" in
   proto:gen)
     echo "==> Generating Protobuf stubs with buf..."
     if command -v buf >/dev/null 2>&1; then
-      buf generate
+      buf generate proto
+    elif command -v pnpm >/dev/null 2>&1; then
+      pnpm exec buf generate proto
     else
-      echo "Error: 'buf' CLI not found. Please install buf (https://buf.build)."
+      echo "Error: Neither 'buf' nor 'pnpm' found."
       exit 1
     fi
     ;;

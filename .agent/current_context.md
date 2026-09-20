@@ -20,14 +20,19 @@
 3. Created `.agent/` architecture with tailored `agents.md`, `current_context.md`, and 8 universal rules in `.agent/rules/`.
 4. Established repository root configuration files (`.editorconfig`, `.gitattributes`, `.gitignore`, `CONTRIBUTING.md`, `SECURITY.md`, `script.sh`, `script.ps1`).
 5. Synthesized `docs/09-engineering-standards.md` into the canonical documentation set.
+6. Initialized `pnpm-workspace.yaml` and root `package.json` with `@bufbuild/buf`, `typescript`, and approved package builds.
+7. Initialized multi-module `go.work` linking `backend/` and `apps/client/` (Fyne).
+8. Configured `proto/buf.yaml`, `proto/buf.gen.yaml`, and foundational `common.proto` persistence contracts.
+9. Created Prisma multi-schema configuration with `auth_schema` and `audit_schema`.
+10. Added Docker Compose topology (`docker-compose.yml`) with Unix Domain Socket shared volume.
 
 ---
 
 ## 3. Immediate Next Steps
-1. Configure `buf.yaml` and initial Protobuf definitions in `/proto` for gRPC persistence contracts.
-2. Initialize the Go logical backend module (`/backend`) with Go 1.22+ and package structure.
-3. Initialize the TypeScript database layer (`/db-layer`) with Prisma and PostgreSQL domain schemas.
-4. Set up Docker Compose topology with shared volume for Unix Domain Socket (`/var/run/campus-os/db.sock`).
+1. Expand Protobuf service contracts in `/proto/campus/v1/` for academic, auth, and student domain operations.
+2. Implement gRPC server handlers and Prisma wrappers in `db-layer/src/handles/`.
+3. Implement `TxToken` interactive session manager in `db-layer/src/tx/`.
+4. Implement Go gRPC client stubs and domain service interfaces in `backend/internal/domains/`.
 
 ---
 

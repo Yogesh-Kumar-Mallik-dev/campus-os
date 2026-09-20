@@ -1,0 +1,22 @@
+{
+  "name": "campus-os-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "./script.sh dev",
+    "build": "pnpm --recursive run build",
+    "check": "pnpm --recursive run check",
+    "test": "pnpm --recursive run test",
+    "lint": "pnpm --recursive run lint",
+    "format": "prettier --write \"**/*.{ts,js,json,md,yaml,proto}\"",
+    "proto:gen": "buf generate proto"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "^1.50.0",
+    "@bufbuild/protoc-gen-es": "^2.2.3",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  },
+  "packageManager": "pnpm@11.22.0"
+}
