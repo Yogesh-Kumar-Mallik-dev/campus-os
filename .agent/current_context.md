@@ -29,6 +29,7 @@
 12. Verified all lifecycle commands (`./script.sh check`, `./script.sh test`, `./script.sh build`, `./script.sh deps`) pass cleanly.
 13. Converted single `schema.prisma` into multi-file directory target `db-layer/prisma/schema/*.prisma` with dedicated domain models: `base.prisma`, `auth.prisma`, `academic.prisma`, `student.prisma`, `hostel.prisma`, `finance.prisma`, `document.prisma`, and `audit.prisma`.
 14. Validated and generated typed Prisma 8 Client from multi-file schemas (`prisma generate --schema=prisma/schema`).
+15. Extended `student.prisma` with first-class Lateral Entry support (`admissionType`, `entrySemesterNumber`, `lateralEntryDetails`) and granular time-series attendance ledger (`sessionDate`, `status: PRESENT/ABSENT/LATE/ON_DUTY/MEDICAL_LEAVE`, multi-column date range indexes).
 
 ---
 
