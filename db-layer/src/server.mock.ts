@@ -162,4 +162,23 @@ if (process.env.NODE_ENV !== 'test') {
     }
     console.log(`BLOCK_DB_SERVER_MOCK_001: Mock persistence server listening on unix://${SOCKET_PATH}`);
   });
+
+  const shutdown = (signal: string) => {
+    console.log(`\nBLOCK_DB_SERVER_MOCK_001: ${signal} received, gracefully shutting down mock server...`);
+    server.tryShutdown((err) => {
+      if (err) {
+        server.forceShutdown();
+      }
+      try {
+        if (fs.existsSync(SOCKET_PATH)) {
+          fs.unlinkSync(SOCKET_PATH);
+        }
+      } catch (_) {}
+      console.log('BLOCK_DB_SERVER_MOCK_001: Mock persistence server terminated cleanly.');
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 }

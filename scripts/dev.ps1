@@ -36,6 +36,7 @@ switch ($Subcommand) {
 
         $dbProcess = $null
         $backendProcess = $null
+        $clientProcess = $null
 
         try {
             Write-Host "==> [dev] Ensuring Campus OS PostgreSQL database is running..." -ForegroundColor Green
@@ -86,15 +87,35 @@ switch ($Subcommand) {
                 Write-Host "==> [dev] Launching Native Fyne Client..." -ForegroundColor Green
                 Push-Location "$ScriptDir\apps\client"
                 $env:CAMPUS_BACKEND_URL = $BackendUrl
-                go run . @args
+                $clientProcess = Start-Process go -ArgumentList "run ." -PassThru
                 Pop-Location
+                Wait-Process -Id $clientProcess.Id
             }
         } finally {
-            Write-Host "`n==> [dev] Shutting down development services..." -ForegroundColor Yellow
-            if ($backendProcess -and -not $backendProcess.HasExited) { Stop-Process -Id $backendProcess.Id -Force }
-            if ($dbProcess -and -not $dbProcess.HasExited) { Stop-Process -Id $dbProcess.Id -Force }
+            Write-Host "`n========================================================================" -ForegroundColor Yellow
+            Write-Host "  [dev] Initiating graceful shutdown of Campus OS services..." -ForegroundColor Yellow
+            Write-Host "========================================================================" -ForegroundColor Yellow
+
+            if ($clientProcess -and -not $clientProcess.HasExited) {
+                Write-Host "==> [dev] Closing Native Client..." -ForegroundColor Yellow
+                $clientProcess.CloseMainWindow() | Out-Null
+                Start-Sleep -Milliseconds 300
+                if (-not $clientProcess.HasExited) { Stop-Process -Id $clientProcess.Id -Force }
+            }
+            if ($backendProcess -and -not $backendProcess.HasExited) {
+                Write-Host "==> [dev] Signaling Go backend to drain connections..." -ForegroundColor Yellow
+                $backendProcess.CloseMainWindow() | Out-Null
+                Start-Sleep -Seconds 1
+                if (-not $backendProcess.HasExited) { Stop-Process -Id $backendProcess.Id -Force }
+            }
+            if ($dbProcess -and -not $dbProcess.HasExited) {
+                Write-Host "==> [dev] Signaling TypeScript DB layer to stop..." -ForegroundColor Yellow
+                $dbProcess.CloseMainWindow() | Out-Null
+                Start-Sleep -Seconds 1
+                if (-not $dbProcess.HasExited) { Stop-Process -Id $dbProcess.Id -Force }
+            }
             if (Test-Path $SocketPath) { Remove-Item $SocketPath -Force }
-            Write-Host "==> [dev] Clean shutdown complete." -ForegroundColor Green
+            Write-Host "==> [dev] Clean graceful shutdown complete." -ForegroundColor Green
         }
     }
 }

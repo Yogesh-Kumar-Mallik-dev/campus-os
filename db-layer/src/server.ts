@@ -87,4 +87,23 @@ if (process.env.NODE_ENV !== 'test') {
     }
     console.log(`BLOCK_DB_SERVER_ENTRYPOINT_001: Persistence service listening on unix://${SOCKET_PATH}`);
   });
+
+  const shutdown = (signal: string) => {
+    console.log(`\nBLOCK_DB_SERVER_ENTRYPOINT_001: ${signal} received, gracefully shutting down persistence service...`);
+    server.tryShutdown((err) => {
+      if (err) {
+        server.forceShutdown();
+      }
+      try {
+        if (fs.existsSync(SOCKET_PATH)) {
+          fs.unlinkSync(SOCKET_PATH);
+        }
+      } catch (_) {}
+      console.log('BLOCK_DB_SERVER_ENTRYPOINT_001: Persistence service terminated cleanly.');
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 }

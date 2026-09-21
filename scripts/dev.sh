@@ -49,12 +49,79 @@ case "$SUBCOMMAND" in
     echo "  Client UI:          Native Fyne (Go)"
     echo "========================================================================"
 
-    # Cleanup background processes on exit
+    CLIENT_PID=""
+    BACKEND_PID=""
+    DB_PID=""
+
+    CLEANED=0
     cleanup() {
-      echo -e "\n==> [dev] Shutting down development services..."
-      kill $(jobs -p) 2>/dev/null || true
+      if [ "$CLEANED" -eq 1 ]; then
+        return
+      fi
+      CLEANED=1
+      trap - EXIT INT TERM
+      echo -e "\n========================================================================"
+      echo "  [dev] Initiating graceful shutdown of Campus OS services..."
+      echo "========================================================================"
+
+      # 1. Signal Native Client if running
+      if [ -n "$CLIENT_PID" ] && kill -0 "$CLIENT_PID" 2>/dev/null; then
+        echo "==> [dev] Closing Native Client (PID: $CLIENT_PID)..."
+        pkill -TERM -P "$CLIENT_PID" 2>/dev/null || true
+        kill -TERM "$CLIENT_PID" 2>/dev/null || true
+      fi
+
+      # 2. Signal Go Backend (triggers HTTP connection draining and server shutdown)
+      if [ -n "$BACKEND_PID" ] && kill -0 "$BACKEND_PID" 2>/dev/null; then
+        echo "==> [dev] Signaling Go backend (PID: $BACKEND_PID) to drain connections..."
+        pkill -TERM -P "$BACKEND_PID" 2>/dev/null || true
+        kill -TERM "$BACKEND_PID" 2>/dev/null || true
+      fi
+
+      # 3. Signal TypeScript DB Layer (triggers gRPC tryShutdown and Prisma disconnect)
+      if [ -n "$DB_PID" ] && kill -0 "$DB_PID" 2>/dev/null; then
+        echo "==> [dev] Signaling TypeScript DB layer (PID: $DB_PID) to gracefully stop..."
+        pkill -TERM -P "$DB_PID" 2>/dev/null || true
+        kill -TERM "$DB_PID" 2>/dev/null || true
+      fi
+
+      # Also signal any remaining child process group jobs
+      kill -TERM $(jobs -p) 2>/dev/null || true
+
+      # 4. Wait gracefully up to 3 seconds for services to finalize
+      echo "==> [dev] Waiting for background services to terminate..."
+      for i in {1..15}; do
+        alive=0
+        if [ -n "$BACKEND_PID" ] && kill -0 "$BACKEND_PID" 2>/dev/null; then alive=1; fi
+        if [ -n "$DB_PID" ] && kill -0 "$DB_PID" 2>/dev/null; then alive=1; fi
+        if [ -n "$CLIENT_PID" ] && kill -0 "$CLIENT_PID" 2>/dev/null; then alive=1; fi
+        if [ "$alive" -eq 0 ]; then
+          break
+        fi
+        sleep 0.2
+      done
+
+      # 5. Force kill any hung process if still running after grace period
+      if [ -n "$BACKEND_PID" ] && kill -0 "$BACKEND_PID" 2>/dev/null; then
+        pkill -KILL -P "$BACKEND_PID" 2>/dev/null || true
+        kill -KILL "$BACKEND_PID" 2>/dev/null || true
+      fi
+      if [ -n "$DB_PID" ] && kill -0 "$DB_PID" 2>/dev/null; then
+        pkill -KILL -P "$DB_PID" 2>/dev/null || true
+        kill -KILL "$DB_PID" 2>/dev/null || true
+      fi
+      if [ -n "$CLIENT_PID" ] && kill -0 "$CLIENT_PID" 2>/dev/null; then
+        pkill -KILL -P "$CLIENT_PID" 2>/dev/null || true
+        kill -KILL "$CLIENT_PID" 2>/dev/null || true
+      fi
+
+      # 6. Unlink domain socket
       rm -f "$SOCKET_PATH"
-      echo "==> [dev] Clean shutdown complete."
+
+      echo "========================================================================"
+      echo "  [dev] Graceful shutdown complete. All resources cleanly released."
+      echo "========================================================================"
+      exit 0
     }
     trap cleanup EXIT INT TERM
 
@@ -108,12 +175,17 @@ case "$SUBCOMMAND" in
 
     if [ "$NO_CLIENT" = true ]; then
       echo "==> [dev] Running in headless mode (--no-client). Press Ctrl+C to stop."
-      wait
+      wait "$BACKEND_PID" 2>/dev/null || true
+      cleanup
     else
       # 6. Launch Native Client
       echo "==> [dev] Launching Native Fyne Client..."
-      CAMPUS_BACKEND_URL="$CAMPUS_BACKEND_URL" "$SCRIPT_DIR/scripts/dev.client.sh" "$@" || true
-      wait
+      (cd "$SCRIPT_DIR" && CAMPUS_BACKEND_URL="$CAMPUS_BACKEND_URL" ./scripts/dev.client.sh "$@") &
+      CLIENT_PID=$!
+
+      # Wait for client to exit normally, then invoke graceful shutdown
+      wait "$CLIENT_PID" 2>/dev/null || true
+      cleanup
     fi
     ;;
 esac

@@ -7,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-echo "==> [uenvi] Tearing down Campus OS containers..."
-(cd "$SCRIPT_DIR" && docker compose down)
+echo "==> [uenvi] Gracefully stopping Campus OS containers..."
+(cd "$SCRIPT_DIR" && docker compose down --timeout 10)
 
 echo "==> [uenvi] Environment successfully terminated."
