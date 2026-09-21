@@ -488,7 +488,7 @@ func (w *OnboardingWizard) renderCompleteStep() {
 		NewKeyValueRow("INSTITUTIONAL AFFILIATION", "Dr. A.P.J. Abdul Kalam Technical University (AKTU)", nil),
 	)
 
-	enterBtn := NewShadcnButton("Finish & Enter Scholar Portal", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("badge.svg", LucideBadgeCheck), func() {
+	enterBtn := NewAnimatedArrowButton("Finish & Enter Scholar Portal", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("graduation-cap.svg", LucideGraduationCap), func() {
 		if w.onComplete != nil {
 			w.onComplete()
 		}

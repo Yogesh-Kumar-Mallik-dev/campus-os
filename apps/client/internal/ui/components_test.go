@@ -175,6 +175,7 @@ func TestIcons_SVGResources(t *testing.T) {
 		{"lucide_flag", LucideFlag},
 		{"lucide_chevron_right", LucideChevronRight},
 		{"lucide_sparkles", LucideSparkles},
+		{"lucide_graduation_cap", LucideGraduationCap},
 	}
 
 	for _, s := range svgList {
