@@ -53,20 +53,17 @@ func (r *responsiveCardLayout) Layout(objects []fyne.CanvasObject, size fyne.Siz
 }
 
 func (r *responsiveCardLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
-	var maxMinW float32 = 240
+	var minW float32 = 280
 	var maxMinH float32 = 0
 
 	for _, child := range objects {
 		ms := child.MinSize()
-		if ms.Width > maxMinW {
-			maxMinW = ms.Width
-		}
 		if ms.Height > maxMinH {
 			maxMinH = ms.Height
 		}
 	}
 
-	return fyne.NewSize(maxMinW, maxMinH+28)
+	return fyne.NewSize(minW, maxMinH+28)
 }
 
 // NewResponsiveCardContainer wraps a CanvasObject in a fluidly adapting container.
