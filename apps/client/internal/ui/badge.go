@@ -31,70 +31,146 @@ const (
 	BadgeShapeRounded
 )
 
-// NewBadge constructs a shadcn-styled badge component matching institutional design tokens.
-func NewBadge(text string, variant BadgeVariant, shape BadgeShape) fyne.CanvasObject {
-	var bg color.Color
-	var fg color.Color
-	var border color.Color
-
+// badgeColors returns the modern 2026 luminous color palette for badges.
+func badgeColors(variant BadgeVariant) (bg, fg, border color.Color) {
 	switch variant {
 	case BadgeDefault:
-		// Primary institutional terracotta: #F45A51
+		// Refined Primary Terracotta: solid crisp terracotta with luminous border
 		bg = color.NRGBA{R: 244, G: 90, B: 81, A: 255}
 		fg = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-		border = color.NRGBA{R: 244, G: 90, B: 81, A: 255}
+		border = color.NRGBA{R: 255, G: 114, B: 104, A: 255}
 	case BadgeSecondary:
-		// Secondary surface: #282E3E
-		bg = color.NRGBA{R: 40, G: 46, B: 62, A: 255}
-		fg = color.NRGBA{R: 242, G: 246, B: 248, A: 255}
-		border = color.NRGBA{R: 46, G: 56, B: 68, A: 255}
+		// Glass Surface: translucent luminous white overlay on dark card
+		bg = color.NRGBA{R: 255, G: 255, B: 255, A: 18}
+		fg = color.NRGBA{R: 226, G: 232, B: 240, A: 240}
+		border = color.NRGBA{R: 255, G: 255, B: 255, A: 32}
 	case BadgeDestructive:
-		// Destructive red tint: #451818 bg, #F87171 fg
-		bg = color.NRGBA{R: 69, G: 24, B: 24, A: 230}
+		// Luminous Rose tint
+		bg = color.NRGBA{R: 239, G: 68, B: 68, A: 35}
 		fg = color.NRGBA{R: 248, G: 113, B: 113, A: 255}
-		border = color.NRGBA{R: 120, G: 35, B: 35, A: 255}
+		border = color.NRGBA{R: 239, G: 68, B: 68, A: 85}
 	case BadgeOutline:
-		// Transparent with subtle border
-		bg = color.NRGBA{R: 16, G: 22, B: 28, A: 0}
-		fg = color.NRGBA{R: 242, G: 246, B: 248, A: 255}
-		border = color.NRGBA{R: 60, G: 72, B: 92, A: 255}
+		// Elegant Minimalist Hairline Pill
+		bg = color.NRGBA{R: 255, G: 255, B: 255, A: 8}
+		fg = color.NRGBA{R: 160, G: 174, B: 192, A: 230}
+		border = color.NRGBA{R: 255, G: 255, B: 255, A: 38}
 	case BadgeSuccess:
-		// Emerald success: #10402E bg, #34D399 fg
-		bg = color.NRGBA{R: 16, G: 64, B: 46, A: 230}
+		// Luminous Emerald tint
+		bg = color.NRGBA{R: 16, G: 185, B: 129, A: 35}
 		fg = color.NRGBA{R: 52, G: 211, B: 153, A: 255}
-		border = color.NRGBA{R: 20, G: 100, B: 70, A: 255}
+		border = color.NRGBA{R: 16, G: 185, B: 129, A: 85}
 	case BadgeWarning:
-		// Amber warning: #3D2A0E bg, #FBBF24 fg
-		bg = color.NRGBA{R: 61, G: 42, B: 14, A: 230}
+		// Luminous Amber tint
+		bg = color.NRGBA{R: 245, G: 158, B: 11, A: 35}
 		fg = color.NRGBA{R: 251, G: 191, B: 36, A: 255}
-		border = color.NRGBA{R: 120, G: 85, B: 20, A: 255}
+		border = color.NRGBA{R: 245, G: 158, B: 11, A: 85}
+	default:
+		bg = color.NRGBA{R: 255, G: 255, B: 255, A: 14}
+		fg = color.NRGBA{R: 226, G: 232, B: 240, A: 240}
+		border = color.NRGBA{R: 255, G: 255, B: 255, A: 28}
 	}
+	return
+}
+
+type badgeLayout struct {
+	padX  float32
+	padY  float32
+	shape BadgeShape
+}
+
+func (l *badgeLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	if len(objects) == 0 {
+		return
+	}
+
+	bg := objects[0]
+	bg.Resize(size)
+	bg.Move(fyne.NewPos(0, 0))
+
+	if rect, ok := bg.(*canvas.Rectangle); ok {
+		if l.shape == BadgeShapePill {
+			rect.CornerRadius = size.Height / 2
+		} else {
+			rect.CornerRadius = 4
+		}
+	}
+
+	if len(objects) > 1 {
+		inner := objects[1]
+		innerW := size.Width - (l.padX * 2)
+		innerH := size.Height - (l.padY * 2)
+		if innerW < 0 {
+			innerW = 0
+		}
+		if innerH < 0 {
+			innerH = 0
+		}
+		inner.Resize(fyne.NewSize(innerW, innerH))
+		inner.Move(fyne.NewPos(l.padX, l.padY))
+	}
+}
+
+func (l *badgeLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	if len(objects) < 2 {
+		return fyne.NewSize(24, 20)
+	}
+	innerMin := objects[1].MinSize()
+	w := innerMin.Width + (l.padX * 2)
+	h := innerMin.Height + (l.padY * 2)
+	if h < 20 {
+		h = 20
+	}
+	return fyne.NewSize(w, h)
+}
+
+// NewBadge constructs a modern 2026 badge component with pixel-perfect pill curvature and luminous palette.
+func NewBadge(text string, variant BadgeVariant, shape BadgeShape) fyne.CanvasObject {
+	bg, fg, border := badgeColors(variant)
 
 	bgRect := canvas.NewRectangle(bg)
 	bgRect.StrokeColor = border
 	bgRect.StrokeWidth = 1
 
-	if shape == BadgeShapePill {
-		bgRect.CornerRadius = 12
-	} else {
-		bgRect.CornerRadius = 5
-	}
-
-	badgeText := canvas.NewText("  "+text+"  ", fg)
-	badgeText.TextSize = 11
+	badgeText := canvas.NewText(text, fg)
+	badgeText.TextSize = 10.5
 	badgeText.TextStyle = fyne.TextStyle{Bold: true}
 	badgeText.Alignment = fyne.TextAlignCenter
 
-	return container.NewStack(
-		bgRect,
-		container.NewPadded(badgeText),
-	)
+	return container.New(&badgeLayout{padX: 9, padY: 2.5, shape: shape}, bgRect, badgeText)
 }
 
-// NewStatusBadge renders an accessible status badge featuring a circular status indicator dot alongside text,
-// adhering to Guardrail 15 (Avoid showing raw status as text; combine visual indicators with text for accessibility).
+// NewStatusBadge renders an accessible status badge featuring a circular status indicator dot alongside text.
 func NewStatusBadge(text string, variant BadgeVariant) fyne.CanvasObject {
-	return NewBadge("● "+text, variant, BadgeShapePill)
+	var dotColor color.Color
+	switch variant {
+	case BadgeSuccess:
+		dotColor = color.NRGBA{R: 52, G: 211, B: 153, A: 255}
+	case BadgeWarning:
+		dotColor = color.NRGBA{R: 251, G: 191, B: 36, A: 255}
+	case BadgeDestructive:
+		dotColor = color.NRGBA{R: 248, G: 113, B: 113, A: 255}
+	case BadgeDefault:
+		dotColor = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+	default:
+		dotColor = color.NRGBA{R: 160, G: 174, B: 192, A: 255}
+	}
+
+	dot := canvas.NewCircle(dotColor)
+	dot.Resize(fyne.NewSize(5, 5))
+
+	bg, fg, border := badgeColors(variant)
+
+	label := canvas.NewText(text, fg)
+	label.TextSize = 10.5
+	label.TextStyle = fyne.TextStyle{Bold: true}
+
+	content := container.NewHBox(container.NewCenter(dot), label)
+
+	bgRect := canvas.NewRectangle(bg)
+	bgRect.StrokeColor = border
+	bgRect.StrokeWidth = 1
+
+	return container.New(&badgeLayout{padX: 8, padY: 2.5, shape: BadgeShapePill}, bgRect, content)
 }
 
 var _ fyne.Widget = (*InteractiveBadge)(nil)
@@ -244,16 +320,8 @@ func (b *InteractiveBadge) CreateRenderer() fyne.WidgetRenderer {
 	bgRect := canvas.NewRectangle(color.Transparent)
 	bgRect.StrokeWidth = 1
 
-	if b.Shape == BadgeShapePill {
-		focusRing.CornerRadius = 14
-		bgRect.CornerRadius = 12
-	} else {
-		focusRing.CornerRadius = 7
-		bgRect.CornerRadius = 5
-	}
-
-	txt := canvas.NewText("  "+b.Text+"  ", color.White)
-	txt.TextSize = 11
+	txt := canvas.NewText(b.Text, color.White)
+	txt.TextSize = 10.5
 	txt.TextStyle = fyne.TextStyle{Bold: true}
 	txt.Alignment = fyne.TextAlignCenter
 
@@ -280,17 +348,41 @@ func (r *interactiveBadgeRenderer) Layout(size fyne.Size) {
 	r.focusRing.Resize(size)
 	r.focusRing.Move(fyne.NewPos(0, 0))
 
-	pad := float32(2)
-	r.bgRect.Resize(fyne.NewSize(size.Width-pad*2, size.Height-pad*2))
+	pad := float32(1.5)
+	innerW := size.Width - pad*2
+	innerH := size.Height - pad*2
+	if innerW < 0 {
+		innerW = 0
+	}
+	if innerH < 0 {
+		innerH = 0
+	}
+	r.bgRect.Resize(fyne.NewSize(innerW, innerH))
 	r.bgRect.Move(fyne.NewPos(pad, pad))
 
-	r.txt.Resize(fyne.NewSize(size.Width-pad*2, size.Height-pad*2))
-	r.txt.Move(fyne.NewPos(pad, pad+2))
+	if r.badge.Shape == BadgeShapePill {
+		r.bgRect.CornerRadius = innerH / 2
+		r.focusRing.CornerRadius = size.Height / 2
+	} else {
+		r.bgRect.CornerRadius = 4
+		r.focusRing.CornerRadius = 6
+	}
+
+	txtW := innerW - 14
+	if txtW < 0 {
+		txtW = 0
+	}
+	r.txt.Resize(fyne.NewSize(txtW, innerH))
+	r.txt.Move(fyne.NewPos(pad+7, pad))
 }
 
 func (r *interactiveBadgeRenderer) MinSize() fyne.Size {
 	ts := r.txt.MinSize()
-	return fyne.NewSize(ts.Width+16, ts.Height+10)
+	h := ts.Height + 5
+	if h < 20 {
+		h = 20
+	}
+	return fyne.NewSize(ts.Width+18, h)
 }
 
 func (r *interactiveBadgeRenderer) Refresh() {
@@ -301,49 +393,22 @@ func (r *interactiveBadgeRenderer) Refresh() {
 		r.focusRing.Hide()
 	}
 
-	var bg, fg, border color.Color
-
-	switch r.badge.Variant {
-	case BadgeDefault:
-		bg = color.NRGBA{R: 244, G: 90, B: 81, A: 255}
-		fg = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
-		border = color.NRGBA{R: 244, G: 90, B: 81, A: 255}
-	case BadgeSecondary:
-		bg = color.NRGBA{R: 40, G: 46, B: 62, A: 255}
-		fg = color.NRGBA{R: 242, G: 246, B: 248, A: 255}
-		border = color.NRGBA{R: 46, G: 56, B: 68, A: 255}
-	case BadgeDestructive:
-		bg = color.NRGBA{R: 69, G: 24, B: 24, A: 230}
-		fg = color.NRGBA{R: 248, G: 113, B: 113, A: 255}
-		border = color.NRGBA{R: 120, G: 35, B: 35, A: 255}
-	case BadgeOutline:
-		bg = color.NRGBA{R: 16, G: 22, B: 28, A: 0}
-		fg = color.NRGBA{R: 242, G: 246, B: 248, A: 255}
-		border = color.NRGBA{R: 60, G: 72, B: 92, A: 255}
-	case BadgeSuccess:
-		bg = color.NRGBA{R: 16, G: 64, B: 46, A: 230}
-		fg = color.NRGBA{R: 52, G: 211, B: 153, A: 255}
-		border = color.NRGBA{R: 20, G: 100, B: 70, A: 255}
-	case BadgeWarning:
-		bg = color.NRGBA{R: 61, G: 42, B: 14, A: 230}
-		fg = color.NRGBA{R: 251, G: 191, B: 36, A: 255}
-		border = color.NRGBA{R: 120, G: 85, B: 20, A: 255}
-	}
+	bg, fg, border := badgeColors(r.badge.Variant)
 
 	if r.badge.disabled {
-		bg = color.NRGBA{R: 25, G: 32, B: 42, A: 120}
+		bg = color.NRGBA{R: 255, G: 255, B: 255, A: 6}
 		fg = color.NRGBA{R: 110, G: 122, B: 138, A: 160}
-		border = color.NRGBA{R: 40, G: 48, B: 58, A: 100}
+		border = color.NRGBA{R: 255, G: 255, B: 255, A: 16}
 	} else if r.badge.Pressed {
 		border = theme.Color(theme.ColorNamePrimary)
 	} else if r.badge.Hovered {
-		border = color.NRGBA{R: 255, G: 255, B: 255, A: 200}
+		border = color.NRGBA{R: 255, G: 255, B: 255, A: 120}
 	}
 
 	r.bgRect.FillColor = bg
 	r.bgRect.StrokeColor = border
 	r.txt.Color = fg
-	r.txt.Text = "  " + r.badge.Text + "  "
+	r.txt.Text = r.badge.Text
 
 	r.Layout(r.badge.Size())
 	r.focusRing.Refresh()
