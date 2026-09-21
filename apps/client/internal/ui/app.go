@@ -4,6 +4,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
@@ -17,9 +18,11 @@ type Application struct {
 }
 
 // BLOCK_UI_APP_NEW_001
-// Purpose: Constructs the Campus OS native client application window and layout.
+// Purpose: Constructs the Campus OS native client application window, applies custom design tokens, and sets responsive geometry.
 func NewApplication(apiClient *api.Client) *Application {
 	a := app.NewWithID("internal.campus-os.client")
+	a.Settings().SetTheme(NewCampusTheme())
+
 	w := a.NewWindow("Campus OS — Institutional Client")
 
 	return &Application{
@@ -30,91 +33,171 @@ func NewApplication(apiClient *api.Client) *Application {
 }
 
 // BLOCK_UI_APP_BUILD_001
-// Purpose: Assembles primary tab navigation and responsive layout views.
+// Purpose: Assembles modern card layout, KPI widgets, and responsive tab views.
 func (a *Application) BuildLayout() fyne.CanvasObject {
+	topBar := NewTopBar("CAMPUS OS", "Student Scholar")
+
+	// -------------------------------------------------------------------------
 	// 1. Attendance Tab
-	attendanceList := widget.NewList(
-		func() int { return 4 },
+	// -------------------------------------------------------------------------
+	attHeader := NewPageHeader(
+		"Time-Series Attendance Ledger",
+		"Biometric, RFID, and faculty roll time-series records",
+		NewStatusPill("84.2% OVERALL", PillSuccess),
+	)
+
+	statAttended := NewStatCard("Attended", "41", "Sessions present", PillSuccess)
+	statMissed := NewStatCard("Absent", "7", "Unexcused cuts", PillError)
+	statExcused := NewStatCard("On Duty", "2", "Medical/Hackathon", PillInfo)
+	statThreshold := NewStatCard("AKTU Eligibility", "SAFE", "Min 75% requirement", PillSuccess)
+
+	statsGrid := container.NewGridWithColumns(4, statAttended, statMissed, statExcused, statThreshold)
+
+	historyData := []struct {
+		subject string
+		date    string
+		time    string
+		status  string
+		pill    PillVariant
+	}{
+		{"DAA (KCS-401) — Design & Analysis of Algorithms", "Today", "09:30 AM", "PRESENT", PillSuccess},
+		{"Operating Systems Lab (KCS-451)", "Yesterday", "02:00 PM", "ON_DUTY", PillInfo},
+		{"Discrete Mathematics (KAS-402)", "19 Sep", "11:15 AM", "PRESENT", PillSuccess},
+		{"Database Management Systems (KCS-403)", "18 Sep", "10:30 AM", "ABSENT", PillError},
+		{"Universal Human Values (KVE-401)", "17 Sep", "03:15 PM", "PRESENT", PillSuccess},
+	}
+
+	historyList := widget.NewList(
+		func() int { return len(historyData) },
 		func() fyne.CanvasObject {
-			return widget.NewLabel("Session Record")
+			subjText := widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+			timeText := widget.NewLabel("")
+			pillPlaceholder := NewStatusPill("STATUS", PillNeutral)
+			return container.NewBorder(nil, nil, nil, pillPlaceholder, container.NewVBox(subjText, timeText))
 		},
 		func(i widget.ListItemID, o fyne.CanvasObject) {
-			labels := []string{
-				"Today (2026-09-21): Period 1 (DAA - CS401) — [PRESENT]",
-				"Yesterday (2026-09-20): Period 2 (OS Lab) — [ON_DUTY - Sanctioned]",
-				"2026-09-19: Period 3 (Maths IV) — [PRESENT]",
-				"2026-09-18: Period 4 (Database Systems) — [ABSENT]",
-			}
-			o.(*widget.Label).SetText(labels[i])
+			item := historyData[i]
+			border := o.(*fyne.Container)
+			vbox := border.Objects[0].(*fyne.Container)
+			vbox.Objects[0].(*widget.Label).SetText(item.subject)
+			vbox.Objects[1].(*widget.Label).SetText(item.date + " • " + item.time)
+			border.Objects[1] = NewStatusPill(item.status, item.pill)
 		},
 	)
-	attendanceTab := container.NewBorder(
-		widget.NewLabelWithStyle("Time-Series Attendance Ledger", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		nil, nil, nil,
-		attendanceList,
+
+	historyCard := NewStyledCard("Recent Attendance Activity", container.NewGridWrap(fyne.NewSize(760, 220), historyList))
+	attendanceTab := container.NewVBox(attHeader, statsGrid, historyCard)
+
+	// -------------------------------------------------------------------------
+	// 2. Hostel Outpass Tab
+	// -------------------------------------------------------------------------
+	outpassHeader := NewPageHeader(
+		"Campus Life & Digital Outpass",
+		"Automated mentor routing, parent consent, and biometric gate verification",
+		NewStatusPill("NO ACTIVE PASS", PillNeutral),
 	)
 
-	// 2. Hostel Outpass Tab
 	destEntry := widget.NewEntry()
-	destEntry.SetPlaceHolder("Enter destination (e.g. City Center)")
-	reasonEntry := widget.NewEntry()
-	reasonEntry.SetPlaceHolder("Purpose of visit / emergency reason")
+	destEntry.SetPlaceHolder("e.g. Anand Vihar Railway Station / Home")
+	reasonEntry := widget.NewMultiLineEntry()
+	reasonEntry.SetPlaceHolder("Specify urgent reason / semester break departure")
 
-	outpassStatus := widget.NewLabel("Current Status: No Active Outpass")
-	submitBtn := widget.NewButtonWithIcon("Request Digital Outpass", theme.MailSendIcon(), func() {
+	outpassStatus := widget.NewLabel("No pass requested for current week.")
+	submitBtn := widget.NewButtonWithIcon("Submit Outpass Request", theme.MailSendIcon(), func() {
 		if destEntry.Text == "" {
 			outpassStatus.SetText("Error: Destination is required")
 			return
 		}
-		outpassStatus.SetText("Request Submitted! Pending Warden Approval -> Gate QR Code")
+		outpassStatus.SetText("✓ Request submitted! Parent OTP dispatched -> Pending Warden approval.")
 	})
+	submitBtn.Importance = widget.HighImportance
 
-	outpassTab := container.NewVBox(
-		widget.NewLabelWithStyle("Campus Life & Gate Outpass", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+	formContent := container.NewVBox(
 		widget.NewLabel("Destination:"),
 		destEntry,
-		widget.NewLabel("Reason:"),
+		widget.NewLabel("Departure Reason:"),
 		reasonEntry,
+		layout.NewSpacer(),
 		submitBtn,
 		widget.NewSeparator(),
 		outpassStatus,
 	)
 
+	outpassCard := NewStyledCard("New Pass Application", formContent)
+	rulesCard := NewStyledCard("Outpass Guidelines", widget.NewLabel(
+		"• Curfew for weekday return is 08:30 PM.\n"+
+			"• Night outpasses require one-time SMS confirmation from registered parent mobile.\n"+
+			"• Gate security scans your QR token upon departure and return.",
+	))
+
+	outpassGrid := container.NewGridWithColumns(2, outpassCard, rulesCard)
+	outpassTab := container.NewVBox(outpassHeader, outpassGrid)
+
+	// -------------------------------------------------------------------------
 	// 3. Academic Profile Tab
-	profileTab := container.NewVBox(
-		widget.NewLabelWithStyle("Student Academic Profile", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewForm(
-			widget.NewFormItem("Roll Number", widget.NewLabel("23CS1042")),
-			widget.NewFormItem("PRN", widget.NewLabel("PRN-2023-8891")),
-			widget.NewFormItem("Department", widget.NewLabel("Computer Science & Engineering")),
-			widget.NewFormItem("Course", widget.NewLabel("B.Tech CSE (4th Semester, Section B)")),
-			widget.NewFormItem("Admission Type", widget.NewLabel("LATERAL_ENTRY (Admitted Sem 3)")),
-			widget.NewFormItem("Status", widget.NewLabel("ACTIVE")),
-		),
+	// -------------------------------------------------------------------------
+	profileHeader := NewPageHeader(
+		"Academic & Institutional Profile",
+		"Affiliated with Dr. A.P.J. Abdul Kalam Technical University (AKTU)",
+		NewStatusPill("LATERAL ENTRY", PillWarning),
 	)
 
-	// 4. Onboarding / QR Activation Tab
-	wizard := NewOnboardingWizard(a.APIClient, func() {
-		// Switch to attendance tab upon onboarding completion
-	})
-	onboardTab := container.NewScroll(wizard.CanvasObject())
+	namesCard := NewStyledCard("Scholar Identity", container.NewVBox(
+		widget.NewForm(
+			widget.NewFormItem("Academic Name", widget.NewLabel("Yogesh")),
+			widget.NewFormItem("Legal Full Name", widget.NewLabel("Yogesh Kumar Mallik")),
+			widget.NewFormItem("Enrollment / Roll No", widget.NewLabel("2200970139001")),
+			widget.NewFormItem("Father Name (Legal)", widget.NewLabel("Father Legal Name")),
+			widget.NewFormItem("Mother Name (Legal)", widget.NewLabel("Mother Legal Name")),
+		),
+	))
 
-	// Tab Container
+	progressionCard := NewStyledCard("Curriculum Progression", container.NewVBox(
+		widget.NewForm(
+			widget.NewFormItem("Department", widget.NewLabel("Computer Science & Engineering")),
+			widget.NewFormItem("Admission Mode", widget.NewLabel("Direct Lateral Entry (2nd Year)")),
+			widget.NewFormItem("Entry Semester", widget.NewLabel("Semester 3 (Direct Entry)")),
+			widget.NewFormItem("Current Semester", widget.NewLabel("Semester 4")),
+			widget.NewFormItem("Institutional Status", widget.NewLabel("ACTIVE (Good Standing)")),
+		),
+	))
+
+	profileGrid := container.NewGridWithColumns(2, namesCard, progressionCard)
+	profileTab := container.NewVBox(profileHeader, profileGrid)
+
+	// -------------------------------------------------------------------------
+	// 4. Onboarding / QR Activation Tab
+	// -------------------------------------------------------------------------
+	wizard := NewOnboardingWizard(a.APIClient, func() {})
+	onboardHeader := NewPageHeader(
+		"First-Time Account Activation",
+		"Activate credentials, pair device carrier SIM, and generate Digital Identity",
+		NewStatusPill("STEP 1 OF 5", PillInfo),
+	)
+	onboardTab := container.NewVBox(onboardHeader, wizard.CanvasObject())
+
+	// -------------------------------------------------------------------------
+	// Primary App Tabs Navigation
+	// -------------------------------------------------------------------------
 	tabs := container.NewAppTabs(
-		container.NewTabItemWithIcon("Attendance", theme.MenuIcon(), attendanceTab),
-		container.NewTabItemWithIcon("Hostel Outpass", theme.NavigateNextIcon(), outpassTab),
-		container.NewTabItemWithIcon("Academic Profile", theme.AccountIcon(), profileTab),
-		container.NewTabItemWithIcon("Activate Account", theme.LoginIcon(), onboardTab),
+		container.NewTabItemWithIcon("Attendance", theme.MenuIcon(), container.NewScroll(attendanceTab)),
+		container.NewTabItemWithIcon("Hostel Outpass", theme.NavigateNextIcon(), container.NewScroll(outpassTab)),
+		container.NewTabItemWithIcon("Academic Profile", theme.AccountIcon(), container.NewScroll(profileTab)),
+		container.NewTabItemWithIcon("Activate Account", theme.LoginIcon(), container.NewScroll(onboardTab)),
 	)
 	tabs.SetTabLocation(container.TabLocationLeading)
 
-	return tabs
+	return container.NewBorder(
+		topBar,
+		nil, nil, nil,
+		tabs,
+	)
 }
 
 // Run launches the native Fyne window loop.
 func (a *Application) Run() {
 	a.Window.SetContent(a.BuildLayout())
-	a.Window.Resize(fyne.NewSize(850, 550))
+	a.Window.Resize(fyne.NewSize(960, 640))
 	a.Window.CenterOnScreen()
 	a.Window.ShowAndRun()
 }
