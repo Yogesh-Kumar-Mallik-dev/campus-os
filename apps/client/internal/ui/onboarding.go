@@ -23,6 +23,13 @@ const (
 	StepComplete
 )
 
+var stepNames = []string{
+	"QR Scan",
+	"SIM Binding",
+	"Review Dossier",
+	"Set Password",
+}
+
 // OnboardingWizard manages the UI state and transitions for account activation.
 type OnboardingWizard struct {
 	client     *api.Client
@@ -82,15 +89,23 @@ func (w *OnboardingWizard) SetStep(step OnboardingStep) {
 func (w *OnboardingWizard) render() {
 	w.content.Objects = nil
 
+	// Stepper indicator
+	if w.step < StepComplete {
+		stepper := container.NewCenter(NewStepIndicator(int(w.step)+1, stepNames))
+		w.content.Add(stepper)
+		w.content.Add(layout.NewSpacer())
+	}
+
 	// Status / Error Banner
 	if w.StatusText != "" {
-		pillVariant := PillInfo
+		pillVariant := PillSuccess
+		svgIcon := ResourceFromSVG("check.svg", SVGCheckVerified)
 		if w.IsError {
 			pillVariant = PillError
+			svgIcon = ResourceFromSVG("alert.svg", SVGClockGrace)
 		}
-		statusPill := NewStatusPill(w.StatusText, pillVariant)
-		w.content.Add(container.NewCenter(statusPill))
-		w.content.Add(widget.NewSeparator())
+		banner := NewBannerNotice("Status Notification", w.StatusText, pillVariant, svgIcon)
+		w.content.Add(banner)
 	}
 
 	switch w.step {
@@ -110,18 +125,20 @@ func (w *OnboardingWizard) render() {
 // Step 1: Scan Sealed QR Code
 func (w *OnboardingWizard) renderScanStep() {
 	header := NewPageHeader(
-		"Scan Sealed QR Code",
-		"Position camera over the tamper-evident QR code on your official admission slip",
+		"Scan Sealed Admission QR",
+		"Position camera viewfinder over the tamper-evident QR on your official admission slip",
 		NewStatusPill("STEP 1 OF 4", PillInfo),
 	)
 
+	qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
+	qrVisual := RenderSVGImage(qrIconRes, 96, 96)
 	scannerVisual := container.NewCenter(
 		container.NewVBox(
-			widget.NewIcon(theme.SearchIcon()),
-			widget.NewLabel("Optical Sensor Ready"),
+			container.NewCenter(qrVisual),
+			widget.NewLabel("Optical Viewfinder Ready • Awaiting Alignment"),
 		),
 	)
-	scannerCard := NewStyledCard("Optical Viewfinder", scannerVisual)
+	scannerCard := NewStyledCard("Optical Capture Interface", scannerVisual)
 
 	tokenEntry := widget.NewEntry()
 	tokenEntry.SetPlaceHolder("Or enter 16-character claim code manually (e.g. claim_genesis_test_demo)")
@@ -154,10 +171,10 @@ func (w *OnboardingWizard) renderScanStep() {
 				w.LegalFullName = "Yogesh Kumar Mallik"
 				w.AdmissionType = "LATERAL_ENTRY"
 				w.EntrySemester = 3
-				w.LateralSummary = "Lateral Entry: Direct admission to Semester 3. Prior diploma credits verified."
+				w.LateralSummary = "Lateral Entry: Direct admission to Semester 3. Prior polytechnic credits verified."
 			}
 			w.IsError = false
-			w.StatusText = "✓ QR Token Verified! Hardware telephony match required."
+			w.StatusText = "QR Token Verified. Hardware telephony match required."
 			w.SetStep(StepSIMVerify)
 		}()
 	})
@@ -176,23 +193,26 @@ func (w *OnboardingWizard) renderScanStep() {
 // Step 2: SIM Telephony & SMS OTP Handshake
 func (w *OnboardingWizard) renderSIMVerifyStep() {
 	header := NewPageHeader(
-		"Device SIM & OTP Verification",
-		"Anti-theft SIM binding ensures account activation only occurs on the scholar's registered handset",
+		"Device SIM & Telephony Handshake",
+		"Hardware carrier binding ensures activation is locked strictly to your physical handset",
 		NewStatusPill("STEP 2 OF 4", PillWarning),
 	)
 
-	phoneInfo := widget.NewLabel(fmt.Sprintf("Registered Mobile: %s", w.MaskedPhone))
+	phoneInfo := widget.NewLabel(fmt.Sprintf("Registered Scholar Phone: %s", w.MaskedPhone))
 
+	sim1Icon := RenderSVGImage(ResourceFromSVG("sim_active.svg", SVGSIMCardActive), 24, 24)
 	sim1Row := container.NewBorder(nil, nil,
-		widget.NewLabel("SIM Slot 1 (Jio 5G): +91 98765-43210"),
-		NewStatusPill("MATCH FOUND", PillSuccess),
+		container.NewHBox(sim1Icon, widget.NewLabel("Slot 1 (Jio 5G): +91 98765-43210")),
+		NewStatusPill("CARRIER MATCH", PillSuccess),
 	)
+
+	sim2Icon := RenderSVGImage(ResourceFromSVG("sim_sec.svg", SVGSIMCardSecondary), 24, 24)
 	sim2Row := container.NewBorder(nil, nil,
-		widget.NewLabel("SIM Slot 2 (Airtel): +91 91234-56789"),
+		container.NewHBox(sim2Icon, widget.NewLabel("Slot 2 (Airtel): +91 91234-56789")),
 		NewStatusPill("SECONDARY", PillNeutral),
 	)
 
-	simCard := NewStyledCard("Detected Device Telephony", container.NewVBox(
+	simCard := NewStyledCard("Hardware Telephony Slots", container.NewVBox(
 		phoneInfo,
 		widget.NewSeparator(),
 		sim1Row,
@@ -202,13 +222,13 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 	otpEntry := widget.NewEntry()
 	otpEntry.SetPlaceHolder("Enter 6-digit SMS OTP (e.g. 123456)")
 
-	verifyBtn := widget.NewButtonWithIcon("Verify Hardware SIM & Submit OTP", theme.ConfirmIcon(), func() {
+	verifyBtn := widget.NewButtonWithIcon("Verify Carrier SIM & Submit OTP", theme.ConfirmIcon(), func() {
 		w.OTPCode = otpEntry.Text
 		if w.OTPCode == "" {
 			w.OTPCode = "123456"
 		}
 		w.IsError = false
-		w.StatusText = "✓ SIM & OTP Confirmed! Review official certificates."
+		w.StatusText = "SIM Binding & OTP Confirmed. Review official admission dossier."
 		w.SetStep(StepReviewProfile)
 	})
 	verifyBtn.Importance = widget.HighImportance
@@ -227,7 +247,7 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 func (w *OnboardingWizard) renderReviewProfileStep() {
 	header := NewPageHeader(
 		"Review Official Records",
-		"Verify the correspondence between educational records and legal identity documents",
+		"Verify the correspondence between secondary marksheet and govt identification",
 		NewStatusPill("STEP 3 OF 4", PillInfo),
 	)
 
@@ -268,8 +288,16 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 func (w *OnboardingWizard) renderSetPasswordStep() {
 	header := NewPageHeader(
 		"Set Your Access Password",
-		"Orientation Grace Period: 6+ character password accepted for your first 72 hours",
+		"Create a secure password to finalize institutional account provisioning",
 		NewStatusPill("STEP 4 OF 4", PillWarning),
+	)
+
+	clockIcon := ResourceFromSVG("clock.svg", SVGClockGrace)
+	graceBanner := NewBannerNotice(
+		"Orientation Grace Period Active",
+		"A simplified 6+ character password is accepted during your first 72 hours of enrollment",
+		PillWarning,
+		clockIcon,
 	)
 
 	passEntry := widget.NewPasswordEntry()
@@ -278,12 +306,14 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 	confirmPassEntry := widget.NewPasswordEntry()
 	confirmPassEntry.SetPlaceHolder("Confirm new password")
 
+	fingerprintIcon := RenderSVGImage(ResourceFromSVG("fingerprint.svg", SVGFingerprint), 20, 20)
 	biometricCheck := widget.NewCheck("Enable Biometric Keyring (Fingerprint / Face ID)", func(b bool) {
 		w.BiometricsEnabled = b
 	})
 	biometricCheck.SetChecked(true)
+	biometricRow := container.NewHBox(fingerprintIcon, biometricCheck)
 
-	completeBtn := widget.NewButtonWithIcon("Complete Activation & Provision Credentials", theme.ConfirmIcon(), func() {
+	completeBtn := widget.NewButtonWithIcon("Complete Activation & Provision Pass", theme.ConfirmIcon(), func() {
 		if len(passEntry.Text) < 6 {
 			w.IsError = true
 			w.StatusText = "Password must contain at least 6 characters during grace period"
@@ -299,17 +329,18 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 
 		w.NewPassword = passEntry.Text
 		w.IsError = false
-		w.StatusText = "Account Successfully Activated!"
+		w.StatusText = "Account Successfully Activated"
 		w.SetStep(StepComplete)
 	})
 	completeBtn.Importance = widget.HighImportance
 
 	passwordCard := NewStyledCard("Credential Security", container.NewVBox(
+		graceBanner,
 		widget.NewLabel("New Password:"),
 		passEntry,
 		widget.NewLabel("Confirm Password:"),
 		confirmPassEntry,
-		biometricCheck,
+		biometricRow,
 		completeBtn,
 	))
 
@@ -319,21 +350,25 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 
 // Step 5: Celebration & Gateway Handoff
 func (w *OnboardingWizard) renderCompleteStep() {
+	checkIcon := ResourceFromSVG("verified.svg", SVGCheckVerified)
+	verifiedVisual := RenderSVGImage(checkIcon, 48, 48)
+
 	header := NewPageHeader(
-		"Account Activated Successfully!",
+		"Account Activated Successfully",
 		"Your institutional credentials and gate pass are active and verified",
 		NewStatusPill("ACCOUNT ACTIVE", PillSuccess),
 	)
 
 	idBadge := container.NewVBox(
+		container.NewCenter(verifiedVisual),
 		container.NewBorder(nil, nil,
 			widget.NewLabel("Scholar: "+w.AcademicName),
 			NewStatusPill("VERIFIED SCHOLAR", PillSuccess),
 		),
 		widget.NewSeparator(),
-		widget.NewLabel("Username: "+w.Username),
-		widget.NewLabel("Email:    "+w.Username+"@campus.edu"),
-		widget.NewLabel("Campus Gate Pass: ENABLED"),
+		widget.NewLabel("Username:    "+w.Username),
+		widget.NewLabel("Email:       "+w.Username+"@campus.edu"),
+		widget.NewLabel("Campus Gate: ENABLED (Ready for NFC/QR Checkpoint Scanning)"),
 		widget.NewLabel("Affiliation: Dr. A.P.J. Abdul Kalam Technical University (AKTU)"),
 	)
 

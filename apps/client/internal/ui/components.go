@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"image/color"
 
 	"fyne.io/fyne/v2"
@@ -58,7 +59,7 @@ func NewStatusPill(text string, variant PillVariant) fyne.CanvasObject {
 	)
 }
 
-// NewPageHeader constructs a styled domain screen banner.
+// NewPageHeader constructs a styled domain screen banner with clean typographic hierarchy.
 func NewPageHeader(title, subtitle string, pill fyne.CanvasObject) fyne.CanvasObject {
 	titleText := canvas.NewText(title, theme.Color(theme.ColorNameForeground))
 	titleText.TextSize = 20
@@ -73,35 +74,6 @@ func NewPageHeader(title, subtitle string, pill fyne.CanvasObject) fyne.CanvasOb
 		return container.NewBorder(nil, nil, leftBox, pill)
 	}
 	return leftBox
-}
-
-// NewStatCard builds a KPI / Metric widget box.
-func NewStatCard(label, value string, sublabel string, pillVariant PillVariant) fyne.CanvasObject {
-	lblText := canvas.NewText(label, theme.Color(theme.ColorNamePlaceHolder))
-	lblText.TextSize = 12
-
-	valText := canvas.NewText(value, theme.Color(theme.ColorNameForeground))
-	valText.TextSize = 24
-	valText.TextStyle = fyne.TextStyle{Bold: true}
-
-	subText := canvas.NewText(sublabel, theme.Color(theme.ColorNamePlaceHolder))
-	subText.TextSize = 11
-
-	cardBg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
-	cardBg.CornerRadius = 12
-	cardBg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
-	cardBg.StrokeWidth = 1
-
-	content := container.NewVBox(
-		lblText,
-		valText,
-		subText,
-	)
-
-	return container.NewStack(
-		cardBg,
-		container.NewPadded(content),
-	)
 }
 
 // NewStyledCard wraps any content into a card with uniform padding and rounded corners.
@@ -130,11 +102,94 @@ func NewStyledCard(title string, content fyne.CanvasObject) fyne.CanvasObject {
 	)
 }
 
-// NewTopBar creates the institutional top navigation branding bar.
+// NewBannerNotice constructs a sleek notice banner with a vector SVG icon and subtle tint.
+func NewBannerNotice(title, message string, variant PillVariant, svgIcon fyne.Resource) fyne.CanvasObject {
+	var bg color.Color
+	var border color.Color
+
+	switch variant {
+	case PillWarning:
+		bg = color.NRGBA{R: 45, G: 32, B: 10, A: 200}
+		border = color.NRGBA{R: 120, G: 85, B: 20, A: 255}
+	case PillSuccess:
+		bg = color.NRGBA{R: 10, G: 40, B: 30, A: 200}
+		border = color.NRGBA{R: 20, G: 100, B: 70, A: 255}
+	case PillError:
+		bg = color.NRGBA{R: 45, G: 15, B: 15, A: 200}
+		border = color.NRGBA{R: 120, G: 35, B: 35, A: 255}
+	default:
+		bg = color.NRGBA{R: 15, G: 30, B: 55, A: 200}
+		border = color.NRGBA{R: 35, G: 75, B: 130, A: 255}
+	}
+
+	bgRect := canvas.NewRectangle(bg)
+	bgRect.CornerRadius = 10
+	bgRect.StrokeColor = border
+	bgRect.StrokeWidth = 1
+
+	titleText := canvas.NewText(title, theme.Color(theme.ColorNameForeground))
+	titleText.TextSize = 13
+	titleText.TextStyle = fyne.TextStyle{Bold: true}
+
+	msgText := canvas.NewText(message, theme.Color(theme.ColorNamePlaceHolder))
+	msgText.TextSize = 11.5
+
+	textVBox := container.NewVBox(titleText, msgText)
+
+	var leftIcon fyne.CanvasObject
+	if svgIcon != nil {
+		leftIcon = RenderSVGImage(svgIcon, 24, 24)
+	} else {
+		leftIcon = widget.NewIcon(theme.InfoIcon())
+	}
+
+	content := container.NewBorder(nil, nil, container.NewCenter(leftIcon), nil, textVBox)
+
+	return container.NewStack(
+		bgRect,
+		container.NewPadded(content),
+	)
+}
+
+// NewStepIndicator renders a sleek multi-step progression bar.
+func NewStepIndicator(currentStep int, stepNames []string) fyne.CanvasObject {
+	stepItems := make([]fyne.CanvasObject, 0, len(stepNames)*2)
+
+	for i, name := range stepNames {
+		var stepPill fyne.CanvasObject
+		stepNum := i + 1
+
+		if stepNum < currentStep {
+			// Completed step
+			stepPill = NewStatusPill(fmt.Sprintf("%d. %s", stepNum, name), PillSuccess)
+		} else if stepNum == currentStep {
+			// Active step
+			stepPill = NewStatusPill(fmt.Sprintf("%d. %s", stepNum, name), PillInfo)
+		} else {
+			// Pending step
+			stepPill = NewStatusPill(fmt.Sprintf("%d. %s", stepNum, name), PillNeutral)
+		}
+
+		stepItems = append(stepItems, stepPill)
+
+		if i < len(stepNames)-1 {
+			sep := canvas.NewLine(color.NRGBA{R: 50, G: 65, B: 90, A: 255})
+			sep.StrokeWidth = 2
+			stepItems = append(stepItems, container.NewCenter(sep))
+		}
+	}
+
+	return container.NewHBox(stepItems...)
+}
+
+// NewTopBar creates the institutional top navigation branding bar with SVG logo.
 func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 	bg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
 	bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
 	bg.StrokeWidth = 1
+
+	logoResource := ResourceFromSVG("campus_logo.svg", SVGCampusLogo)
+	logoImg := RenderSVGImage(logoResource, 28, 28)
 
 	brandText := canvas.NewText(institutionName, theme.Color(theme.ColorNamePrimary))
 	brandText.TextSize = 16
@@ -143,7 +198,10 @@ func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 	tagline := canvas.NewText("Institutional Operating System", theme.Color(theme.ColorNamePlaceHolder))
 	tagline.TextSize = 11
 
-	brandBox := container.NewVBox(brandText, tagline)
+	brandBox := container.NewHBox(
+		container.NewCenter(logoImg),
+		container.NewVBox(brandText, tagline),
+	)
 
 	rolePill := NewStatusPill(userRole, PillInfo)
 	statusDot := canvas.NewCircle(color.NRGBA{R: 52, G: 211, B: 153, A: 255})

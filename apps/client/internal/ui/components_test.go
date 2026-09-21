@@ -75,26 +75,65 @@ func TestComponents_Render(t *testing.T) {
 		t.Fatal("expected non-nil page header without pill")
 	}
 
-	// Stat Card
-	stat := NewStatCard("Metric", "100%", "Subtext", PillSuccess)
-	if stat == nil {
-		t.Fatal("expected non-nil stat card")
-	}
-
 	// Styled Card
-	c1 := NewStyledCard("Card Title", stat)
+	c1 := NewStyledCard("Card Title", hNoPill)
 	if c1 == nil {
 		t.Fatal("expected non-nil styled card with title")
 	}
 
-	c2 := NewStyledCard("", stat)
+	c2 := NewStyledCard("", hNoPill)
 	if c2 == nil {
 		t.Fatal("expected non-nil styled card without title")
 	}
 
+	// Banner Notice with and without SVG
+	banner1 := NewBannerNotice("Notice", "Message", PillWarning, ResourceFromSVG("test.svg", SVGShieldCheck))
+	if banner1 == nil {
+		t.Fatal("expected non-nil banner with SVG")
+	}
+
+	banner2 := NewBannerNotice("Notice", "Message", PillInfo, nil)
+	if banner2 == nil {
+		t.Fatal("expected non-nil banner without SVG")
+	}
+
+	// Step Indicator
+	stepper := NewStepIndicator(2, []string{"Step 1", "Step 2", "Step 3"})
+	if stepper == nil {
+		t.Fatal("expected non-nil step indicator")
+	}
+
 	// Top Bar
-	topBar := NewTopBar("CAMPUS OS", "Student Scholar")
+	topBar := NewTopBar("CAMPUS OS", "Account Activation")
 	if topBar == nil {
 		t.Fatal("expected non-nil top bar")
+	}
+}
+
+func TestIcons_SVGResources(t *testing.T) {
+	svgList := []struct {
+		name string
+		svg  string
+	}{
+		{"shield", SVGShieldCheck},
+		{"qr", SVGQRCodeFrame},
+		{"sim_act", SVGSIMCardActive},
+		{"sim_sec", SVGSIMCardSecondary},
+		{"fingerprint", SVGFingerprint},
+		{"clock", SVGClockGrace},
+		{"academic", SVGAcademicCap},
+		{"check", SVGCheckVerified},
+		{"logo", SVGCampusLogo},
+	}
+
+	for _, s := range svgList {
+		res := ResourceFromSVG(s.name, s.svg)
+		if res == nil || len(res.Content()) == 0 {
+			t.Fatalf("failed to create SVG resource for %s", s.name)
+		}
+		img := RenderSVGImage(res, 24, 24)
+		if img == nil {
+			t.Fatalf("failed to render SVG image for %s", s.name)
+		}
 	}
 }
