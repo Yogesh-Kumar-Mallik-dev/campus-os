@@ -1,0 +1,197 @@
+syntax = "proto3";
+
+package campus.v1;
+
+import "campus/v1/common.proto";
+
+option go_package = "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/pkg/proto/campus/v1;campusv1";
+
+// Executive role enumeration for Tier-1 executive provisioning
+enum ExecutiveRole {
+  EXECUTIVE_ROLE_UNSPECIFIED = 0;
+  EXECUTIVE_ROLE_DIRECTOR = 1;
+  EXECUTIVE_ROLE_EXECUTIVE_DIRECTOR = 2;
+  EXECUTIVE_ROLE_DEAN = 3;
+  EXECUTIVE_ROLE_REGISTRAR = 4;
+}
+
+// Genesis Super Admin (Chairperson) bootstrap request
+message BootstrapSuperAdminRequest {
+  string chairperson_name = 1;
+  string chairperson_email = 2;
+  string chairperson_phone = 3;
+}
+
+// Genesis Super Admin (Chairperson) bootstrap response
+message BootstrapSuperAdminResponse {
+  string claim_token = 1;
+  string ascii_qr = 2;
+  int64 expires_at_unix = 3;
+}
+
+// Request to generate an executive credential QR code
+message GenerateExecutiveQRRequest {
+  RequestMeta meta = 1;
+  ExecutiveRole role = 2;
+  string full_name = 3;
+  string email = 4;
+  string phone_number = 5;
+}
+
+// Response containing the executive sealed QR payload
+message GenerateExecutiveQRResponse {
+  string claim_token = 1;
+  string sealed_qr_payload = 2;
+  int64 expires_at_unix = 3;
+}
+
+// Request to generate bulk student credential QR codes
+message GenerateBulkStudentQRRequest {
+  RequestMeta meta = 1;
+  string batch_year = 2;
+  string department_id = 3;
+  string course_id = 4;
+}
+
+// Individual student claim entry within a bulk batch
+message StudentClaimEntry {
+  string student_id = 1;
+  string roll_number = 2;
+  string prn = 3;
+  string username = 4;
+  string claim_token = 5;
+  string sealed_qr_payload = 6;
+}
+
+// Response containing bulk student credential QR codes
+message GenerateBulkStudentQRResponse {
+  string batch_id = 1;
+  int32 total_generated = 2;
+  string manifest_hash = 3;
+  repeated StudentClaimEntry students = 4;
+}
+
+// Request to validate a scanned claim token
+message ValidateClaimTokenRequest {
+  string claim_token = 1;
+}
+
+// Response with student/executive details for the claim token
+message ValidateClaimTokenResponse {
+  bool is_valid = 1;
+  string user_id = 2;
+  string masked_phone_number = 3;
+  string username = 4;
+  string academic_name = 5;
+  string legal_full_name = 6;
+  string admission_type = 7;
+  int32 entry_semester_number = 8;
+  string lateral_entry_summary = 9;
+  int64 grace_period_remaining_seconds = 10;
+}
+
+// Request to verify hardware SIM presence and send an SMS OTP
+message VerifySIMAndSendOTPRequest {
+  string claim_token = 1;
+  string device_sim_iccid_hash = 2;
+  string device_carrier_phone = 3;
+}
+
+// Response confirming hardware SIM match and OTP dispatch
+message VerifySIMAndSendOTPResponse {
+  bool sim_matched = 1;
+  string otp_challenge_id = 2;
+  int32 resend_available_in_seconds = 3;
+}
+
+// Request to verify SMS OTP and set the initial account password
+message VerifyOTPAndClaimAccountRequest {
+  string claim_token = 1;
+  string otp_challenge_id = 2;
+  string otp_code = 3;
+  string new_password = 4;
+  bool enable_biometrics = 5;
+  string totp_secret_confirmation = 6;
+}
+
+// Response confirming successful account claim and returning sessions
+message VerifyOTPAndClaimAccountResponse {
+  bool success = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+  string user_id = 4;
+  string username = 5;
+  string email = 6;
+  string role_code = 7;
+}
+
+// Universal login request supporting username, email, or PRN
+message LoginRequest {
+  string identifier = 1;
+  string password = 2;
+  string totp_code = 3;
+}
+
+// Login response containing Ed25519 JWT session tokens
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 expires_in_seconds = 3;
+  string user_id = 4;
+  string username = 5;
+  string full_name = 6;
+  repeated string role_codes = 7;
+}
+
+// Session refresh token request
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// Session refresh token response with family token rotation
+message RefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 expires_in_seconds = 3;
+}
+
+// Session revocation request
+message RevokeSessionRequest {
+  RequestMeta meta = 1;
+  string refresh_token = 2;
+}
+
+// Session revocation response
+message RevokeSessionResponse {
+  bool success = 1;
+}
+
+// Authentication and Identity Provisioning Service
+service AuthService {
+  // Genesis bootstrap for the Chairperson Super Admin seat via bare-metal CLI
+  rpc BootstrapSuperAdmin(BootstrapSuperAdminRequest) returns (BootstrapSuperAdminResponse);
+
+  // Generates sealed credential QR codes for the Executive Council
+  rpc GenerateExecutiveQR(GenerateExecutiveQRRequest) returns (GenerateExecutiveQRResponse);
+
+  // Generates bulk student credential QR codes for an admission batch
+  rpc GenerateBulkStudentQR(GenerateBulkStudentQRRequest) returns (GenerateBulkStudentQRResponse);
+
+  // Validates a scanned single-use claim token and returns profile details
+  rpc ValidateClaimToken(ValidateClaimTokenRequest) returns (ValidateClaimTokenResponse);
+
+  // Verifies device SIM telephony binding and triggers an SMS OTP
+  rpc VerifySIMAndSendOTP(VerifySIMAndSendOTPRequest) returns (VerifySIMAndSendOTPResponse);
+
+  // Verifies the SMS OTP, sets the initial password, and claims the account
+  rpc VerifyOTPAndClaimAccount(VerifyOTPAndClaimAccountRequest) returns (VerifyOTPAndClaimAccountResponse);
+
+  // Universal authentication endpoint for active users
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // Refreshes an access token using a rotating family refresh token
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+
+  // Revokes a user session and invalidates the token family
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+}
