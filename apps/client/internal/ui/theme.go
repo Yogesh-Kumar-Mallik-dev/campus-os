@@ -58,15 +58,24 @@ func (t *CampusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 			return color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 		case theme.ColorNameButton:
 			return color.NRGBA{R: 237, G: 240, B: 244, A: 255}
+		case theme.ColorNameDisabledButton:
+			return color.NRGBA{R: 230, G: 234, B: 240, A: 255}
 		case theme.ColorNameHover:
 			return color.NRGBA{R: 228, G: 232, B: 238, A: 255}
 		case theme.ColorNamePressed:
 			return color.NRGBA{R: 215, G: 220, B: 228, A: 255}
+		case theme.ColorNameFocus:
+			return color.NRGBA{R: 144, G: 20, B: 22, A: 220}
+		case theme.ColorNameSelection:
+			return color.NRGBA{R: 144, G: 20, B: 22, A: 60}
+		case theme.ColorNameHyperlink:
+			return color.NRGBA{R: 144, G: 20, B: 22, A: 255}
 		case theme.ColorNameSeparator:
 			return color.NRGBA{R: 216, G: 221, B: 225, A: 255}
-		case theme.ColorNamePlaceHolder, theme.ColorNameDisabled:
-			// --muted-foreground: oklch(0.48 0.018 240)
+		case theme.ColorNamePlaceHolder:
 			return color.NRGBA{R: 101, G: 108, B: 125, A: 255}
+		case theme.ColorNameDisabled:
+			return color.NRGBA{R: 130, G: 140, B: 155, A: 255}
 		case theme.ColorNameSuccess:
 			return color.NRGBA{R: 16, G: 185, B: 129, A: 255}
 		case theme.ColorNameWarning:
@@ -74,6 +83,22 @@ func (t *CampusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 		case theme.ColorNameError:
 			// --destructive: oklch(0.577 0.245 27.325)
 			return color.NRGBA{R: 220, G: 38, B: 38, A: 255}
+		case theme.ColorNameForegroundOnError:
+			return color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+		case theme.ColorNameForegroundOnSuccess:
+			return color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+		case theme.ColorNameForegroundOnWarning:
+			return color.NRGBA{R: 16, G: 22, B: 28, A: 255}
+		case theme.ColorNameScrollBar:
+			return color.NRGBA{R: 180, G: 186, B: 196, A: 180}
+		case theme.ColorNameScrollBarBackground:
+			return color.NRGBA{R: 245, G: 248, B: 251, A: 0}
+		case theme.ColorNameShadow:
+			return color.NRGBA{R: 0, G: 0, B: 0, A: 30}
+		case theme.ColorNameInnerWindowBorder:
+			return color.NRGBA{R: 216, G: 221, B: 225, A: 255}
+		case theme.ColorNameInnerWindowBorderInactive:
+			return color.NRGBA{R: 235, G: 238, B: 242, A: 255}
 		}
 	} else {
 		// Dark theme (institution's primary dark palette)
@@ -101,15 +126,25 @@ func (t *CampusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 		case theme.ColorNameButton:
 			// --secondary: oklch(0.27 0.018 239)
 			return color.NRGBA{R: 40, G: 46, B: 62, A: 255}
+		case theme.ColorNameDisabledButton:
+			return color.NRGBA{R: 24, G: 30, B: 40, A: 255}
 		case theme.ColorNameHover:
 			return color.NRGBA{R: 52, G: 62, B: 80, A: 255}
 		case theme.ColorNamePressed:
 			return color.NRGBA{R: 64, G: 76, B: 98, A: 255}
+		case theme.ColorNameFocus:
+			return color.NRGBA{R: 244, G: 90, B: 81, A: 220}
+		case theme.ColorNameSelection:
+			return color.NRGBA{R: 244, G: 90, B: 81, A: 90}
+		case theme.ColorNameHyperlink:
+			return color.NRGBA{R: 244, G: 90, B: 81, A: 255}
 		case theme.ColorNameSeparator:
 			return color.NRGBA{R: 46, G: 56, B: 68, A: 255}
-		case theme.ColorNamePlaceHolder, theme.ColorNameDisabled:
+		case theme.ColorNamePlaceHolder:
 			// --muted-foreground: oklch(0.72 0.018 225)
 			return color.NRGBA{R: 153, G: 167, B: 173, A: 220}
+		case theme.ColorNameDisabled:
+			return color.NRGBA{R: 110, G: 122, B: 138, A: 255}
 		case theme.ColorNameSuccess:
 			return color.NRGBA{R: 52, G: 211, B: 153, A: 255}
 		case theme.ColorNameWarning:
@@ -117,6 +152,22 @@ func (t *CampusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 		case theme.ColorNameError:
 			// --destructive: oklch(0.704 0.191 22.216)
 			return color.NRGBA{R: 248, G: 113, B: 113, A: 255}
+		case theme.ColorNameForegroundOnError:
+			return color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+		case theme.ColorNameForegroundOnSuccess:
+			return color.NRGBA{R: 16, G: 22, B: 28, A: 255}
+		case theme.ColorNameForegroundOnWarning:
+			return color.NRGBA{R: 16, G: 22, B: 28, A: 255}
+		case theme.ColorNameScrollBar:
+			return color.NRGBA{R: 52, G: 62, B: 80, A: 180}
+		case theme.ColorNameScrollBarBackground:
+			return color.NRGBA{R: 16, G: 22, B: 28, A: 0}
+		case theme.ColorNameShadow:
+			return color.NRGBA{R: 0, G: 0, B: 0, A: 90}
+		case theme.ColorNameInnerWindowBorder:
+			return color.NRGBA{R: 46, G: 56, B: 68, A: 255}
+		case theme.ColorNameInnerWindowBorderInactive:
+			return color.NRGBA{R: 30, G: 38, B: 48, A: 255}
 		}
 	}
 

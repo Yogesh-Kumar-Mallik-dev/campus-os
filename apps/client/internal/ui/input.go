@@ -9,11 +9,14 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// FormField encapsules a responsive labeled input field.
+// FormField encapsules a responsive labeled input field supporting
+// interactive states including Disabled, Error validation, and helper guidance.
 type FormField struct {
 	Label       string
 	Placeholder string
 	HelperText  string
+	ErrorText   string
+	Disabled    bool
 	IsPassword  bool
 	Entry       *widget.Entry
 }
@@ -30,14 +33,19 @@ func NewShadcnInput(placeholder string, isPassword bool) *widget.Entry {
 	return entry
 }
 
-// NewFormField constructs a complete responsive field with label, input box, and helper text.
+// NewFormField constructs a complete responsive field with label, input box, helper/error text,
+// and accessible interactive states (Focus ring via theme, Disabled state, Error state).
 func NewFormField(field FormField) (fyne.CanvasObject, *widget.Entry) {
 	entry := field.Entry
 	if entry == nil {
 		entry = NewShadcnInput(field.Placeholder, field.IsPassword)
 	}
 
-	items := make([]fyne.CanvasObject, 0, 3)
+	if field.Disabled {
+		entry.Disable()
+	}
+
+	items := make([]fyne.CanvasObject, 0, 4)
 
 	if field.Label != "" {
 		lbl := widget.NewLabelWithStyle(field.Label, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
@@ -47,7 +55,12 @@ func NewFormField(field FormField) (fyne.CanvasObject, *widget.Entry) {
 
 	items = append(items, entry)
 
-	if field.HelperText != "" {
+	if field.ErrorText != "" {
+		errText := canvas.NewText("● "+field.ErrorText, color.NRGBA{R: 248, G: 113, B: 113, A: 255})
+		errText.TextSize = 11.5
+		errText.TextStyle = fyne.TextStyle{Bold: true}
+		items = append(items, errText)
+	} else if field.HelperText != "" {
 		helper := canvas.NewText(field.HelperText, color.NRGBA{R: 153, G: 167, B: 173, A: 220})
 		helper.TextSize = 11.5
 		items = append(items, helper)

@@ -213,10 +213,12 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 
 	phoneInfo := NewKeyValueRow("REGISTERED TELEPHONY CONTACT", w.MaskedPhone, NewStatusBadge("TELEPHONY DETECTED", BadgeSuccess))
 
+	var sim1Card, sim2Card *SelectableCard
+
 	sim1Icon := RenderSVGImage(ResourceFromSVG("sim_active.svg", SVGSIMCardActive), 20, 20)
 	sim1Label := widget.NewLabel("Slot 1 (Jio 5G): +91 98765-43210")
 	sim1Label.Wrapping = fyne.TextWrapWord
-	sim1Row := container.NewBorder(nil, nil,
+	sim1Content := container.NewBorder(nil, nil,
 		container.NewHBox(sim1Icon),
 		NewStatusBadge("CARRIER MATCH", BadgeSuccess),
 		sim1Label,
@@ -225,11 +227,23 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 	sim2Icon := RenderSVGImage(ResourceFromSVG("sim_sec.svg", SVGSIMCardSecondary), 20, 20)
 	sim2Label := widget.NewLabel("Slot 2 (Airtel): +91 91234-56789")
 	sim2Label.Wrapping = fyne.TextWrapWord
-	sim2Row := container.NewBorder(nil, nil,
+	sim2Content := container.NewBorder(nil, nil,
 		container.NewHBox(sim2Icon),
 		NewBadge("SECONDARY", BadgeSecondary, BadgeShapePill),
 		sim2Label,
 	)
+
+	sim1Card = NewSelectableCard(sim1Content, true, func() {
+		sim1Card.SetSelected(true)
+		sim2Card.SetSelected(false)
+		w.SelectedSIMPhone = "+919876543210"
+	})
+
+	sim2Card = NewSelectableCard(sim2Content, false, func() {
+		sim1Card.SetSelected(false)
+		sim2Card.SetSelected(true)
+		w.SelectedSIMPhone = "+919123456789"
+	})
 
 	otpField, otpEntry := NewFormField(FormField{
 		Label:       "One-Time Challenge Code (OTP)",
@@ -254,8 +268,8 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		Content: container.NewVBox(
 			phoneInfo,
 			NewShadcnSeparator(true),
-			sim1Row,
-			sim2Row,
+			sim1Card,
+			sim2Card,
 			NewShadcnSeparator(true),
 			otpField,
 		),

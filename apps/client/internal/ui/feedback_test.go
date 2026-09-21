@@ -47,6 +47,57 @@ func TestSwitch_Interaction(t *testing.T) {
 		t.Fatal("expected switch tap to toggle to unchecked")
 	}
 
+	// Test Hover states
+	sw.MouseIn(nil)
+	if !sw.Hovered {
+		t.Fatal("expected switch to be hovered after MouseIn")
+	}
+	sw.MouseOut()
+	if sw.Hovered {
+		t.Fatal("expected switch not to be hovered after MouseOut")
+	}
+
+	// Test Focus and Keyboard navigation accessibility
+	sw.FocusGained()
+	if !sw.Focused {
+		t.Fatal("expected switch to be focused after FocusGained")
+	}
+	// Spacebar toggles switch
+	sw.TypedRune(' ')
+	if !sw.Checked {
+		t.Fatal("expected spacebar key to toggle switch to checked")
+	}
+	// Enter key toggles switch
+	sw.TypedKey(&fyne.KeyEvent{Name: fyne.KeyReturn})
+	if sw.Checked {
+		t.Fatal("expected enter key to toggle switch to unchecked")
+	}
+	sw.FocusLost()
+	if sw.Focused {
+		t.Fatal("expected switch not to be focused after FocusLost")
+	}
+
+	// Test Disabled state
+	sw.Disable()
+	if !sw.Disabled() {
+		t.Fatal("expected switch to report disabled")
+	}
+	// Tapping while disabled must NOT toggle
+	sw.Tapped(&fyne.PointEvent{})
+	if sw.Checked {
+		t.Fatal("expected disabled switch to ignore tap")
+	}
+	// Keyboard while disabled must NOT toggle
+	sw.TypedRune(' ')
+	if sw.Checked {
+		t.Fatal("expected disabled switch to ignore keyboard")
+	}
+	// Re-enable
+	sw.Enable()
+	if sw.Disabled() {
+		t.Fatal("expected switch to be re-enabled")
+	}
+
 	// Test renderer methods
 	renderer := test.WidgetRenderer(sw)
 	if renderer == nil {
@@ -57,8 +108,8 @@ func TestSwitch_Interaction(t *testing.T) {
 	if minSize.Width <= 0 || minSize.Height <= 0 {
 		t.Errorf("expected valid min size, got %v", minSize)
 	}
-	if len(renderer.Objects()) != 2 {
-		t.Errorf("expected 2 objects (track, knob), got %d", len(renderer.Objects()))
+	if len(renderer.Objects()) != 3 {
+		t.Errorf("expected 3 objects (focusRing, track, knob), got %d", len(renderer.Objects()))
 	}
 	renderer.Destroy()
 }
@@ -123,4 +174,100 @@ func TestToast_And_AlertDialog(t *testing.T) {
 	if confirmed {
 		t.Fatal("confirmed should not be called on dismiss without button click")
 	}
+}
+
+func TestSelectableCard_Interaction(t *testing.T) {
+	tapped := false
+	card := NewSelectableCard(widget.NewLabel("Card Content"), false, func() {
+		tapped = true
+	})
+
+	if card == nil || card.Selected {
+		t.Fatal("expected card to initialize unselected")
+	}
+
+	// Tap interaction
+	card.Tapped(nil)
+	if !tapped {
+		t.Fatal("expected tapped handler to be called")
+	}
+	tapped = false
+
+	// Hover interaction
+	card.MouseIn(nil)
+	if !card.Hovered {
+		t.Fatal("expected card to be hovered")
+	}
+	card.MouseOut()
+	if card.Hovered {
+		t.Fatal("expected card not to be hovered")
+	}
+
+	// Active press interaction
+	card.MouseDown(nil)
+	if !card.Pressed {
+		t.Fatal("expected card to be pressed")
+	}
+	card.MouseUp(nil)
+	if card.Pressed {
+		t.Fatal("expected card not to be pressed")
+	}
+
+	// Focus and Keyboard accessibility
+	card.FocusGained()
+	if !card.Focused {
+		t.Fatal("expected card to be focused")
+	}
+	card.TypedRune(' ')
+	if !tapped {
+		t.Fatal("expected space key to activate card")
+	}
+	tapped = false
+
+	card.TypedKey(&fyne.KeyEvent{Name: fyne.KeyReturn})
+	if !tapped {
+		t.Fatal("expected return key to activate card")
+	}
+	tapped = false
+	card.FocusLost()
+	if card.Focused {
+		t.Fatal("expected card not to be focused after FocusLost")
+	}
+
+	// Selection state
+	card.SetSelected(true)
+	if !card.Selected {
+		t.Fatal("expected card to be selected")
+	}
+
+	// Disabled state
+	card.Disable()
+	if !card.Disabled() {
+		t.Fatal("expected card to report disabled")
+	}
+	card.Tapped(nil)
+	if tapped {
+		t.Fatal("expected disabled card to ignore tap")
+	}
+	card.TypedRune(' ')
+	if tapped {
+		t.Fatal("expected disabled card to ignore key")
+	}
+
+	card.Enable()
+	if card.Disabled() {
+		t.Fatal("expected card to be re-enabled")
+	}
+
+	// Renderer test
+	renderer := test.WidgetRenderer(card)
+	if renderer == nil {
+		t.Fatal("expected non-nil renderer for selectable card")
+	}
+	renderer.Layout(fyne.NewSize(200, 100))
+	minSize := renderer.MinSize()
+	if minSize.Width <= 0 || minSize.Height <= 0 {
+		t.Errorf("expected valid min size for selectable card, got %v", minSize)
+	}
+	renderer.Destroy()
 }

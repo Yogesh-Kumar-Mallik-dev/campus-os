@@ -26,17 +26,23 @@ const (
 	ButtonSizeIcon
 )
 
-// NewShadcnButton constructs a button adhering to shadcn variants and sizing.
-func NewShadcnButton(label string, variant ButtonVariant, size ButtonSize, icon fyne.Resource, onClick func()) *widget.Button {
-	var btn *widget.Button
+// ShadcnButton extends Fyne's Button with shadcn variant tokens, accessible hit targets,
+// and full interactive states (Hover, Active, Focus, and Disabled).
+type ShadcnButton struct {
+	widget.Button
+	Variant    ButtonVariant
+	ButtonSize ButtonSize
+}
 
-	if icon != nil && label != "" {
-		btn = widget.NewButtonWithIcon(label, icon, onClick)
-	} else if icon != nil {
-		btn = widget.NewButtonWithIcon("", icon, onClick)
-	} else {
-		btn = widget.NewButton(label, onClick)
+// NewShadcnButton constructs a button adhering to shadcn variants and sizing.
+func NewShadcnButton(label string, variant ButtonVariant, size ButtonSize, icon fyne.Resource, onClick func()) *ShadcnButton {
+	btn := &ShadcnButton{
+		Variant:    variant,
+		ButtonSize: size,
 	}
+	btn.Text = label
+	btn.Icon = icon
+	btn.OnTapped = onClick
 
 	switch variant {
 	case ButtonDefault:
@@ -49,5 +55,36 @@ func NewShadcnButton(label string, variant ButtonVariant, size ButtonSize, icon 
 		btn.Importance = widget.LowImportance
 	}
 
+	btn.ExtendBaseWidget(btn)
 	return btn
 }
+
+// MinSize enforces Guardrail 26: comfortable minimum touch and click targets (>= 36-38px height).
+func (b *ShadcnButton) MinSize() fyne.Size {
+	base := b.Button.MinSize()
+	targetHeight := float32(38)
+	targetWidth := base.Width
+
+	switch b.ButtonSize {
+	case ButtonSizeSm:
+		targetHeight = 32
+	case ButtonSizeLg:
+		targetHeight = 44
+	case ButtonSizeIcon:
+		targetHeight = 38
+		if targetWidth < 38 {
+			targetWidth = 38
+		}
+	default:
+		targetHeight = 38
+	}
+
+	if base.Height < targetHeight {
+		base.Height = targetHeight
+	}
+	if base.Width < targetWidth {
+		base.Width = targetWidth
+	}
+	return base
+}
+

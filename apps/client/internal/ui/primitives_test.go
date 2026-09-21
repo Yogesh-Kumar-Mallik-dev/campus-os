@@ -3,6 +3,7 @@ package ui
 import (
 	"testing"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -28,6 +29,74 @@ func TestBadge_VariantsAndShapes(t *testing.T) {
 				t.Fatalf("expected non-nil badge for variant %d, shape %d", v, s)
 			}
 		}
+	}
+
+	// Test InteractiveBadge with full interactive states
+	tapped := false
+	ib := NewInteractiveBadge("FILTER CHIP", BadgeSecondary, BadgeShapePill, func() {
+		tapped = true
+	})
+	if ib == nil {
+		t.Fatal("expected non-nil interactive badge")
+	}
+
+	// Tap
+	ib.Tapped(nil)
+	if !tapped {
+		t.Fatal("expected interactive badge to handle tap")
+	}
+	tapped = false
+
+	// Hover
+	ib.MouseIn(nil)
+	if !ib.Hovered {
+		t.Fatal("expected badge to be hovered")
+	}
+	ib.MouseOut()
+	if ib.Hovered {
+		t.Fatal("expected badge not to be hovered")
+	}
+
+	// Press
+	ib.MouseDown(nil)
+	if !ib.Pressed {
+		t.Fatal("expected badge to be pressed")
+	}
+	ib.MouseUp(nil)
+	if ib.Pressed {
+		t.Fatal("expected badge not to be pressed")
+	}
+
+	// Focus & Keyboard
+	ib.FocusGained()
+	if !ib.Focused {
+		t.Fatal("expected badge to be focused")
+	}
+	ib.TypedRune(' ')
+	if !tapped {
+		t.Fatal("expected space key to tap badge")
+	}
+	tapped = false
+
+	ib.TypedKey(&fyne.KeyEvent{Name: fyne.KeyReturn})
+	if !tapped {
+		t.Fatal("expected return key to tap badge")
+	}
+	tapped = false
+	ib.FocusLost()
+
+	// Disabled
+	ib.Disable()
+	if !ib.Disabled() {
+		t.Fatal("expected badge to report disabled")
+	}
+	ib.Tapped(nil)
+	if tapped {
+		t.Fatal("expected disabled badge to ignore tap")
+	}
+	ib.Enable()
+	if ib.Disabled() {
+		t.Fatal("expected badge to be re-enabled")
 	}
 }
 
@@ -128,6 +197,27 @@ func TestShadcnInput_AndFormField(t *testing.T) {
 	})
 	if customField == nil {
 		t.Fatal("expected non-nil form field with custom entry")
+	}
+
+	// FormField disabled state
+	disabledField, disEntry := NewFormField(FormField{
+		Label:    "Roll Number",
+		Disabled: true,
+	})
+	if disabledField == nil || disEntry == nil {
+		t.Fatal("expected non-nil disabled form field")
+	}
+	if !disEntry.Disabled() {
+		t.Fatal("expected entry to be disabled when FormField.Disabled is true")
+	}
+
+	// FormField with error state
+	errorField, _ := NewFormField(FormField{
+		Label:     "Token",
+		ErrorText: "Token has expired or is invalid",
+	})
+	if errorField == nil {
+		t.Fatal("expected non-nil error form field")
 	}
 }
 

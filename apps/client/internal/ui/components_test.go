@@ -40,6 +40,25 @@ func TestCampusTheme_ColorsAndSizes(t *testing.T) {
 		t.Fatal("expected non-nil dark primary")
 	}
 
+	// Interactive & Accessibility state colors
+	for _, variant := range []fyne.ThemeVariant{theme.VariantLight, theme.VariantDark} {
+		for _, colorName := range []fyne.ThemeColorName{
+			theme.ColorNameHover,
+			theme.ColorNamePressed,
+			theme.ColorNameFocus,
+			theme.ColorNameDisabled,
+			theme.ColorNameDisabledButton,
+			theme.ColorNameSelection,
+			theme.ColorNameHyperlink,
+			theme.ColorNameScrollBar,
+		} {
+			c := th.Color(colorName, variant)
+			if c == nil {
+				t.Fatalf("expected non-nil color for %s in variant %d", colorName, variant)
+			}
+		}
+	}
+
 	// Size checks
 	cardRadius := th.Size(theme.SizeNameCardRadius)
 	if cardRadius != 10.0 {
