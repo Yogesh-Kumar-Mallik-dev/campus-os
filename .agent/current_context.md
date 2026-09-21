@@ -1,62 +1,56 @@
 # Campus OS — Current Context Tracker
 
-**Last Updated:** 2026-09-20  
-**Current Phase:** Pre-Implementation Specification & Engineering Standards Scaffolding (Section 23 Compliance)  
+**Last Updated:** 2026-09-21  
+**Current Phase:** Native Client Component System & Institutional Identity Polish  
 **Active Branch:** `main`
 
 ---
 
 ## 1. Status Overview
-* **Product Bible v1.2 Audited:** Foundational Product Bible read and analyzed.
-* **Deferred / TBD Decisions Resolved:** All 11 open institutional and technical areas resolved via pair-programming session.
-* **Section 23 Documentation Scaffolding Complete:** Initial specification suite (`docs/01` through `docs/08` and `docs/adrs/ADR-0001` through `ADR-0004`) created and committed.
-* **Engineering Standards Audited & Adopted:** Universal engineering standards from `engineering-standards.git` incorporated into `.agent/`, root configs, and `docs/09-engineering-standards.md`.
+* **Section 23 Architectural Baseline Complete:** Formalized `docs/01` through `docs/09` and ADRs `ADR-0001` through `ADR-0006`.
+* **Prisma 8 Multi-Schema Persistence Layer:** Implemented `db-layer/prisma/schema/*.prisma` with comprehensive models for auth, student, academic, and audit domains.
+* **Go Logical Backend Core:** Implemented configuration, error envelopes (RFC 7807), collection query semantics, and UDS gRPC persistence client.
+* **Go Fyne Native Client Modernized:** Focused strictly on Account Activation & Scholar Onboarding flow, recreating 10 shadcn UI primitives in pure Go, integrating Lucide vector icons, and embedding the official BBDIT institutional logo.
+* **Continuous Integration & Quality:** All lifecycle scripts (`./script.sh check`, `./script.sh test`, `./script.sh build`) passing 100% across backend, client, and DB layer.
 
 ---
 
 ## 2. Recent Actions Completed
 1. Renamed git branch from `master` to `main`.
-2. Cloned and audited `git@github.com:Yogesh-Kumar-Mallik-dev/engineering-standards.git`.
-3. Created `.agent/` architecture with tailored `agents.md`, `current_context.md`, and 8 universal rules in `.agent/rules/`.
-4. Established repository root configuration files (`.editorconfig`, `.gitattributes`, `.gitignore`, `CONTRIBUTING.md`, `SECURITY.md`, `script.sh`, `script.ps1`).
-5. Synthesized `docs/09-engineering-standards.md` into the canonical documentation set.
-6. Initialized `pnpm-workspace.yaml` and root `package.json` with `@bufbuild/buf`, `typescript`, and approved package builds.
-7. Initialized multi-module `go.work` linking `backend/` and `apps/client/` (Fyne).
-8. Upgraded Prisma and `@prisma/client` to Prisma 8 (`8.1.0-dev.7`).
-9. Implemented actual core scripts in `scripts/` (`scripts/*.sh` and `scripts/*.ps1`) for `dev`, `build`, `check`, `test`, `deps`, `proto_gen`, `envi`, `uenvi`, and `flush_db` per engineering standards.
-10. Added Go gRPC & Protobuf dependencies (`google.golang.org/grpc v1.84.0`).
-11. Generated Protobuf stubs into `backend/pkg/proto/` and `packages/ts-proto/src/` with `buf generate`.
-12. Verified all lifecycle commands (`./script.sh check`, `./script.sh test`, `./script.sh build`, `./script.sh deps`) pass cleanly.
-13. Converted single `schema.prisma` into multi-file directory target `db-layer/prisma/schema/*.prisma` with dedicated domain models: `base.prisma`, `auth.prisma`, `academic.prisma`, `student.prisma`, `hostel.prisma`, `finance.prisma`, `document.prisma`, and `audit.prisma`.
-14. Validated and generated typed Prisma 8 Client from multi-file schemas (`prisma generate --schema=prisma/schema`).
-15. Extended `student.prisma` with first-class Lateral Entry support (`admissionType`, `entrySemesterNumber`, `lateralEntryDetails`) and granular time-series attendance ledger (`sessionDate`, `status: PRESENT/ABSENT/LATE/ON_DUTY/MEDICAL_LEAVE`, multi-column date range indexes).
-16. Established Go Logical Backend architecture (`backend/`): runtime config loader, RFC 7807 problem details error envelopes, HTTP 200 OK collection query semantics, request tracing and panic recovery middlewares, graceful OS signal shutdown, and gRPC UDS persistence client.
-17. Established Go Frontend Framework (`apps/client/`): cross-platform native client powered by Fyne v2 with tabbed navigation (Time-Series Attendance Ledger, Hostel Outpass submission, Academic Profile), backend API client, and headless test suite.
-18. Updated build pipeline (`scripts/build.sh`) to compile both `bin/campus-backend` and `bin/campus-client` natively.
-19. Designed and formalized Canonical Identity Conventions and Onboarding Architecture in `docs/adrs/ADR-0005-canonical-identity-and-onboarding.md` and `docs/04-authorization-specification.md`: Option A student usernames (`first.course.YYYY[.l][.increment]`), faculty usernames (`first.last.YYYY[.increment]`), Zero-Faculty-Knowledge QR code credential delivery, immediate mandatory password update, and 3-day progressive grace period.
-20. Formalized Bulk Credential Generation Authority Matrix (Registrar for students, HR for faculty/staff, CSO/Estate for operational staff with immutable manifests) and Hardware SIM-Presence Binding with Mobile OTP Verification during onboarding, plus audited post-onboarding contact change workflows.
-21. Designed and implemented Dual-Identity Alt-Name Architecture in `student.prisma`, `auth.prisma`, `docs/adrs/ADR-0005`, and `docs/04-authorization-specification.md`: tri-name modeling (`academicName` vs `legalFullName` vs `preferredName`), decoupled parent/guardian alt-names (academic Class X vs legal Govt ID names), document-type regulatory routing matrix, and the official "One and the Same" Dual-Identity Verification Certificate template.
-22. Designed and implemented Affiliating University (AKTU) Result Ingestion, PDF Parsing & Revision Ledger in `academic.prisma`, `docs/adrs/ADR-0006`, `docs/03-domain-catalog.md`, `docs/04-authorization-specification.md`, and `docs/05-workflow-specification.md`: dual-channel upload (`INSTITUTION_BULK` vs `STUDENT_SELF`), automated conflict detection (`CONFLICT_RESOLUTION_NEEDED`) with Exam Cell review queue, immutable revision history tracking full examination lifecycle (Challenge Evaluation Stage 1/2, Scrutiny, Back Papers, Grace Marks, Year Backs), and cryptographic document linkage.
-23. Formalized Genesis Bootstrapping and Executive Council Provisioning in `ADR-0005` and `docs/04-authorization-specification.md`: Super Admin (Chairperson) QR credential generation via backend bare-metal server CLI (`campus-backend bootstrap-superadmin`), exclusive Chairperson authority (`executive.qr.generate`) to provision Tier-1 Executive Council (Director, Executive Director, Dean, Registrar), and cascading zero-knowledge trust chain.
-24. Implemented full-stack Onboarding & Authentication system:
-    - Protobuf service definitions (`proto/campus/v1/auth.proto`) with Go stubs and TypeScript contracts.
-    - TypeScript DB persistence handlers (`db-layer/src/handles/auth.ts`) with Prisma 8 models (`ClaimToken`, `RefreshToken`, `User`, `SuperAdminSeat`) and unit tests.
-    - Go Logical Backend bare-metal CLI (`campus-backend bootstrap-superadmin`), gRPC persistence client, and RFC 7807 HTTP onboarding endpoints (`/api/v1/auth/claim/*`, `/api/v1/auth/login`, `/api/v1/auth/refresh`).
-    - Go Fyne Native Client Onboarding Wizard (`apps/client/internal/ui/onboarding.go`) featuring 5-step state machine (Scan QR, SIM Telephony Check & SMS OTP, Official Records Review with Lateral Entry, Password Setup with 3-Day Grace Period, and Digital ID Gate Card).
+2. Cloned and audited `engineering-standards.git`, scaffolding `.agent/` and root configs.
+3. Created multi-module `go.work` linking `backend/` and `apps/client/`.
+4. Upgraded to Prisma 8 (`8.1.0-dev.7`) and established multi-file domain schemas.
+5. Implemented gRPC over Unix Domain Socket boundary (`/tmp/campus-db.sock`) with Protobuf generation.
+6. Formalized Canonical Identity Conventions, Alt-Name modeling, and Genesis Bootstrapping in `ADR-0005`.
+7. Formalized Affiliating University (AKTU) Result Ingestion & Revision Ledger in `ADR-0006`.
+8. Implemented full-stack Onboarding & Authentication flow across Protobuf, TypeScript DB handlers, Go backend, and Fyne native client.
+9. Standardized test naming to `*.test.ts` and `*_test.go` and added gRPC client test suites.
+10. Added cross-platform PowerShell dev runners (`dev.ps1`, `dev.client.ps1`, `dev.backend.ps1`, `dev.db.ps1`, `dev.mock.ps1`).
+11. Extracted and mapped institutional OKLCH color tokens from abandoned project's `+layout.css` (`#10161C`, `#18202A`, `#2E3844`, `#F45A51`, `#F2F6F8`).
+12. Stripped extraneous unrequested navigation tabs from native client, focusing 100% on the 5-step Account Activation wizard.
+13. Recreated 10 native shadcn-style UI primitives in Go Fyne with full unit test coverage:
+    - Core: `NewShadcnCard`, `NewBadge`, `NewShadcnButton`, `NewShadcnInput`, `NewFormField`, `NewShadcnAlert`.
+    - Feedback & Overlay: `NewSwitch`, `ShowToast`, `ShowAlertDialog`, `NewEmptyState`, `NewShadcnSeparator`.
+14. Fixed responsive layout and text wrapping defects:
+    - Enforced `TextWrapWord` across all labels in composite cards.
+    - Resolved `container.NewCenter` 76px column squish in `NewEmptyState`, aligning to shadcn's full-width dropzone specification.
+    - Removed redundant outer card nesting, establishing a clean canvas visual hierarchy.
+15. Created pure vector Lucide icon suite in `icons.go` (`LucideScan`, `LucideQrCode`, `LucideSim`, `LucideSmartphone`, `LucideShieldCheck`, `LucideUserCheck`, `LucideFileCheck`, `LucideLock`, `LucideClock`, `LucideFingerprint`, `LucideBadgeCheck`, `LucideSparkles`, `LucideFlag`), removing all generic Fyne theme icons.
+16. Imported 34 official BBDIT institutional assets from abandoned project into `apps/client/assets/` and embedded `bbdit-logo-transparent.png` into the native client top bar (`NewTopBar`).
+17. Updated repository `README.md` and documentation set.
 
 ---
 
 ## 3. Immediate Next Steps
-1. Expand Protobuf service contracts in `/proto/campus/v1/` for academic, auth, and student domain operations.
-2. Implement gRPC server handlers and Prisma wrappers in `db-layer/src/handles/`.
-3. Implement `TxToken` interactive session manager in `db-layer/src/tx/`.
-4. Implement Go gRPC client stubs and domain service interfaces in `backend/internal/domains/`.
+1. Gather user feedback on the updated client appearance and responsiveness via `./scripts/dev.client.sh`.
+2. Expand Protobuf service definitions and persistence handlers for subsequent domain workflows when prioritized.
+3. Maintain 100% test coverage and zero-broken-window policy across all commits.
 
 ---
 
 ## 4. Key Architectural Invariants
 * **Go Backend:** Pure domain logic, workflows, authorization evaluation. Never imports SQL drivers or Prisma.
 * **TypeScript DB Layer:** Implements canonical gRPC handles over UDS exposing domain operations (no generic CRUD).
+* **Native Client UI:** Zero emojis, zero generic raster icons. Pure Lucide vector SVGs and embedded official BBDIT assets.
 * **Multi-Dimensional RBAC:** Strict AND semantics for scope dimensions (`Department`, `Course`, `Semester`, `Section`, `Subject`, `Lab`, `HostelBlockFloor`).
-* **Strict Single-Change Commits:** One feature/fix per atomic commit, signed, conventional format.
-* **Hand-in-Hand Tests:** Co-located tests accompany every domain logic change.
+* **Atomic Signed Commits:** Single-purpose, atomic, signed commits per task.
