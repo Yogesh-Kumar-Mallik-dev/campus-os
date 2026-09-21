@@ -30,7 +30,7 @@ func NewApplication(apiClient *api.Client) *Application {
 }
 
 // BLOCK_UI_APP_BUILD_001
-// Purpose: Assembles dedicated Account Activation layout matching institutional design tokens.
+// Purpose: Assembles fully responsive Account Activation layout matching institutional design tokens.
 func (a *Application) BuildLayout() fyne.CanvasObject {
 	topBar := NewTopBar("CAMPUS OS", "Account Activation")
 
@@ -51,15 +51,13 @@ func (a *Application) BuildLayout() fyne.CanvasObject {
 		wizardCard,
 	)
 
-	// Responsive centered card container
-	centeredContainer := container.NewCenter(
-		container.NewGridWrap(fyne.NewSize(720, 560), container.NewScroll(contentBox)),
-	)
+	// Responsive card container adapting fluidly across desktop & mobile screens
+	responsiveBody := NewResponsiveCardContainer(contentBox, 660)
 
 	return container.NewBorder(
 		topBar,
 		nil, nil, nil,
-		centeredContainer,
+		responsiveBody,
 	)
 }
 

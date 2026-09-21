@@ -7,98 +7,115 @@ import (
 	"fyne.io/fyne/v2/theme"
 )
 
-// CampusTheme implements fyne.Theme matching the design tokens from the abandoned project:
-// --campus-color-surface, --campus-color-accent, --campus-color-text, --campus-color-muted
-// and dark/light mode palette from tokens.css & +layout.css.
+// CampusTheme implements fyne.Theme strictly mapped to the institutional design system
+// defined in frontend/web/src/routes/+layout.css:
+// Light mode:
+//   --primary: oklch(0.42 0.16 27)    -> rgb(144, 20, 22)
+//   --background: oklch(0.978 0.005 240) -> rgb(245, 248, 251)
+//   --foreground: oklch(0.18 0.015 240)  -> rgb(16, 22, 28)
+//   --card: oklch(1 0 0)                  -> rgb(255, 255, 255)
+//   --border: oklch(0.895 0.008 240)      -> rgb(216, 221, 225)
+// Dark mode:
+//   --primary: oklch(0.67 0.19 27)    -> rgb(244, 90, 81)
+//   --background: oklch(0.16 0.018 242) -> rgb(16, 22, 28)
+//   --foreground: oklch(0.97 0.004 225)  -> rgb(242, 246, 248)
+//   --card: oklch(0.205 0.02 240)        -> rgb(24, 32, 42)
+//   --muted-foreground: oklch(0.72 0.018 225) -> rgb(153, 167, 173)
+//   --border: oklch(0.72 0.018 225 / 16%)     -> rgb(38, 47, 58)
 type CampusTheme struct {
 	fyne.Theme
 }
 
-// NewCampusTheme creates an institutional theme with modern palette and geometry.
+// NewCampusTheme creates an institutional theme with colors from +layout.css.
 func NewCampusTheme() fyne.Theme {
 	return &CampusTheme{
 		Theme: theme.DefaultTheme(),
 	}
 }
 
-// Color returns tailored colors mapped from design tokens.
+// Color returns tailored colors mapped from the institutional +layout.css.
 func (t *CampusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
 	if variant == theme.VariantLight {
 		switch name {
 		case theme.ColorNameBackground:
-			// --background: #f4f6f8 (tokens.css surface light)
-			return color.NRGBA{R: 244, G: 246, B: 248, A: 255}
+			// --background: oklch(0.978 0.005 240)
+			return color.NRGBA{R: 245, G: 248, B: 251, A: 255}
 		case theme.ColorNameForeground:
-			// --campus-color-text: #172033
-			return color.NRGBA{R: 23, G: 32, B: 51, A: 255}
+			// --foreground: oklch(0.18 0.015 240)
+			return color.NRGBA{R: 16, G: 22, B: 28, A: 255}
 		case theme.ColorNameMenuBackground, theme.ColorNameOverlayBackground, theme.ColorNameHeaderBackground:
+			// --card: oklch(1 0 0)
 			return color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 		case theme.ColorNameInputBackground:
 			return color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 		case theme.ColorNameInputBorder:
-			return color.NRGBA{R: 226, G: 232, B: 240, A: 255}
+			// --border: oklch(0.895 0.008 240)
+			return color.NRGBA{R: 216, G: 221, B: 225, A: 255}
 		case theme.ColorNamePrimary:
-			// --campus-color-accent (light): #075eb8
-			return color.NRGBA{R: 7, G: 94, B: 184, A: 255}
+			// --primary: oklch(0.42 0.16 27)
+			return color.NRGBA{R: 144, G: 20, B: 22, A: 255}
 		case theme.ColorNameForegroundOnPrimary:
 			return color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 		case theme.ColorNameButton:
-			return color.NRGBA{R: 235, G: 242, B: 250, A: 255}
+			return color.NRGBA{R: 237, G: 240, B: 244, A: 255}
 		case theme.ColorNameHover:
-			return color.NRGBA{R: 224, G: 234, B: 248, A: 255}
+			return color.NRGBA{R: 228, G: 232, B: 238, A: 255}
 		case theme.ColorNamePressed:
-			return color.NRGBA{R: 210, G: 225, B: 245, A: 255}
+			return color.NRGBA{R: 215, G: 220, B: 228, A: 255}
 		case theme.ColorNameSeparator:
-			return color.NRGBA{R: 226, G: 232, B: 240, A: 255}
+			return color.NRGBA{R: 216, G: 221, B: 225, A: 255}
 		case theme.ColorNamePlaceHolder, theme.ColorNameDisabled:
-			// --campus-color-muted: #56627a
-			return color.NRGBA{R: 86, G: 98, B: 122, A: 255}
+			// --muted-foreground: oklch(0.48 0.018 240)
+			return color.NRGBA{R: 101, G: 108, B: 125, A: 255}
 		case theme.ColorNameSuccess:
 			return color.NRGBA{R: 16, G: 185, B: 129, A: 255}
 		case theme.ColorNameWarning:
 			return color.NRGBA{R: 245, G: 158, B: 11, A: 255}
 		case theme.ColorNameError:
-			return color.NRGBA{R: 239, G: 68, B: 68, A: 255}
+			// --destructive: oklch(0.577 0.245 27.325)
+			return color.NRGBA{R: 220, G: 38, B: 38, A: 255}
 		}
 	} else {
-		// Dark theme (default in modern workstations / Hyprland)
+		// Dark theme (institution's primary dark palette)
 		switch name {
 		case theme.ColorNameBackground:
-			// --campus-color-surface (dark): rgba(16, 21, 34, 0.85) -> #101522
-			return color.NRGBA{R: 16, G: 21, B: 34, A: 255}
+			// --background: oklch(0.16 0.018 242)
+			return color.NRGBA{R: 16, G: 22, B: 28, A: 255}
 		case theme.ColorNameForeground:
-			// --campus-color-text: #f5f7fb
-			return color.NRGBA{R: 245, G: 247, B: 251, A: 255}
+			// --foreground: oklch(0.97 0.004 225)
+			return color.NRGBA{R: 242, G: 246, B: 248, A: 255}
 		case theme.ColorNameMenuBackground, theme.ColorNameOverlayBackground, theme.ColorNameHeaderBackground:
-			// --card: #1a2234
-			return color.NRGBA{R: 26, G: 34, B: 52, A: 255}
+			// --card: oklch(0.205 0.02 240)
+			return color.NRGBA{R: 24, G: 32, B: 42, A: 255}
 		case theme.ColorNameInputBackground:
-			// elevated subtle background
-			return color.NRGBA{R: 21, G: 28, B: 44, A: 255}
+			return color.NRGBA{R: 19, G: 26, B: 35, A: 255}
 		case theme.ColorNameInputBorder:
-			// --border: rgba(180, 191, 211, 0.16) -> #2c3852
-			return color.NRGBA{R: 44, G: 56, B: 82, A: 255}
+			// --border: oklch(0.72 0.018 225 / 16%)
+			return color.NRGBA{R: 46, G: 56, B: 68, A: 255}
 		case theme.ColorNamePrimary:
-			// --campus-color-accent (dark): #77baff
-			return color.NRGBA{R: 119, G: 186, B: 255, A: 255}
+			// --primary: oklch(0.67 0.19 27) -> #f45a51
+			return color.NRGBA{R: 244, G: 90, B: 81, A: 255}
 		case theme.ColorNameForegroundOnPrimary:
-			return color.NRGBA{R: 14, G: 20, B: 32, A: 255}
+			// --primary-foreground: oklch(0.14 0.02 240)
+			return color.NRGBA{R: 18, G: 21, B: 29, A: 255}
 		case theme.ColorNameButton:
-			return color.NRGBA{R: 30, G: 40, B: 62, A: 255}
+			// --secondary: oklch(0.27 0.018 239)
+			return color.NRGBA{R: 40, G: 46, B: 62, A: 255}
 		case theme.ColorNameHover:
-			return color.NRGBA{R: 42, G: 56, B: 86, A: 255}
+			return color.NRGBA{R: 52, G: 62, B: 80, A: 255}
 		case theme.ColorNamePressed:
-			return color.NRGBA{R: 54, G: 72, B: 110, A: 255}
+			return color.NRGBA{R: 64, G: 76, B: 98, A: 255}
 		case theme.ColorNameSeparator:
-			return color.NRGBA{R: 38, G: 48, B: 70, A: 255}
+			return color.NRGBA{R: 46, G: 56, B: 68, A: 255}
 		case theme.ColorNamePlaceHolder, theme.ColorNameDisabled:
-			// --campus-color-muted: #b4bfd3
-			return color.NRGBA{R: 180, G: 191, B: 211, A: 200}
+			// --muted-foreground: oklch(0.72 0.018 225)
+			return color.NRGBA{R: 153, G: 167, B: 173, A: 220}
 		case theme.ColorNameSuccess:
 			return color.NRGBA{R: 52, G: 211, B: 153, A: 255}
 		case theme.ColorNameWarning:
 			return color.NRGBA{R: 251, G: 191, B: 36, A: 255}
 		case theme.ColorNameError:
+			// --destructive: oklch(0.704 0.191 22.216)
 			return color.NRGBA{R: 248, G: 113, B: 113, A: 255}
 		}
 	}
@@ -106,13 +123,13 @@ func (t *CampusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 	return t.Theme.Color(name, variant)
 }
 
-// Size returns refined dimensions for modern desktop and mobile viewports.
+// Size returns refined dimensions matching CSS tokens: --radius: 0.45rem.
 func (t *CampusTheme) Size(name fyne.ThemeSizeName) float32 {
 	switch name {
 	case theme.SizeNameCardRadius:
-		return 12.0 // modern smooth card radius
+		return 10.0 // matching --radius
 	case theme.SizeNameButtonRadius:
-		return 8.0 // sleek action button radius
+		return 8.0 // --radius-md
 	case theme.SizeNameInputRadius:
 		return 8.0
 	case theme.SizeNameSelectionRadius:
@@ -122,13 +139,13 @@ func (t *CampusTheme) Size(name fyne.ThemeSizeName) float32 {
 	case theme.SizeNameInnerPadding:
 		return 8.0
 	case theme.SizeNameText:
-		return 14.0
+		return 13.5
 	case theme.SizeNameHeadingText:
-		return 20.0
+		return 19.0
 	case theme.SizeNameSubHeadingText:
-		return 16.0
+		return 15.0
 	case theme.SizeNameCaptionText:
-		return 11.5
+		return 11.0
 	default:
 		return t.Theme.Size(name)
 	}

@@ -151,29 +151,29 @@ func NewBannerNotice(title, message string, variant PillVariant, svgIcon fyne.Re
 	)
 }
 
-// NewStepIndicator renders a sleek multi-step progression bar.
+// NewStepIndicator renders a responsive multi-step progression bar that fits mobile & desktop.
 func NewStepIndicator(currentStep int, stepNames []string) fyne.CanvasObject {
 	stepItems := make([]fyne.CanvasObject, 0, len(stepNames)*2)
 
 	for i, name := range stepNames {
-		var stepPill fyne.CanvasObject
 		stepNum := i + 1
+		var stepPill fyne.CanvasObject
 
 		if stepNum < currentStep {
-			// Completed step
-			stepPill = NewStatusPill(fmt.Sprintf("%d. %s", stepNum, name), PillSuccess)
+			// Completed step: compact checkmark number
+			stepPill = NewStatusPill(fmt.Sprintf("%d", stepNum), PillSuccess)
 		} else if stepNum == currentStep {
-			// Active step
-			stepPill = NewStatusPill(fmt.Sprintf("%d. %s", stepNum, name), PillInfo)
+			// Active step: highlighted with full name
+			stepPill = NewStatusPill(fmt.Sprintf("%d: %s", stepNum, name), PillInfo)
 		} else {
-			// Pending step
-			stepPill = NewStatusPill(fmt.Sprintf("%d. %s", stepNum, name), PillNeutral)
+			// Pending step: compact number
+			stepPill = NewStatusPill(fmt.Sprintf("%d", stepNum), PillNeutral)
 		}
 
 		stepItems = append(stepItems, stepPill)
 
 		if i < len(stepNames)-1 {
-			sep := canvas.NewLine(color.NRGBA{R: 50, G: 65, B: 90, A: 255})
+			sep := canvas.NewLine(color.NRGBA{R: 60, G: 72, B: 92, A: 255})
 			sep.StrokeWidth = 2
 			stepItems = append(stepItems, container.NewCenter(sep))
 		}

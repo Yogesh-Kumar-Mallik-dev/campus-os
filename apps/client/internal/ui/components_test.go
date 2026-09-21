@@ -3,7 +3,10 @@ package ui
 import (
 	"testing"
 
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 )
 
 func TestCampusTheme_ColorsAndSizes(t *testing.T) {
@@ -39,8 +42,8 @@ func TestCampusTheme_ColorsAndSizes(t *testing.T) {
 
 	// Size checks
 	cardRadius := th.Size(theme.SizeNameCardRadius)
-	if cardRadius != 12.0 {
-		t.Errorf("expected card radius 12.0, got %f", cardRadius)
+	if cardRadius != 10.0 {
+		t.Errorf("expected card radius 10.0, got %f", cardRadius)
 	}
 
 	btnRadius := th.Size(theme.SizeNameButtonRadius)
@@ -49,8 +52,8 @@ func TestCampusTheme_ColorsAndSizes(t *testing.T) {
 	}
 
 	headingSize := th.Size(theme.SizeNameHeadingText)
-	if headingSize != 20.0 {
-		t.Errorf("expected heading size 20.0, got %f", headingSize)
+	if headingSize != 19.0 {
+		t.Errorf("expected heading size 19.0, got %f", headingSize)
 	}
 }
 
@@ -135,5 +138,39 @@ func TestIcons_SVGResources(t *testing.T) {
 		if img == nil {
 			t.Fatalf("failed to render SVG image for %s", s.name)
 		}
+	}
+}
+
+func TestResponsiveLayout(t *testing.T) {
+	rl := NewResponsiveLayout(0, 0)
+	if rl == nil {
+		t.Fatal("expected non-nil responsive layout")
+	}
+
+	btn := widget.NewButton("Action", nil)
+	containerObj := container.New(rl, btn)
+
+	// Test layout calculation on narrow viewport (mobile 360px)
+	rl.Layout([]fyne.CanvasObject{btn}, fyne.NewSize(360, 640))
+	if btn.Size().Width != 360-24 { // 336px
+		t.Errorf("expected mobile width 336, got %f", btn.Size().Width)
+	}
+
+	// Test layout calculation on wide viewport (desktop 1200px)
+	rl.Layout([]fyne.CanvasObject{btn}, fyne.NewSize(1200, 800))
+	if btn.Size().Width != 640 { // clamped to maxWidth 640
+		t.Errorf("expected desktop width clamped to 640, got %f", btn.Size().Width)
+	}
+
+	// Min size test
+	minS := rl.MinSize([]fyne.CanvasObject{btn})
+	if minS.Width <= 0 || minS.Height <= 0 {
+		t.Errorf("expected positive min size, got %v", minS)
+	}
+
+	// Responsive card container
+	respContainer := NewResponsiveCardContainer(containerObj, 640)
+	if respContainer == nil {
+		t.Fatal("expected non-nil responsive card container")
 	}
 }
