@@ -6,6 +6,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
@@ -24,37 +25,37 @@ const (
 
 // OnboardingWizard manages the UI state and transitions for account activation.
 type OnboardingWizard struct {
-	client       *api.Client
-	content      *fyne.Container
-	step         OnboardingStep
-	onComplete   func()
+	client     *api.Client
+	content    *fyne.Container
+	step       OnboardingStep
+	onComplete func()
 
 	// Wizard Form State
-	ClaimToken          string
-	MaskedPhone         string
-	Username            string
-	AcademicName        string
-	LegalFullName       string
-	AdmissionType       string
-	EntrySemester       int
-	LateralSummary      string
-	OTPChallengeID      string
-	SelectedSIMPhone    string
-	OTPCode             string
-	NewPassword         string
-	BiometricsEnabled   bool
-	StatusText          string
-	IsError             bool
+	ClaimToken        string
+	MaskedPhone       string
+	Username          string
+	AcademicName      string
+	LegalFullName     string
+	AdmissionType     string
+	EntrySemester     int
+	LateralSummary    string
+	OTPChallengeID    string
+	SelectedSIMPhone  string
+	OTPCode           string
+	NewPassword       string
+	BiometricsEnabled bool
+	StatusText        string
+	IsError           bool
 }
 
 // BLOCK_UI_ONBOARDING_NEW_001
 // Purpose: Constructs a new OnboardingWizard instance.
 func NewOnboardingWizard(client *api.Client, onComplete func()) *OnboardingWizard {
 	w := &OnboardingWizard{
-		client:           client,
-		step:             StepScan,
-		onComplete:       onComplete,
-		SelectedSIMPhone: "+919876543210",
+		client:            client,
+		step:              StepScan,
+		onComplete:        onComplete,
+		SelectedSIMPhone:  "+919876543210",
 		BiometricsEnabled: true,
 	}
 	w.content = container.NewVBox()
@@ -83,9 +84,12 @@ func (w *OnboardingWizard) render() {
 
 	// Status / Error Banner
 	if w.StatusText != "" {
-		style := fyne.TextStyle{Italic: true}
-		statusLabel := widget.NewLabelWithStyle(w.StatusText, fyne.TextAlignCenter, style)
-		w.content.Add(statusLabel)
+		pillVariant := PillInfo
+		if w.IsError {
+			pillVariant = PillError
+		}
+		statusPill := NewStatusPill(w.StatusText, pillVariant)
+		w.content.Add(container.NewCenter(statusPill))
 		w.content.Add(widget.NewSeparator())
 	}
 
@@ -105,17 +109,22 @@ func (w *OnboardingWizard) render() {
 
 // Step 1: Scan Sealed QR Code
 func (w *OnboardingWizard) renderScanStep() {
-	header := widget.NewLabelWithStyle("Step 1 of 4: Scan Sealed QR Code", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-	subtext := widget.NewLabelWithStyle("Position your camera over the official sealed QR on your admission slip.", fyne.TextAlignCenter, fyne.TextStyle{})
-
-	scannerMock := widget.NewCard(
-		"Camera Viewfinder",
-		"Aim at tamper-evident QR code",
-		container.NewCenter(widget.NewIcon(theme.SearchIcon())),
+	header := NewPageHeader(
+		"Scan Sealed QR Code",
+		"Position camera over the tamper-evident QR code on your official admission slip",
+		NewStatusPill("STEP 1 OF 4", PillInfo),
 	)
 
+	scannerVisual := container.NewCenter(
+		container.NewVBox(
+			widget.NewIcon(theme.SearchIcon()),
+			widget.NewLabel("Optical Sensor Ready"),
+		),
+	)
+	scannerCard := NewStyledCard("Optical Viewfinder", scannerVisual)
+
 	tokenEntry := widget.NewEntry()
-	tokenEntry.SetPlaceHolder("Or enter 16-character claim code manually")
+	tokenEntry.SetPlaceHolder("Or enter 16-character claim code manually (e.g. claim_genesis_test_demo)")
 	if w.ClaimToken != "" {
 		tokenEntry.SetText(w.ClaimToken)
 	}
@@ -127,7 +136,6 @@ func (w *OnboardingWizard) renderScanStep() {
 		}
 		w.ClaimToken = token
 
-		// Validate with backend API if available, or simulate
 		go func() {
 			resp, err := w.client.ValidateClaim(context.Background(), token)
 			if err == nil && resp.IsValid {
@@ -139,89 +147,113 @@ func (w *OnboardingWizard) renderScanStep() {
 				w.EntrySemester = resp.EntrySemesterNumber
 				w.LateralSummary = resp.LateralEntrySummary
 			} else {
-				// Fallback demo state
+				// Fallback demo mock values for instant local dev testing
 				w.MaskedPhone = "+91 98XXX-XX210"
 				w.Username = "yogesh.cse.2024.l"
 				w.AcademicName = "Yogesh"
 				w.LegalFullName = "Yogesh Kumar Mallik"
 				w.AdmissionType = "LATERAL_ENTRY"
 				w.EntrySemester = 3
-				w.LateralSummary = "Lateral Entry: Direct admission to Semester 3. Prior polytechnic credits verified."
+				w.LateralSummary = "Lateral Entry: Direct admission to Semester 3. Prior diploma credits verified."
 			}
-			w.StatusText = "QR Code Recognized! Please verify device SIM presence."
+			w.IsError = false
+			w.StatusText = "✓ QR Token Verified! Hardware telephony match required."
 			w.SetStep(StepSIMVerify)
 		}()
 	})
 	scanBtn.Importance = widget.HighImportance
 
+	formCard := NewStyledCard("Manual Token Input", container.NewVBox(
+		tokenEntry,
+		scanBtn,
+	))
+
 	w.content.Add(header)
-	w.content.Add(subtext)
-	w.content.Add(scannerMock)
-	w.content.Add(tokenEntry)
-	w.content.Add(scanBtn)
+	w.content.Add(scannerCard)
+	w.content.Add(formCard)
 }
 
 // Step 2: SIM Telephony & SMS OTP Handshake
 func (w *OnboardingWizard) renderSIMVerifyStep() {
-	header := widget.NewLabelWithStyle("Step 2 of 4: Device SIM & OTP Verification", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-	phoneInfo := widget.NewLabel(fmt.Sprintf("Registered Mobile Phone: %s", w.MaskedPhone))
-
-	simCard := widget.NewCard(
-		"Hardware Telephony Detection",
-		"Checking device SIM slots for anti-theft binding",
-		container.NewVBox(
-			widget.NewLabel("🟢 SIM Slot 1 (Jio 5G): +91 98765-43210 [MATCH FOUND]"),
-			widget.NewLabel("⚪ SIM Slot 2 (Airtel): +91 91234-56789 [SECONDARY]"),
-		),
+	header := NewPageHeader(
+		"Device SIM & OTP Verification",
+		"Anti-theft SIM binding ensures account activation only occurs on the scholar's registered handset",
+		NewStatusPill("STEP 2 OF 4", PillWarning),
 	)
+
+	phoneInfo := widget.NewLabel(fmt.Sprintf("Registered Mobile: %s", w.MaskedPhone))
+
+	sim1Row := container.NewBorder(nil, nil,
+		widget.NewLabel("SIM Slot 1 (Jio 5G): +91 98765-43210"),
+		NewStatusPill("MATCH FOUND", PillSuccess),
+	)
+	sim2Row := container.NewBorder(nil, nil,
+		widget.NewLabel("SIM Slot 2 (Airtel): +91 91234-56789"),
+		NewStatusPill("SECONDARY", PillNeutral),
+	)
+
+	simCard := NewStyledCard("Detected Device Telephony", container.NewVBox(
+		phoneInfo,
+		widget.NewSeparator(),
+		sim1Row,
+		sim2Row,
+	))
 
 	otpEntry := widget.NewEntry()
 	otpEntry.SetPlaceHolder("Enter 6-digit SMS OTP (e.g. 123456)")
 
-	verifyBtn := widget.NewButtonWithIcon("Verify SIM & Submit OTP", theme.ConfirmIcon(), func() {
+	verifyBtn := widget.NewButtonWithIcon("Verify Hardware SIM & Submit OTP", theme.ConfirmIcon(), func() {
 		w.OTPCode = otpEntry.Text
 		if w.OTPCode == "" {
 			w.OTPCode = "123456"
 		}
-		w.StatusText = "Device SIM & OTP Confirmed! Please verify your official records."
+		w.IsError = false
+		w.StatusText = "✓ SIM & OTP Confirmed! Review official certificates."
 		w.SetStep(StepReviewProfile)
 	})
 	verifyBtn.Importance = widget.HighImportance
 
+	otpCard := NewStyledCard("SMS Challenge Verification", container.NewVBox(
+		otpEntry,
+		verifyBtn,
+	))
+
 	w.content.Add(header)
-	w.content.Add(phoneInfo)
 	w.content.Add(simCard)
-	w.content.Add(otpEntry)
-	w.content.Add(verifyBtn)
+	w.content.Add(otpCard)
 }
 
 // Step 3: Review Official Records & Dual-Identity Confirmation
 func (w *OnboardingWizard) renderReviewProfileStep() {
-	header := widget.NewLabelWithStyle("Step 3 of 4: Review Official Student Records", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-
-	profileCard := widget.NewCard(
-		"Student Identity & Enrollment",
-		"Verify the accuracy of your academic vs legal identification",
-		container.NewVBox(
-			widget.NewLabel(fmt.Sprintf("Academic Name (Class X Marksheet) : %s", w.AcademicName)),
-			widget.NewLabel(fmt.Sprintf("Legal Full Name (Govt ID / Aadhaar) : %s", w.LegalFullName)),
-			widget.NewLabel(fmt.Sprintf("Canonical Username                 : %s", w.Username)),
-			widget.NewLabel(fmt.Sprintf("Assigned Institutional Email       : %s@campus.edu", w.Username)),
-			widget.NewLabel(fmt.Sprintf("Admission Category                 : %s (Entry Sem %d)", w.AdmissionType, w.EntrySemester)),
-			widget.NewLabel(fmt.Sprintf("Academic Notes                     : %s", w.LateralSummary)),
-		),
+	header := NewPageHeader(
+		"Review Official Records",
+		"Verify the correspondence between educational records and legal identity documents",
+		NewStatusPill("STEP 3 OF 4", PillInfo),
 	)
 
-	confirmCheck := widget.NewCheck("I confirm these records match my secondary school and legal certificates", nil)
+	profileForm := widget.NewForm(
+		widget.NewFormItem("Academic Name (Marksheet)", widget.NewLabel(w.AcademicName)),
+		widget.NewFormItem("Legal Full Name (Govt ID)", widget.NewLabel(w.LegalFullName)),
+		widget.NewFormItem("Canonical Username", widget.NewLabel(w.Username)),
+		widget.NewFormItem("Institutional Email", widget.NewLabel(fmt.Sprintf("%s@campus.edu", w.Username))),
+		widget.NewFormItem("Admission Type", widget.NewLabel(fmt.Sprintf("%s (Entry Sem %d)", w.AdmissionType, w.EntrySemester))),
+		widget.NewFormItem("Curriculum Notes", widget.NewLabel(w.LateralSummary)),
+	)
+
+	profileCard := NewStyledCard("Verified Admission Dossier", profileForm)
+
+	confirmCheck := widget.NewCheck("I confirm these records accurately reflect my secondary marksheet and govt identification", nil)
 	confirmCheck.SetChecked(true)
 
-	nextBtn := widget.NewButtonWithIcon("Looks Good, Set Password ->", theme.NavigateNextIcon(), func() {
+	nextBtn := widget.NewButtonWithIcon("Records Confirmed, Set Password ->", theme.NavigateNextIcon(), func() {
 		if !confirmCheck.Checked {
-			w.StatusText = "Please confirm that the records match your official certificates"
+			w.IsError = true
+			w.StatusText = "Please acknowledge record verification before proceeding"
 			w.render()
 			return
 		}
-		w.StatusText = "Identity confirmed. Set your password."
+		w.IsError = false
+		w.StatusText = "Identity records confirmed. Create your password."
 		w.SetStep(StepSetPassword)
 	})
 	nextBtn.Importance = widget.HighImportance
@@ -234,8 +266,11 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 
 // Step 4: Password Setup & 3-Day Orientation Grace Period
 func (w *OnboardingWizard) renderSetPasswordStep() {
-	header := widget.NewLabelWithStyle("Step 4 of 4: Create Your Password", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-	graceBanner := widget.NewLabel("💡 Orientation Grace Period Active: 6+ character password accepted for your first 3 days.")
+	header := NewPageHeader(
+		"Set Your Access Password",
+		"Orientation Grace Period: 6+ character password accepted for your first 72 hours",
+		NewStatusPill("STEP 4 OF 4", PillWarning),
+	)
 
 	passEntry := widget.NewPasswordEntry()
 	passEntry.SetPlaceHolder("Enter new password (min 6 characters)")
@@ -243,53 +278,68 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 	confirmPassEntry := widget.NewPasswordEntry()
 	confirmPassEntry.SetPlaceHolder("Confirm new password")
 
-	biometricCheck := widget.NewCheck("Enable Face / Fingerprint Unlock on this device", func(b bool) {
+	biometricCheck := widget.NewCheck("Enable Biometric Keyring (Fingerprint / Face ID)", func(b bool) {
 		w.BiometricsEnabled = b
 	})
 	biometricCheck.SetChecked(true)
 
-	completeBtn := widget.NewButtonWithIcon("Complete Onboarding & Activate Account", theme.ConfirmIcon(), func() {
+	completeBtn := widget.NewButtonWithIcon("Complete Activation & Provision Credentials", theme.ConfirmIcon(), func() {
 		if len(passEntry.Text) < 6 {
-			w.StatusText = "Password must be at least 6 characters during grace period"
+			w.IsError = true
+			w.StatusText = "Password must contain at least 6 characters during grace period"
 			w.render()
 			return
 		}
 		if passEntry.Text != confirmPassEntry.Text {
+			w.IsError = true
 			w.StatusText = "Passwords do not match"
 			w.render()
 			return
 		}
 
 		w.NewPassword = passEntry.Text
+		w.IsError = false
 		w.StatusText = "Account Successfully Activated!"
 		w.SetStep(StepComplete)
 	})
 	completeBtn.Importance = widget.HighImportance
 
+	passwordCard := NewStyledCard("Credential Security", container.NewVBox(
+		widget.NewLabel("New Password:"),
+		passEntry,
+		widget.NewLabel("Confirm Password:"),
+		confirmPassEntry,
+		biometricCheck,
+		completeBtn,
+	))
+
 	w.content.Add(header)
-	w.content.Add(graceBanner)
-	w.content.Add(passEntry)
-	w.content.Add(confirmPassEntry)
-	w.content.Add(biometricCheck)
-	w.content.Add(completeBtn)
+	w.content.Add(passwordCard)
 }
 
 // Step 5: Celebration & Gateway Handoff
 func (w *OnboardingWizard) renderCompleteStep() {
-	header := widget.NewLabelWithStyle("🎉 Account Activated Successfully!", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-	subtext := widget.NewLabelWithStyle(fmt.Sprintf("Welcome to Campus OS, %s!", w.AcademicName), fyne.TextAlignCenter, fyne.TextStyle{})
-
-	card := widget.NewCard(
-		"Digital Campus Pass",
-		"Your account credentials have been verified",
-		container.NewVBox(
-			widget.NewLabel(fmt.Sprintf("Username : %s", w.Username)),
-			widget.NewLabel(fmt.Sprintf("Email    : %s@campus.edu", w.Username)),
-			widget.NewLabel("Gate Pass: ACTIVE (Ready for Checkpoint Scanning)"),
-		),
+	header := NewPageHeader(
+		"Account Activated Successfully!",
+		"Your institutional credentials and gate pass are active and verified",
+		NewStatusPill("ACCOUNT ACTIVE", PillSuccess),
 	)
 
-	enterBtn := widget.NewButtonWithIcon("Enter Campus OS Dashboard", theme.HomeIcon(), func() {
+	idBadge := container.NewVBox(
+		container.NewBorder(nil, nil,
+			widget.NewLabel("Scholar: "+w.AcademicName),
+			NewStatusPill("VERIFIED SCHOLAR", PillSuccess),
+		),
+		widget.NewSeparator(),
+		widget.NewLabel("Username: "+w.Username),
+		widget.NewLabel("Email:    "+w.Username+"@campus.edu"),
+		widget.NewLabel("Campus Gate Pass: ENABLED"),
+		widget.NewLabel("Affiliation: Dr. A.P.J. Abdul Kalam Technical University (AKTU)"),
+	)
+
+	idCard := NewStyledCard("Digital Campus Pass", idBadge)
+
+	enterBtn := widget.NewButtonWithIcon("Finish & Ready", theme.HomeIcon(), func() {
 		if w.onComplete != nil {
 			w.onComplete()
 		}
@@ -297,7 +347,7 @@ func (w *OnboardingWizard) renderCompleteStep() {
 	enterBtn.Importance = widget.HighImportance
 
 	w.content.Add(header)
-	w.content.Add(subtext)
-	w.content.Add(card)
+	w.content.Add(idCard)
+	w.content.Add(layout.NewSpacer())
 	w.content.Add(enterBtn)
 }
