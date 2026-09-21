@@ -18,15 +18,83 @@ switch ($Subcommand) {
         & "$ScriptDir\scripts\dev.client.ps1" @SubArgs
     }
     default {
-        Write-Host "==> [dev] Starting Campus OS backend database service..." -ForegroundColor Green
-        docker compose up -d campus-db
+        $SocketPath = if ($env:SOCKET_PATH) { $env:SOCKET_PATH } else { "$env:TEMP\campus-os-dev.sock" }
+        $Port = if ($env:PORT) { $env:PORT } else { "8080" }
+        $BackendUrl = if ($env:CAMPUS_BACKEND_URL) { $env:CAMPUS_BACKEND_URL } else { "http://localhost:$Port" }
 
-        Write-Host "==> [dev] Starting TypeScript DB Layer in development mode..." -ForegroundColor Green
-        Push-Location "$ScriptDir\db-layer"
+        Write-Host "========================================================================" -ForegroundColor Cyan
+        Write-Host "  CAMPUS OS: LOCAL FULL-STACK DEVELOPMENT ENVIRONMENT                  " -ForegroundColor Cyan
+        Write-Host "========================================================================" -ForegroundColor Cyan
+        Write-Host "  Persistence Socket: unix://$SocketPath" -ForegroundColor Yellow
+        Write-Host "  Backend API:        $BackendUrl" -ForegroundColor Yellow
+        Write-Host "  Client UI:          Native Fyne (Go)" -ForegroundColor Yellow
+        Write-Host "========================================================================" -ForegroundColor Cyan
+
+        if (Test-Path $SocketPath) {
+            Remove-Item $SocketPath -Force
+        }
+
+        $dbProcess = $null
+        $backendProcess = $null
+
         try {
-            pnpm run dev
+            Write-Host "==> [dev] Ensuring Campus OS PostgreSQL database is running..." -ForegroundColor Green
+            docker compose up -d campus-db
+
+            Write-Host "==> [dev] Starting TypeScript DB Layer with tsx watcher..." -ForegroundColor Green
+            $env:SOCKET_PATH = $SocketPath
+            $dbProcess = Start-Process pnpm -ArgumentList "run dev" -WorkingDirectory "$ScriptDir\db-layer" -PassThru
+
+            Write-Host "==> [dev] Waiting for DB layer socket to initialize at $SocketPath..." -ForegroundColor Green
+            $ready = $false
+            for ($i = 0; $i -lt 50; $i++) {
+                if (Test-Path $SocketPath) {
+                    $ready = $true
+                    break
+                }
+                Start-Sleep -Milliseconds 200
+            }
+
+            if (-not $ready) {
+                Write-Error "TypeScript DB layer socket failed to bind at $SocketPath"
+                exit 1
+            }
+            Write-Host "==> [dev] TypeScript DB layer ready." -ForegroundColor Green
+
+            Write-Host "==> [dev] Starting Go logical backend on :$Port..." -ForegroundColor Green
+            $env:DB_SOCKET_PATH = $SocketPath
+            $env:PORT = $Port
+            $env:ENV = "development"
+            $backendProcess = Start-Process go -ArgumentList "run ./cmd/server" -WorkingDirectory "$ScriptDir\backend" -PassThru
+
+            Write-Host "==> [dev] Waiting for HTTP API on $BackendUrl/healthz..." -ForegroundColor Green
+            for ($i = 0; $i -lt 50; $i++) {
+                try {
+                    $resp = Invoke-WebRequest -Uri "$BackendUrl/healthz" -UseBasicParsing -TimeoutSec 1
+                    if ($resp.StatusCode -eq 200) { break }
+                } catch {
+                    Start-Sleep -Milliseconds 200
+                }
+            }
+            Write-Host "==> [dev] Go backend ready." -ForegroundColor Green
+
+            $noClient = $args -contains "--no-client"
+            if ($noClient) {
+                Write-Host "==> [dev] Running in headless mode (--no-client). Press Ctrl+C to stop." -ForegroundColor Yellow
+                Wait-Process -Id $backendProcess.Id
+            } else {
+                Write-Host "==> [dev] Launching Native Fyne Client..." -ForegroundColor Green
+                Push-Location "$ScriptDir\apps\client"
+                $env:CAMPUS_BACKEND_URL = $BackendUrl
+                go run . @args
+                Pop-Location
+            }
         } finally {
-            Pop-Location
+            Write-Host "`n==> [dev] Shutting down development services..." -ForegroundColor Yellow
+            if ($backendProcess -and -not $backendProcess.HasExited) { Stop-Process -Id $backendProcess.Id -Force }
+            if ($dbProcess -and -not $dbProcess.HasExited) { Stop-Process -Id $dbProcess.Id -Force }
+            if (Test-Path $SocketPath) { Remove-Item $SocketPath -Force }
+            Write-Host "==> [dev] Clean shutdown complete." -ForegroundColor Green
         }
     }
 }

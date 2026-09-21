@@ -9,6 +9,8 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import * as fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { AuthHandler } from './handles/auth.js';
@@ -17,10 +19,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROTO_ROOT = path.resolve(__dirname, '../../proto');
 
-const SOCKET_PATH = process.env.SOCKET_PATH || '/var/run/campus-os/db.sock';
+const SOCKET_PATH = process.env.SOCKET_PATH || '/tmp/campus-os-dev.sock';
 
 export function createServer(prisma?: PrismaClient): grpc.Server {
-  const db = prisma || (process.env.NODE_ENV !== 'test' ? new PrismaClient() : {} as any);
+  let db: PrismaClient;
+  if (prisma) {
+    db = prisma;
+  } else if (process.env.NODE_ENV !== 'test') {
+    const connectionString =
+      process.env.DATABASE_URL ||
+      'postgresql://campus_admin:campus_password_dev@localhost:5434/campus_os?schema=auth_schema';
+    const adapter = new PrismaPg({ connectionString });
+    db = new PrismaClient({ adapter });
+  } else {
+    db = {} as any;
+  }
   const server = new grpc.Server();
 
   const packageDefinition = protoLoader.loadSync(
@@ -56,5 +69,22 @@ export function createServer(prisma?: PrismaClient): grpc.Server {
 }
 
 if (process.env.NODE_ENV !== 'test') {
-  console.log(`BLOCK_DB_SERVER_ENTRYPOINT_001: Initializing persistence service on ${SOCKET_PATH}`);
+  if (fs.existsSync(SOCKET_PATH)) {
+    try {
+      fs.unlinkSync(SOCKET_PATH);
+    } catch (_) {}
+  }
+  const dir = path.dirname(SOCKET_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  const server = createServer();
+  server.bindAsync(`unix://${SOCKET_PATH}`, grpc.ServerCredentials.createInsecure(), (err) => {
+    if (err) {
+      console.error(`BLOCK_DB_SERVER_ERR: Failed to bind to ${SOCKET_PATH}:`, err);
+      process.exit(1);
+    }
+    console.log(`BLOCK_DB_SERVER_ENTRYPOINT_001: Persistence service listening on unix://${SOCKET_PATH}`);
+  });
 }

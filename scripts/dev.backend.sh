@@ -6,6 +6,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export DB_SOCKET_PATH="${DB_SOCKET_PATH:-/tmp/campus-os-dev.sock}"
+export PORT="${PORT:-8080}"
+export ENV="${ENV:-development}"
 
-echo "==> [dev:backend] Launching Go Logical Backend on :8080..."
-(cd "$SCRIPT_DIR/backend" && go run ./cmd/server "$@")
+echo "==> [dev:backend] Launching Go Logical Backend on :$PORT (Socket: $DB_SOCKET_PATH)..."
+(cd "$SCRIPT_DIR/backend" && DB_SOCKET_PATH="$DB_SOCKET_PATH" PORT="$PORT" ENV="$ENV" go run ./cmd/server "$@")
