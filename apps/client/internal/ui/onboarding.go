@@ -208,10 +208,10 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 	header := NewPageHeader(
 		"Device SIM & Telephony Handshake",
 		"Hardware carrier binding ensures activation is locked strictly to your physical handset",
-		NewBadge("STEP 2 OF 4", BadgeWarning, BadgeShapePill),
+		NewBadge("STEP 2 OF 4", BadgeDefault, BadgeShapePill),
 	)
 
-	phoneInfo := NewKeyValueRow("REGISTERED TELEPHONY CONTACT", w.MaskedPhone, NewStatusBadge("TELEPHONY DETECTED", BadgeSuccess))
+	phoneInfo := NewKeyValueRow("REGISTERED TELEPHONY CONTACT", w.MaskedPhone, nil)
 
 	var sim1Card, sim2Card *SelectableCard
 
@@ -220,7 +220,7 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 	sim1Label.Wrapping = fyne.TextWrapWord
 	sim1Content := container.NewBorder(nil, nil,
 		container.NewHBox(sim1Icon),
-		NewStatusBadge("CARRIER MATCH", BadgeSuccess),
+		NewBadge("Slot 1", BadgeSecondary, BadgeShapePill),
 		sim1Label,
 	)
 
@@ -229,7 +229,7 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 	sim2Label.Wrapping = fyne.TextWrapWord
 	sim2Content := container.NewBorder(nil, nil,
 		container.NewHBox(sim2Icon),
-		NewBadge("SECONDARY", BadgeSecondary, BadgeShapePill),
+		NewBadge("Slot 2", BadgeSecondary, BadgeShapePill),
 		sim2Label,
 	)
 
@@ -289,15 +289,15 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 	)
 
 	dossierRows := container.NewVBox(
-		NewKeyValueRow("ACADEMIC SCHOLAR NAME", w.AcademicName, NewStatusBadge("VERIFIED", BadgeSuccess)),
+		NewKeyValueRow("ACADEMIC SCHOLAR NAME", w.AcademicName, nil),
 		NewShadcnSeparator(true),
-		NewKeyValueRow("LEGAL FULL NAME (GOVT ID)", w.LegalFullName, NewStatusBadge("IDENTITY MATCH", BadgeSuccess)),
+		NewKeyValueRow("LEGAL FULL NAME (GOVT ID)", w.LegalFullName, nil),
 		NewShadcnSeparator(true),
-		NewKeyValueRow("INSTITUTIONAL USERNAME", w.Username, NewBadge("STUDENT SEAT", BadgeSecondary, BadgeShapePill)),
+		NewKeyValueRow("INSTITUTIONAL USERNAME", w.Username, nil),
 		NewShadcnSeparator(true),
 		NewKeyValueRow("OFFICIAL EMAIL", fmt.Sprintf("%s@campus.edu", w.Username), nil),
 		NewShadcnSeparator(true),
-		NewKeyValueRow("ADMISSION TYPE & SEMESTER", fmt.Sprintf("%s (Semester %d)", w.AdmissionType, w.EntrySemester), NewStatusBadge("SEAT ALLOCATED", BadgeSuccess)),
+		NewKeyValueRow("ADMISSION TYPE & SEMESTER", fmt.Sprintf("%s (Semester %d)", w.AdmissionType, w.EntrySemester), nil),
 		NewShadcnSeparator(true),
 		NewKeyValueRow("CURRICULAR NOTES", w.LateralSummary, nil),
 	)
@@ -356,7 +356,7 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 	header := NewPageHeader(
 		"Set Your Access Password",
 		"Create a secure password to finalize institutional account provisioning",
-		NewBadge("STEP 4 OF 4", BadgeWarning, BadgeShapePill),
+		NewBadge("STEP 4 OF 4", BadgeDefault, BadgeShapePill),
 	)
 
 	clockIcon := ResourceFromSVG("clock.svg", LucideClock)
@@ -437,7 +437,7 @@ func (w *OnboardingWizard) renderCompleteStep() {
 	header := NewPageHeader(
 		"Account Activated Successfully",
 		"Your institutional credentials and gate pass are active and verified",
-		NewStatusBadge("ACCOUNT ACTIVE", BadgeSuccess),
+		NewBadge("ACTIVATION COMPLETE", BadgeDefault, BadgeShapePill),
 	)
 
 	sparklesIcon := RenderSVGImage(ResourceFromSVG("sparkles.svg", LucideSparkles), 48, 48)
@@ -452,7 +452,7 @@ func (w *OnboardingWizard) renderCompleteStep() {
 		NewShadcnSeparator(true),
 		NewKeyValueRow("INSTITUTIONAL EMAIL", fmt.Sprintf("%s@campus.edu", w.Username), nil),
 		NewShadcnSeparator(true),
-		NewKeyValueRow("CAMPUS GATE ACCESS", "ENABLED • NFC & QR Checkpoint Check-in Active", NewStatusBadge("GATE ONLINE", BadgeSuccess)),
+		NewKeyValueRow("CAMPUS GATE ACCESS", "ENABLED • NFC & QR Checkpoint Check-in Active", nil),
 		NewShadcnSeparator(true),
 		NewKeyValueRow("INSTITUTIONAL AFFILIATION", "Dr. A.P.J. Abdul Kalam Technical University (AKTU)", nil),
 	)

@@ -37,7 +37,7 @@ func (a *Application) BuildLayout() fyne.CanvasObject {
 	header := NewPageHeader(
 		"Student & Scholar Onboarding",
 		"Verify sealed admission QR, validate hardware SIM, and generate your Digital Campus Pass",
-		NewStatusPill("SECURE ONBOARDING", PillInfo),
+		nil,
 	)
 
 	wizard := NewOnboardingWizard(a.APIClient, a.Window, func() {

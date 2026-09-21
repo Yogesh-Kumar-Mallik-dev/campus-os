@@ -7,7 +7,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
@@ -207,34 +206,16 @@ func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 	bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
 	bg.StrokeWidth = 1
 
-	logoPill := RenderBBDITHeaderLogo(120, 22)
+	logoPill := RenderBBDITHeaderLogo(140, 26)
 
-	brandText := canvas.NewText(institutionName, theme.Color(theme.ColorNamePrimary))
-	brandText.TextSize = 15
-	brandText.TextStyle = fyne.TextStyle{Bold: true}
+	roleBadge := NewBadge(userRole, BadgeOutline, BadgeShapePill)
 
-	tagline := canvas.NewText("Institutional Operating System", theme.Color(theme.ColorNamePlaceHolder))
-	tagline.TextSize = 11
-
-	brandBox := container.NewHBox(
+	barContent := container.NewBorder(
+		nil, nil,
 		container.NewCenter(logoPill),
-		container.NewVBox(brandText, tagline),
+		container.NewCenter(roleBadge),
 	)
 
-	rolePill := NewStatusPill(userRole, PillInfo)
-	statusDot := canvas.NewCircle(color.NRGBA{R: 52, G: 211, B: 153, A: 255})
-	statusDot.Resize(fyne.NewSize(8, 8))
-	liveLabel := canvas.NewText("Online", theme.Color(theme.ColorNamePlaceHolder))
-	liveLabel.TextSize = 11
-
-	rightBox := container.NewHBox(
-		container.NewCenter(statusDot),
-		liveLabel,
-		layout.NewSpacer(),
-		rolePill,
-	)
-
-	barContent := container.NewBorder(nil, nil, brandBox, rightBox)
 	return container.NewStack(
 		bg,
 		container.NewPadded(barContent),

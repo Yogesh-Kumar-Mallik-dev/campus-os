@@ -61,9 +61,10 @@ func (t *CampusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 		case theme.ColorNameDisabledButton:
 			return color.NRGBA{R: 230, G: 234, B: 240, A: 255}
 		case theme.ColorNameHover:
-			return color.NRGBA{R: 228, G: 232, B: 238, A: 255}
+			// Subtle darkening alpha blend overlay for light backgrounds
+			return color.NRGBA{R: 0, G: 0, B: 0, A: 15}
 		case theme.ColorNamePressed:
-			return color.NRGBA{R: 215, G: 220, B: 228, A: 255}
+			return color.NRGBA{R: 0, G: 0, B: 0, A: 32}
 		case theme.ColorNameFocus:
 			return color.NRGBA{R: 144, G: 20, B: 22, A: 220}
 		case theme.ColorNameSelection:
@@ -129,9 +130,10 @@ func (t *CampusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 		case theme.ColorNameDisabledButton:
 			return color.NRGBA{R: 24, G: 30, B: 40, A: 255}
 		case theme.ColorNameHover:
-			return color.NRGBA{R: 52, G: 62, B: 80, A: 255}
+			// Subtle luminous highlight alpha blend overlay so button colors brighten rather than greying out
+			return color.NRGBA{R: 255, G: 255, B: 255, A: 26}
 		case theme.ColorNamePressed:
-			return color.NRGBA{R: 64, G: 76, B: 98, A: 255}
+			return color.NRGBA{R: 255, G: 255, B: 255, A: 50}
 		case theme.ColorNameFocus:
 			return color.NRGBA{R: 244, G: 90, B: 81, A: 220}
 		case theme.ColorNameSelection:
