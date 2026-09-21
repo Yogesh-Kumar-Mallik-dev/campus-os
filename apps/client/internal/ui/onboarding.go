@@ -331,11 +331,16 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 	confirmPassEntry := NewShadcnInput("Confirm new password", true)
 
 	fingerprintIcon := RenderSVGImage(ResourceFromSVG("fingerprint.svg", SVGFingerprint), 20, 20)
-	biometricCheck := widget.NewCheck("Enable Biometric Keyring (Fingerprint / Face ID)", func(b bool) {
+	bioLabel := widget.NewLabel("Enable Biometric Keyring (Fingerprint / Face ID)")
+	bioLabel.Wrapping = fyne.TextWrapWord
+	biometricSwitch := NewSwitch(w.BiometricsEnabled, func(b bool) {
 		w.BiometricsEnabled = b
 	})
-	biometricCheck.SetChecked(true)
-	biometricRow := container.NewHBox(fingerprintIcon, biometricCheck)
+	biometricRow := container.NewBorder(nil, nil,
+		container.NewHBox(fingerprintIcon),
+		biometricSwitch,
+		bioLabel,
+	)
 
 	completeBtn := NewShadcnButton("Complete Activation & Provision Pass", ButtonDefault, ButtonSizeDefault, theme.ConfirmIcon(), func() {
 		if len(passEntry.Text) < 6 {
