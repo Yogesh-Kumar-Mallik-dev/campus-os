@@ -120,15 +120,51 @@ Responsive 4-column luminous glass card grid:
 * **Quick Actions Bar:**
   - Shortcuts: *"Provision Executive QR Docket"*, *"Inspect Audit Ledger"*, *"Review Department Status"*.
 
+### 3.3 Optical Camera QR Scanner & Local Permissions
+* **Permission Governance:** Before initiating camera hardware capture, the client presents a themed modal dialog in full stylistic alignment with Design System 2026.
+* **Local Persistence:** The user's permission choice (`prompt`, `granted`, or `denied`) is persistently stored on disk in `~/.config/campus-os/preferences.json` (0600 file mode). Once granted, subsequent scans bypass the prompt.
+* **Zero-Network In-Memory Processing:** Video frames captured from `/dev/video*` (via `ffmpeg` V4L2 MJPEG stream) are decoded and evaluated strictly in-memory by `goqr`. No frames or sensor streams are ever recorded, written to disk, or transmitted over any network interface.
+* **Fallback Mechanisms:** If no physical camera sensor is attached or if permission is denied, the wizard allows selecting a screenshot/picture file or entering the manual claim token.
+
+---
+
+## 4. Design System 2026 Client Aesthetics
+(Theme, components, tokens)
+
+---
+
+## 5. Base Dashboard Shell Layout (Design System 2026)
+
+### 5.1 Desktop & Responsive Layout
+* **TopBar Layout:**
+  - Left: BBDIT institutional logo and application name.
+  - Center: Active page title (e.g. "Executive Overview").
+  - Right: Theme toggle (Dark/Light), backend live status indicator, profile badge, and sign out button.
+  - Mobile / Narrow Screens: Hamburger menu button displayed on the far left to toggle the navigation drawer.
+* **Navigation Sidebar:** Fixed 220px desktop sidebar with institutional navigation routes.
+* **KPI Metrics (4 Cards):**
+  1. Active Students
+  2. Faculty Present
+  3. Real-Time Occupancy
+  4. Total Staff
+
+### 5.2 Content Panels & Quick Actions
+* **Panel 1 (Left): Pending Executive Approvals Queue**
+* **Panel 2 (Right): Recent Institutional Activity & Audit Stream**
+* **Quick Actions Bar:**
+  - Action #5: *"Create Access QR Token for Dean, Registrar, Director, and Executive Director"* (Phase 2).
+
 ---
 
 ## 6. Implementation Checklist & Quality Standards
 
-- [ ] Add printable high-resolution docket file export to `runBootstrapCLI` in `backend/cmd/server/main.go`.
-- [ ] Implement `KeyringSessionStore` with OS Keyring integration in `apps/client/internal/auth/`.
-- [ ] Implement `LoginView` component with input validation and toggle to Onboarding in `apps/client/internal/ui/login.go`.
-- [ ] Implement `DashboardShell`, `DashboardTopBar`, and fixed `SidebarNav` in `apps/client/internal/ui/dashboard.go`.
-- [ ] Implement `MetricCard` and Executive Overview panels in `apps/client/internal/ui/overview.go`.
-- [ ] Every new Go file accompanied by co-located `*_test.go` unit tests.
-- [ ] Zero build or test failures via `./scripts/check.sh && ./scripts/test.sh`.
-- [ ] Strict SSH cryptographic commit signatures (`git commit -S`).
+- [x] Add printable high-resolution docket file export to `runBootstrapCLI` in `backend/cmd/server/main.go`.
+- [x] Implement `KeyringSessionStore` with OS Keyring integration in `apps/client/internal/auth/`.
+- [x] Implement `LoginView` component with input validation and toggle to Onboarding in `apps/client/internal/ui/login.go`.
+- [x] Implement `DashboardShell`, `DashboardTopBar`, and fixed `SidebarNav` in `apps/client/internal/ui/dashboard.go`.
+- [x] Implement `MetricCard` and Executive Overview panels in `apps/client/internal/ui/dashboard.go`.
+- [x] Implement live optical camera QR scanner with thematic permission modal and local persistence in `apps/client/internal/ui/camera.go`.
+- [x] Full monorepo development orchestration with automatic port conflict resolution in `scripts/dev.sh`.
+- [x] Every new Go file accompanied by co-located `*_test.go` unit tests.
+- [x] Zero build or test failures via `./scripts/check.sh && ./scripts/test.sh`.
+- [x] Strict SSH cryptographic commit signatures (`git commit -S`).
