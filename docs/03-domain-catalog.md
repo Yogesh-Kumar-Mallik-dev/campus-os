@@ -54,7 +54,11 @@ erDiagram
   * `timetables` — Scheduled class slots, periods, and room mappings.
   * `teaching_assignments` — Mapping of teachers and lab technicians to subjects, sections, and hosted semesters.
   * `internal_assessments` — Assessment definitions (Mid-term, Quizzes, Lab evaluations).
-  * `student_marks` — Submitted, reviewed, and finalized student grade records.
+  * `student_marks` — Submitted, reviewed, and finalized student internal grade records.
+  * `university_exam_results` — Canonical state of external affiliating university semester results (SGPA, CGPA, credits, status).
+  * `university_exam_result_revisions` — Immutable ledger of result updates (Challenge Evaluations, Back Papers, Grace Marks, Year Backs) tracking uploader, verifier, source PDF, and delta.
+  * `university_subject_marks` — Granular per-subject breakdown (internal, external, total, grade, credits, grace marks, attempt number).
+  * `university_result_conflict_resolutions` — Exam Cell resolution queue and decisions for student vs institution upload discrepancies.
 
 ### 2.3 `student_schema` (Student Domain)
 

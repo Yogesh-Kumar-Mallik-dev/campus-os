@@ -63,6 +63,7 @@ Campus OS enforces a **Strict Need-to-Know** access boundary:
 | **HOD** | Comprehensive visibility across all programs, courses, hosted semesters, faculty, and students within their academic department. |
 | **Warden** | Full visibility over hostel residents, bed occupancy, room maintenance, and leave/outpass workflows within their hostel block. |
 | **Guard** | Real-time visibility limited strictly to approved outpasses for checkpoint identity verification and timestamp logging. |
+| **Exam Cell / COE** | Full institutional authority over university result ingestion, Gazette/TR bulk uploads, marks ledger auditing, and exclusive authority to resolve score discrepancies and conflicting uploads. |
 | **Registrar / Dean** | Institution-wide read visibility for academic records, admissions, enrollments, and institutional governance. |
 | **Management / Moderator** | Institutional oversight visibility across grievance logs, operational reports, and cross-departmental escalations. |
 

@@ -78,7 +78,30 @@ sequenceDiagram
 
 $$\text{Teacher Submits Marks} \longrightarrow \text{HOD Departmental Review} \longrightarrow \text{Registrar / Dean Verification} \longrightarrow \text{Academic Records Locked}$$
 
-### 4.3 Master Data Governance Pipeline
+### 4.3 Affiliating University (AKTU) Semester Result Ingestion & Conflict Resolution
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Uploader as Student / Exam Cell Officer
+    actor Engine as PDF Parser Engine
+    actor COE as Exam Cell / COE
+    
+    Uploader->>Engine: Upload Result PDF (Gazette / OneView Scorecard)
+    Engine->>Engine: Hash & Store PDF in document_schema.documents
+    Engine->>Engine: Parse Metadata, Subject Rows, SGPA, & Result Status
+    alt No Baseline or Exact Match
+        Engine->>Engine: Generate New Revision & Lock (VERIFIED_LOCKED)
+    else Discrepancy with Existing Verified Record
+        Engine->>Engine: Transition Status to CONFLICT_RESOLUTION_NEEDED
+        Engine->>COE: Route to Actionable Resolution Queue
+        Note over COE: Side-by-Side Comparison of Extracted Marks & PDFs
+        COE->>Engine: Sign Off (Accept Student / Accept Institution / Manual Override)
+        Engine->>Engine: Commit New Revision with Audit Delta & Lock
+    end
+```
+
+### 4.4 Master Data Governance Pipeline
 
 $$\text{Registrar / Dean Academics Proposes} \longrightarrow \text{Director Formally Approves} \longrightarrow \text{Super Admin Atomically Commits}$$
 

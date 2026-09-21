@@ -218,3 +218,117 @@ model StudentMark {
   @@map("student_marks")
   @@schema("academic_schema")
 }
+
+// ==============================================================================
+// Affiliating University (AKTU) Semester Results, PDF Parsing & Revision Ledger
+// ==============================================================================
+
+model UniversityExamResult {
+  id                    String                              @id @default(uuid())
+  studentId             String                              @map("student_id")
+  semesterNumber        Int                                 @map("semester_number")
+  academicSession       String                              @map("academic_session") // e.g. "2024-25"
+  examType              String                              @default("REGULAR") @map("exam_type") // REGULAR, BACK_PAPER, SPECIAL_COP, CHALLENGE_EVALUATION, SCRUTINY
+  
+  sgpa                  Float?
+  cgpa                  Float?
+  totalCreditsEarned    Float?                              @map("total_credits_earned")
+  totalCreditsAttempted Float?                              @map("total_credits_attempted")
+  totalMarksSecured     Float?                              @map("total_marks_secured")
+  totalMaxMarks         Float?                              @map("total_max_marks")
+  resultStatus          String                              @default("PASS") @map("result_status") // PASS, PWG (Pass With Grace), PCP (Promoted with Carry Over Paper), FAILED, YEAR_BACK
+  
+  verificationStatus    String                              @default("DRAFT_PARSED") @map("verification_status") // DRAFT_PARSED, VERIFIED_LOCKED, CONFLICT_RESOLUTION_NEEDED
+  hasConflict           Boolean                             @default(false) @map("has_conflict")
+  conflictDetails       Json?                               @map("conflict_details")
+  
+  currentRevisionId     String?                             @map("current_revision_id")
+  createdAt             DateTime                            @default(now()) @map("created_at")
+  updatedAt             DateTime                            @updatedAt @map("updated_at")
+  
+  revisions             UniversityExamResultRevision[]
+  conflictResolutions   UniversityResultConflictResolution[]
+
+  @@unique([studentId, semesterNumber, academicSession])
+  @@index([studentId, resultStatus])
+  @@index([verificationStatus])
+  @@map("university_exam_results")
+  @@schema("academic_schema")
+}
+
+model UniversityExamResultRevision {
+  id               String                 @id @default(uuid())
+  resultId         String                 @map("result_id")
+  studentId        String                 @map("student_id")
+  revisionNumber   Int                    @map("revision_number")
+  examType         String                 @map("exam_type") // REGULAR, BACK_PAPER, SPECIAL_COP, CHALLENGE_EVALUATION_S1, CHALLENGE_EVALUATION_S2, SCRUTINY
+  uploadSource     String                 @map("upload_source") // "INSTITUTION_BULK", "STUDENT_SELF", "MANUAL_OVERRIDE"
+  documentId       String                 @map("document_id") // Reference to uploaded PDF in document_schema.documents
+  uploadedByUserId String                 @map("uploaded_by_user_id")
+  verifiedByUserId String?                @map("verified_by_user_id")
+  
+  sgpa             Float?
+  cgpa             Float?
+  resultStatus     String                 @map("result_status") // PASS, PWG, PCP, FAILED, YEAR_BACK
+  deltaDetails     Json?                  @map("delta_details") // Snapshot diff of previous vs new marks/grades
+  remarks          String?
+  createdAt        DateTime               @default(now()) @map("created_at")
+  
+  result           UniversityExamResult   @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  subjectMarks     UniversitySubjectMark[]
+
+  @@unique([resultId, revisionNumber])
+  @@index([studentId, examType])
+  @@index([documentId])
+  @@map("university_exam_result_revisions")
+  @@schema("academic_schema")
+}
+
+model UniversitySubjectMark {
+  id             String                       @id @default(uuid())
+  revisionId     String                       @map("revision_id")
+  subjectCode    String                       @map("subject_code") // e.g. "KCS501"
+  subjectName    String                       @map("subject_name") // e.g. "Database Management Systems"
+  subjectType    String                       @default("THEORY") @map("subject_type") // THEORY, PRACTICAL
+  
+  internalMarks  Float?                       @map("internal_marks") // Sessional / College component
+  externalMarks  Float?                       @map("external_marks") // University end-sem paper
+  totalMarks     Float                        @map("total_marks")
+  maxMarks       Float                        @default(100) @map("max_marks")
+  
+  grade          String? // e.g. "A+", "B", "F"
+  gradePoints    Float?                       @map("grade_points")
+  credits        Float                        @default(0)
+  
+  isGraceAwarded Boolean                      @default(false) @map("is_grace_awarded")
+  graceMarks     Float                        @default(0) @map("grace_marks")
+  
+  isBackPaper    Boolean                      @default(false) @map("is_back_paper")
+  attemptNumber  Int                          @default(1) @map("attempt_number")
+  
+  createdAt      DateTime                     @default(now()) @map("created_at")
+  revision       UniversityExamResultRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+
+  @@index([revisionId, subjectCode])
+  @@map("university_subject_marks")
+  @@schema("academic_schema")
+}
+
+model UniversityResultConflictResolution {
+  id                            String               @id @default(uuid())
+  resultId                      String               @map("result_id")
+  conflictedSubjectCode         String?              @map("conflicted_subject_code")
+  studentUploadRevisionId       String               @map("student_upload_revision_id")
+  institutionUploadRevisionId   String               @map("institution_upload_revision_id")
+  status                        String               @default("PENDING") @map("status") // PENDING, RESOLVED_ACCEPTED_STUDENT, RESOLVED_ACCEPTED_INSTITUTION, RESOLVED_MANUALLY
+  resolvedByUserId              String?              @map("resolved_by_user_id")
+  resolutionJustification       String?              @map("resolution_justification")
+  resolvedAt                    DateTime?            @map("resolved_at")
+  createdAt                     DateTime             @default(now()) @map("created_at")
+  
+  result                        UniversityExamResult @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  @@index([resultId, status])
+  @@map("university_result_conflict_resolutions")
+  @@schema("academic_schema")
+}
