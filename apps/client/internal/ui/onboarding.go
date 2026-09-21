@@ -7,6 +7,8 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
 )
@@ -39,6 +41,7 @@ type OnboardingWizard struct {
 
 	// Wizard Form State
 	ClaimToken        string
+	ScannedImageName  string
 	MaskedPhone       string
 	Username          string
 	AcademicName      string
@@ -130,22 +133,98 @@ func (w *OnboardingWizard) render() {
 
 // Step 1: Scan Sealed QR Code
 func (w *OnboardingWizard) renderScanStep() {
-	qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
-	qrVisual := RenderSVGImage(qrIconRes, 64, 64)
+	var scannerVisual fyne.CanvasObject
+	var scannerTitle, scannerDesc string
+
+	if w.ScannedImageName != "" {
+		checkIconRes := ResourceFromSVG("check_circle.svg", LucideCheckCircle2)
+		scannerVisual = RenderSVGImage(checkIconRes, 56, 56)
+		scannerTitle = "QR Picture Loaded & Decoded"
+		scannerDesc = fmt.Sprintf("Extracted admission token from: %s", w.ScannedImageName)
+	} else {
+		qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
+		scannerVisual = RenderSVGImage(qrIconRes, 56, 56)
+		scannerTitle = "Optical Camera or Picture Scan"
+		scannerDesc = "Align docket under optical camera or select a WhatsApp / screenshot image"
+	}
 
 	emptyScanner := NewEmptyState(EmptyStateParams{
-		Media:       qrVisual,
-		Title:       "Optical Camera Ready",
-		Description: "Align official QR code within optical brackets",
+		Media:       scannerVisual,
+		Title:       scannerTitle,
+		Description: scannerDesc,
 	})
 
 	tokenField, tokenEntry := NewFormField(FormField{
 		Label:       "Voucher Claim Token",
 		Placeholder: "Enter 16-character code (or leave blank for demo)",
-		HelperText:  "Located beneath the tamper-evident scratch foil on your admission docket",
+		HelperText:  "Auto-filled from decoded QR picture or manually entered from admission docket",
 	})
 	if w.ClaimToken != "" {
 		tokenEntry.SetText(w.ClaimToken)
+	}
+
+	uploadBtn := NewShadcnButton("Select QR Screenshot or Picture", ButtonOutline, ButtonSizeDefault, ResourceFromSVG("upload.svg", LucideUpload), func() {
+		if w.window == nil {
+			return
+		}
+		fd := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+			if err != nil || reader == nil {
+				return
+			}
+			defer reader.Close()
+
+			token, decodeErr := DecodeQRFromImage(reader)
+			if decodeErr != nil {
+				w.IsError = true
+				w.StatusText = "Could not detect a QR code in the selected picture. Ensure the image is clear or enter the token manually."
+				w.toast("No QR Code Detected", "Please ensure the QR code is clearly visible.", AlertDestructive)
+				w.render()
+				return
+			}
+
+			w.ClaimToken = token
+			w.ScannedImageName = reader.URI().Name()
+			tokenEntry.SetText(token)
+			w.IsError = false
+			w.StatusText = fmt.Sprintf("QR code decoded successfully from %s", reader.URI().Name())
+			w.toast("QR Picture Decoded", fmt.Sprintf("Token: %s", token), AlertSuccess)
+			w.render()
+		}, w.window)
+
+		fd.SetFilter(storage.NewExtensionFileFilter([]string{".png", ".jpg", ".jpeg", ".webp", ".bmp"}))
+		fd.SetTitleText("Select Admission QR Picture or Screenshot")
+		fd.Show()
+	})
+
+	// Setup drag-and-drop on desktop window
+	if w.window != nil {
+		w.window.SetOnDropped(func(pos fyne.Position, uris []fyne.URI) {
+			if len(uris) == 0 || w.step != StepScan {
+				return
+			}
+			reader, err := storage.Reader(uris[0])
+			if err != nil {
+				return
+			}
+			defer reader.Close()
+
+			token, decodeErr := DecodeQRFromImage(reader)
+			if decodeErr != nil {
+				w.IsError = true
+				w.StatusText = "Could not detect a QR code in the dropped picture."
+				w.toast("No QR Code Detected", "Please ensure the QR code is clear.", AlertDestructive)
+				w.render()
+				return
+			}
+
+			w.ClaimToken = token
+			w.ScannedImageName = uris[0].Name()
+			tokenEntry.SetText(token)
+			w.IsError = false
+			w.StatusText = fmt.Sprintf("QR code decoded successfully from %s", uris[0].Name())
+			w.toast("QR Picture Decoded", fmt.Sprintf("Token: %s", token), AlertSuccess)
+			w.render()
+		})
 	}
 
 	scanBtn := NewShadcnButton("Validate Admission Token", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("scan.svg", LucideScan), func() {
@@ -185,9 +264,10 @@ func (w *OnboardingWizard) renderScanStep() {
 	scannerCard := NewShadcnCard(CardParts{
 		Badge:       NewBadge("STEP 1 OF 4", BadgeDefault, BadgeShapePill),
 		Title:       "Scan Sealed Admission QR",
-		Description: "Position camera viewfinder over the tamper-evident QR or enter the manual token beneath the seal",
+		Description: "Position camera viewfinder, select a screenshot/picture, or enter the manual token beneath the seal",
 		Content: container.NewVBox(
 			emptyScanner,
+			container.NewCenter(uploadBtn),
 			NewShadcnSeparator(true),
 			tokenField,
 		),
