@@ -7,7 +7,8 @@ import { createServer } from './server.js';
  */
 describe('Database Layer Server', () => {
   it('creates an initialized gRPC server instance', () => {
-    const server = createServer();
+    const mockPrisma = {} as any;
+    const server = createServer(mockPrisma);
     expect(server).toBeDefined();
   });
 });
