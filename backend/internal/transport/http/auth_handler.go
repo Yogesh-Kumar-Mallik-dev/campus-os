@@ -1,0 +1,219 @@
+package http
+
+import (
+	"encoding/json"
+	"net/http"
+
+	campusv1 "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/pkg/proto/campus/v1"
+)
+
+// AuthHTTPHandler maps incoming HTTP onboarding and login requests to the gRPC AuthService.
+type AuthHTTPHandler struct {
+	client campusv1.AuthServiceClient
+}
+
+// NewAuthHTTPHandler constructs an AuthHTTPHandler with the provided gRPC client.
+func NewAuthHTTPHandler(client campusv1.AuthServiceClient) *AuthHTTPHandler {
+	return &AuthHTTPHandler{client: client}
+}
+
+// BLOCK_AUTH_HTTP_VALIDATE_001
+// Purpose: Validates a scanned single-use claim token and returns profile details.
+func (h *AuthHTTPHandler) HandleValidateClaim(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ClaimToken string `json:"claim_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ClaimToken == "" {
+		WriteProblem(w, r, http.StatusBadRequest, "INVALID_CLAIM_REQUEST", "Invalid Claim Request", "claim_token is required", nil)
+		return
+	}
+
+	if h.client == nil {
+		WriteProblem(w, r, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "Auth Service Unavailable", "Backend persistence link is uninitialized", nil)
+		return
+	}
+
+	resp, err := h.client.ValidateClaimToken(r.Context(), &campusv1.ValidateClaimTokenRequest{
+		ClaimToken: body.ClaimToken,
+	})
+	if err != nil {
+		WriteProblem(w, r, http.StatusInternalServerError, "CLAIM_VALIDATION_FAILED", "Claim Validation Error", err.Error(), nil)
+		return
+	}
+
+	if !resp.IsValid {
+		WriteProblem(w, r, http.StatusUnauthorized, "CLAIM_TOKEN_INVALID", "Invalid Claim Token", "The token is expired, consumed, or invalid", nil)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"is_valid":                        resp.IsValid,
+		"user_id":                         resp.UserId,
+		"masked_phone_number":             resp.MaskedPhoneNumber,
+		"username":                        resp.Username,
+		"academic_name":                   resp.AcademicName,
+		"legal_full_name":                 resp.LegalFullName,
+		"admission_type":                  resp.AdmissionType,
+		"entry_semester_number":           resp.EntrySemesterNumber,
+		"lateral_entry_summary":           resp.LateralEntrySummary,
+		"grace_period_remaining_seconds": resp.GracePeriodRemainingSeconds,
+	})
+}
+
+// BLOCK_AUTH_HTTP_VERIFY_SIM_001
+// Purpose: Checks hardware SIM telephony match and triggers an SMS OTP.
+func (h *AuthHTTPHandler) HandleVerifySIM(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ClaimToken         string `json:"claim_token"`
+		DeviceSIMIccidHash string `json:"device_sim_iccid_hash"`
+		DeviceCarrierPhone string `json:"device_carrier_phone"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ClaimToken == "" {
+		WriteProblem(w, r, http.StatusBadRequest, "INVALID_SIM_REQUEST", "Invalid SIM Request", "claim_token and phone are required", nil)
+		return
+	}
+
+	if h.client == nil {
+		WriteProblem(w, r, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "Auth Service Unavailable", "Backend persistence link is uninitialized", nil)
+		return
+	}
+
+	resp, err := h.client.VerifySIMAndSendOTP(r.Context(), &campusv1.VerifySIMAndSendOTPRequest{
+		ClaimToken:         body.ClaimToken,
+		DeviceSimIccidHash: body.DeviceSIMIccidHash,
+		DeviceCarrierPhone: body.DeviceCarrierPhone,
+	})
+	if err != nil {
+		WriteProblem(w, r, http.StatusInternalServerError, "SIM_VERIFY_FAILED", "SIM Verification Error", err.Error(), nil)
+		return
+	}
+
+	if !resp.SimMatched {
+		WriteProblem(w, r, http.StatusForbidden, "ERR_SIM_ABSENT_OR_MISMATCH", "SIM Mismatch or Absent", "The physical SIM matching this student record is not present in this device", nil)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"sim_matched":                 resp.SimMatched,
+		"otp_challenge_id":            resp.OtpChallengeId,
+		"resend_available_in_seconds": resp.ResendAvailableInSeconds,
+	})
+}
+
+// BLOCK_AUTH_HTTP_COMPLETE_001
+// Purpose: Verifies the SMS OTP, sets user password, and completes account claim.
+func (h *AuthHTTPHandler) HandleCompleteClaim(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ClaimToken       string `json:"claim_token"`
+		OTPChallengeID   string `json:"otp_challenge_id"`
+		OTPCode          string `json:"otp_code"`
+		NewPassword      string `json:"new_password"`
+		EnableBiometrics bool   `json:"enable_biometrics"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ClaimToken == "" || body.NewPassword == "" {
+		WriteProblem(w, r, http.StatusBadRequest, "INVALID_COMPLETE_REQUEST", "Invalid Request", "Missing required claim parameters", nil)
+		return
+	}
+
+	if len(body.NewPassword) < 6 {
+		WriteProblem(w, r, http.StatusBadRequest, "PASSWORD_TOO_SHORT", "Weak Password", "Password must be at least 6 characters during grace period", nil)
+		return
+	}
+
+	if h.client == nil {
+		WriteProblem(w, r, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "Auth Service Unavailable", "Backend persistence link is uninitialized", nil)
+		return
+	}
+
+	resp, err := h.client.VerifyOTPAndClaimAccount(r.Context(), &campusv1.VerifyOTPAndClaimAccountRequest{
+		ClaimToken:       body.ClaimToken,
+		OtpChallengeId:   body.OTPChallengeID,
+		OtpCode:          body.OTPCode,
+		NewPassword:      body.NewPassword,
+		EnableBiometrics: body.EnableBiometrics,
+	})
+	if err != nil {
+		WriteProblem(w, r, http.StatusBadRequest, "CLAIM_COMPLETION_FAILED", "Claim Failed", err.Error(), nil)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"success":       resp.Success,
+		"access_token":  resp.AccessToken,
+		"refresh_token": resp.RefreshToken,
+		"user_id":       resp.UserId,
+		"username":      resp.Username,
+		"email":         resp.Email,
+		"role_code":     resp.RoleCode,
+	})
+}
+
+// BLOCK_AUTH_HTTP_LOGIN_001
+// Purpose: Universal authentication endpoint supporting username, email, or PRN.
+func (h *AuthHTTPHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Identifier string `json:"identifier"`
+		Password   string `json:"password"`
+		TOTPCode   string `json:"totp_code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Identifier == "" || body.Password == "" {
+		WriteProblem(w, r, http.StatusBadRequest, "INVALID_LOGIN_REQUEST", "Invalid Login Request", "identifier and password are required", nil)
+		return
+	}
+
+	if h.client == nil {
+		WriteProblem(w, r, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "Auth Service Unavailable", "Backend persistence link is uninitialized", nil)
+		return
+	}
+
+	resp, err := h.client.Login(r.Context(), &campusv1.LoginRequest{
+		Identifier: body.Identifier,
+		Password:   body.Password,
+		TotpCode:   body.TOTPCode,
+	})
+	if err != nil {
+		WriteProblem(w, r, http.StatusUnauthorized, "LOGIN_FAILED", "Invalid Credentials", "Incorrect username or password", nil)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"access_token":       resp.AccessToken,
+		"refresh_token":      resp.RefreshToken,
+		"expires_in_seconds": resp.ExpiresInSeconds,
+		"user_id":            resp.UserId,
+		"username":           resp.Username,
+		"full_name":          resp.FullName,
+		"role_codes":         resp.RoleCodes,
+	})
+}
+
+// BLOCK_AUTH_HTTP_REFRESH_001
+// Purpose: Refreshes access tokens via rotating family refresh tokens.
+func (h *AuthHTTPHandler) HandleRefresh(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.RefreshToken == "" {
+		WriteProblem(w, r, http.StatusBadRequest, "INVALID_REFRESH_REQUEST", "Invalid Refresh Request", "refresh_token is required", nil)
+		return
+	}
+
+	if h.client == nil {
+		WriteProblem(w, r, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "Auth Service Unavailable", "Backend persistence link is uninitialized", nil)
+		return
+	}
+
+	resp, err := h.client.RefreshToken(r.Context(), &campusv1.RefreshTokenRequest{
+		RefreshToken: body.RefreshToken,
+	})
+	if err != nil {
+		WriteProblem(w, r, http.StatusUnauthorized, "REFRESH_FAILED", "Refresh Failed", err.Error(), nil)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"access_token":       resp.AccessToken,
+		"refresh_token":      resp.RefreshToken,
+		"expires_in_seconds": resp.ExpiresInSeconds,
+	})
+}

@@ -13,9 +13,10 @@ import (
 
 // PersistenceClient encapsulates the gRPC connection to the TypeScript DB Layer.
 type PersistenceClient struct {
-	conn       *grpc.ClientConn
-	dbService  campusv1.DatabaseServiceClient
-	socketPath string
+	conn        *grpc.ClientConn
+	dbService   campusv1.DatabaseServiceClient
+	authService campusv1.AuthServiceClient
+	socketPath  string
 }
 
 // BLOCK_GRPC_CLIENT_DIAL_001
@@ -34,10 +35,16 @@ func NewPersistenceClient(socketPath string) (*PersistenceClient, error) {
 	}
 
 	return &PersistenceClient{
-		conn:       conn,
-		dbService:  campusv1.NewDatabaseServiceClient(conn),
-		socketPath: socketPath,
+		conn:        conn,
+		dbService:   campusv1.NewDatabaseServiceClient(conn),
+		authService: campusv1.NewAuthServiceClient(conn),
+		socketPath:  socketPath,
 	}, nil
+}
+
+// AuthService returns the underlying AuthServiceClient.
+func (c *PersistenceClient) AuthService() campusv1.AuthServiceClient {
+	return c.authService
 }
 
 // Close closes the underlying gRPC client connection.

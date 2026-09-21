@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,7 +13,9 @@ import (
 	"time"
 
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/internal/config"
+	transportGrpc "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/internal/transport/grpc"
 	transportHttp "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/internal/transport/http"
+	campusv1 "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/pkg/proto/campus/v1"
 )
 
 // Version of the Campus OS Backend
@@ -26,11 +29,28 @@ const Version = "0.1.0"
 func main() {
 	cfg := config.Load()
 
+	// Check for Genesis CLI bootstrap subcommand
+	if len(os.Args) > 1 && os.Args[1] == "bootstrap-superadmin" {
+		runBootstrapCLI(cfg)
+		return
+	}
+
 	log.Printf("BLOCK_MAIN_ENTRYPOINT_001: Initializing Campus OS Backend v%s (Env: %s)...", Version, cfg.Environment)
 	log.Printf("BLOCK_MAIN_ENTRYPOINT_001: DB Unix Socket Target: %s", cfg.DBSocketPath)
 
+	// Attempt connecting to persistence layer over UDS
+	var authClient campusv1.AuthServiceClient
+	grpcClient, err := transportGrpc.NewPersistenceClient(cfg.DBSocketPath)
+	if err == nil {
+		authClient = grpcClient.AuthService()
+		defer grpcClient.Close()
+	} else {
+		log.Printf("BLOCK_MAIN_WARN_001: Persistence client link deferred (socket not yet active): %v", err)
+	}
+
 	router := transportHttp.NewRouter(transportHttp.RouterConfig{
-		Version: Version,
+		Version:    Version,
+		AuthClient: authClient,
 	})
 
 	server := &http.Server{
@@ -63,4 +83,57 @@ func main() {
 	}
 
 	fmt.Println("BLOCK_MAIN_ENTRYPOINT_001: Campus OS Backend terminated cleanly.")
+}
+
+// BLOCK_MAIN_BOOTSTRAP_CLI_001
+// Purpose: Implements the bare-metal server CLI command for Genesis Super Admin (Chairperson) bootstrapping.
+func runBootstrapCLI(cfg *config.Config) {
+	fs := flag.NewFlagSet("bootstrap-superadmin", flag.ExitOnError)
+	name := fs.String("name", "Chairperson", "Full legal name of the institutional Chairperson")
+	email := fs.String("email", "chairperson@campus.edu", "Official email address of the Chairperson")
+	phone := fs.String("phone", "+919876543210", "Registered mobile phone number (used for SIM binding & OTP)")
+
+	_ = fs.Parse(os.Args[2:])
+
+	fmt.Println("========================================================================")
+	fmt.Println("  CAMPUS OS GENESIS BOOTSTRAP: SUPER ADMIN (CHAIRPERSON) PROVISIONING   ")
+	fmt.Println("========================================================================")
+	fmt.Printf("  Target Server Socket : %s\n", cfg.DBSocketPath)
+	fmt.Printf("  Chairperson Name     : %s\n", *name)
+	fmt.Printf("  Chairperson Email    : %s\n", *email)
+	fmt.Printf("  Registered Phone     : %s\n", *phone)
+	fmt.Println("------------------------------------------------------------------------")
+
+	grpcClient, err := transportGrpc.NewPersistenceClient(cfg.DBSocketPath)
+	if err != nil {
+		fmt.Printf("Error: Failed to dial DB layer over %s: %v\n", cfg.DBSocketPath, err)
+		os.Exit(1)
+	}
+	defer grpcClient.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := grpcClient.AuthService().BootstrapSuperAdmin(ctx, &campusv1.BootstrapSuperAdminRequest{
+		ChairpersonName:  *name,
+		ChairpersonEmail: *email,
+		ChairpersonPhone: *phone,
+	})
+	if err != nil {
+		fmt.Printf("Bootstrap Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("\n  SCAN THIS SEALED CLAIM QR CODE USING CAMPUS OS MOBILE CLIENT:")
+	fmt.Println()
+	fmt.Println(resp.AsciiQr)
+	fmt.Println()
+	fmt.Printf("  Single-Use Claim Token : %s\n", resp.ClaimToken)
+	fmt.Printf("  Expires At (Unix)      : %d\n", resp.ExpiresAtUnix)
+	fmt.Println("========================================================================")
+	fmt.Println("  INSTRUCTIONS:")
+	fmt.Println("  1. Open Campus OS Native Client on the Chairperson's registered phone.")
+	fmt.Println("  2. Point camera at the terminal QR code above to initiate SIM verification.")
+	fmt.Println("  3. Complete SMS OTP verification and set your master administrator password.")
+	fmt.Println("========================================================================")
 }
