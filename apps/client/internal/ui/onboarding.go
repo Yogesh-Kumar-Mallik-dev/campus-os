@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -33,6 +34,7 @@ var stepNames = []string{
 // OnboardingWizard manages the UI state and transitions for account activation.
 type OnboardingWizard struct {
 	client     *api.Client
+	window     fyne.Window
 	content    *fyne.Container
 	step       OnboardingStep
 	onComplete func()
@@ -56,10 +58,11 @@ type OnboardingWizard struct {
 }
 
 // BLOCK_UI_ONBOARDING_NEW_001
-// Purpose: Constructs a new OnboardingWizard instance.
-func NewOnboardingWizard(client *api.Client, onComplete func()) *OnboardingWizard {
+// Purpose: Constructs a new OnboardingWizard instance using native shadcn primitives.
+func NewOnboardingWizard(client *api.Client, window fyne.Window, onComplete func()) *OnboardingWizard {
 	w := &OnboardingWizard{
 		client:            client,
+		window:            window,
 		step:              StepScan,
 		onComplete:        onComplete,
 		SelectedSIMPhone:  "+919876543210",
@@ -84,6 +87,12 @@ func (w *OnboardingWizard) CurrentStep() OnboardingStep {
 func (w *OnboardingWizard) SetStep(step OnboardingStep) {
 	w.step = step
 	w.render()
+}
+
+func (w *OnboardingWizard) toast(title, message string, variant AlertVariant) {
+	if w.window != nil {
+		ShowToast(w.window, title, message, variant, 3*time.Second)
+	}
 }
 
 func (w *OnboardingWizard) render() {
@@ -130,16 +139,16 @@ func (w *OnboardingWizard) renderScanStep() {
 	)
 
 	qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
-	qrVisual := RenderSVGImage(qrIconRes, 72, 72)
-	scannerVisual := container.NewCenter(
-		container.NewVBox(
-			container.NewCenter(qrVisual),
-			widget.NewLabel("Optical Sensor Ready"),
-		),
-	)
+	qrVisual := RenderSVGImage(qrIconRes, 68, 68)
+
+	emptyScanner := NewEmptyState(EmptyStateParams{
+		Media:       qrVisual,
+		Title:       "Optical Camera Ready",
+		Description: "Align official QR code within optical brackets",
+	})
 	scannerCard := NewShadcnCard(CardParts{
 		Title:   "Optical Capture Interface",
-		Content: scannerVisual,
+		Content: emptyScanner,
 	})
 
 	tokenEntry := NewShadcnInput("Enter 16-character code (or leave blank for demo)", false)
@@ -147,8 +156,7 @@ func (w *OnboardingWizard) renderScanStep() {
 		tokenEntry.SetText(w.ClaimToken)
 	}
 
-	var scanBtn *widget.Button
-	scanBtn = NewShadcnButton("Validate QR Code Token", ButtonDefault, ButtonSizeDefault, theme.ConfirmIcon(), func() {
+	scanBtn := NewShadcnButton("Validate QR Code Token", ButtonDefault, ButtonSizeDefault, theme.ConfirmIcon(), func() {
 		token := tokenEntry.Text
 		if token == "" {
 			token = "claim_genesis_test_demo"
@@ -177,6 +185,7 @@ func (w *OnboardingWizard) renderScanStep() {
 			}
 			w.IsError = false
 			w.StatusText = "QR Token Verified. Hardware telephony match required."
+			w.toast("QR Code Recognized", "Hardware carrier binding required next.", AlertSuccess)
 			w.SetStep(StepSIMVerify)
 		}()
 	})
@@ -227,7 +236,7 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		Title: "Hardware Telephony Slots",
 		Content: container.NewVBox(
 			phoneInfo,
-			widget.NewSeparator(),
+			NewShadcnSeparator(true),
 			sim1Row,
 			sim2Row,
 		),
@@ -242,6 +251,7 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		}
 		w.IsError = false
 		w.StatusText = "SIM Binding & OTP Confirmed. Review official admission dossier."
+		w.toast("SIM & OTP Verified", "Review your official admission records.", AlertSuccess)
 		w.SetStep(StepReviewProfile)
 	})
 
@@ -293,10 +303,24 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 	checkText.Wrapping = fyne.TextWrapWord
 	confirmRow := container.NewBorder(nil, nil, confirmCheck, nil, checkText)
 
+	discrepancyBtn := NewShadcnButton("Report Discrepancy", ButtonOutline, ButtonSizeDefault, nil, func() {
+		if w.window != nil {
+			ShowAlertDialog(w.window, "Report Record Discrepancy",
+				"If your academic marksheet or legal Aadhaar name differs from these records, an audit flag will be sent to the Registrar desk.",
+				"Acknowledge & Flag", false, func() {
+					w.IsError = true
+					w.StatusText = "Audit flag recorded. Please consult the Academic Registrar desk."
+					w.toast("Discrepancy Reported", "Audit flag submitted to Registrar.", AlertWarning)
+					w.render()
+				})
+		}
+	})
+
 	nextBtn := NewShadcnButton("Records Confirmed, Set Password ->", ButtonDefault, ButtonSizeDefault, theme.NavigateNextIcon(), func() {
 		if !confirmCheck.Checked {
 			w.IsError = true
 			w.StatusText = "Please acknowledge record verification before proceeding"
+			w.toast("Confirmation Required", "Please check the confirmation box.", AlertDestructive)
 			w.render()
 			return
 		}
@@ -305,10 +329,12 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 		w.SetStep(StepSetPassword)
 	})
 
+	actionRow := container.NewGridWithColumns(2, discrepancyBtn, nextBtn)
+
 	w.content.Add(header)
 	w.content.Add(profileCard)
 	w.content.Add(confirmRow)
-	w.content.Add(nextBtn)
+	w.content.Add(actionRow)
 }
 
 // Step 4: Password Setup & 3-Day Orientation Grace Period
@@ -346,12 +372,14 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 		if len(passEntry.Text) < 6 {
 			w.IsError = true
 			w.StatusText = "Password must contain at least 6 characters during grace period"
+			w.toast("Password Too Short", "Must be at least 6 characters.", AlertDestructive)
 			w.render()
 			return
 		}
 		if passEntry.Text != confirmPassEntry.Text {
 			w.IsError = true
 			w.StatusText = "Passwords do not match"
+			w.toast("Mismatch Error", "Passwords do not match.", AlertDestructive)
 			w.render()
 			return
 		}
@@ -359,6 +387,7 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 		w.NewPassword = passEntry.Text
 		w.IsError = false
 		w.StatusText = "Account Successfully Activated"
+		w.toast("Success", "Account credentials provisioned.", AlertSuccess)
 		w.SetStep(StepComplete)
 	})
 
@@ -407,7 +436,7 @@ func (w *OnboardingWizard) renderCompleteStep() {
 			scholarLabel,
 			NewBadge("VERIFIED SCHOLAR", BadgeSuccess, BadgeShapePill),
 		),
-		widget.NewSeparator(),
+		NewShadcnSeparator(true),
 		userLabel,
 		emailLabel,
 		gateLabel,

@@ -40,11 +40,13 @@ func (a *Application) BuildLayout() fyne.CanvasObject {
 		NewStatusPill("SECURE ONBOARDING", PillInfo),
 	)
 
-	wizard := NewOnboardingWizard(a.APIClient, func() {
+	wizard := NewOnboardingWizard(a.APIClient, a.Window, func() {
 		// Callback on onboarding completion
 	})
 
-	wizardCard := NewStyledCard("", wizard.CanvasObject())
+	wizardCard := NewShadcnCard(CardParts{
+		Content: wizard.CanvasObject(),
+	})
 
 	contentBox := container.NewVBox(
 		header,
