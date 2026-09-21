@@ -8,7 +8,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
 )
@@ -156,7 +155,7 @@ func (w *OnboardingWizard) renderScanStep() {
 		tokenEntry.SetText(w.ClaimToken)
 	}
 
-	scanBtn := NewShadcnButton("Validate QR Code Token", ButtonDefault, ButtonSizeDefault, theme.ConfirmIcon(), func() {
+	scanBtn := NewShadcnButton("Validate QR Code Token", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("scan.svg", LucideScan), func() {
 		token := tokenEntry.Text
 		if token == "" {
 			token = "claim_genesis_test_demo"
@@ -244,7 +243,7 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 
 	otpEntry := NewShadcnInput("Enter 6-digit SMS OTP (e.g. 123456)", false)
 
-	verifyBtn := NewShadcnButton("Verify Carrier SIM & Submit OTP", ButtonDefault, ButtonSizeDefault, theme.ConfirmIcon(), func() {
+	verifyBtn := NewShadcnButton("Verify Carrier SIM & Submit OTP", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("phone.svg", LucideSmartphone), func() {
 		w.OTPCode = otpEntry.Text
 		if w.OTPCode == "" {
 			w.OTPCode = "123456"
@@ -303,7 +302,7 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 	checkText.Wrapping = fyne.TextWrapWord
 	confirmRow := container.NewBorder(nil, nil, confirmCheck, nil, checkText)
 
-	discrepancyBtn := NewShadcnButton("Report Discrepancy", ButtonOutline, ButtonSizeDefault, nil, func() {
+	discrepancyBtn := NewShadcnButton("Report Discrepancy", ButtonOutline, ButtonSizeDefault, ResourceFromSVG("flag.svg", LucideFlag), func() {
 		if w.window != nil {
 			ShowAlertDialog(w.window, "Report Record Discrepancy",
 				"If your academic marksheet or legal Aadhaar name differs from these records, an audit flag will be sent to the Registrar desk.",
@@ -316,7 +315,7 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 		}
 	})
 
-	nextBtn := NewShadcnButton("Records Confirmed, Set Password ->", ButtonDefault, ButtonSizeDefault, theme.NavigateNextIcon(), func() {
+	nextBtn := NewShadcnButton("Records Confirmed, Set Password ->", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("file-check.svg", LucideFileCheck), func() {
 		if !confirmCheck.Checked {
 			w.IsError = true
 			w.StatusText = "Please acknowledge record verification before proceeding"
@@ -368,7 +367,7 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 		bioLabel,
 	)
 
-	completeBtn := NewShadcnButton("Complete Activation & Provision Pass", ButtonDefault, ButtonSizeDefault, theme.ConfirmIcon(), func() {
+	completeBtn := NewShadcnButton("Complete Activation & Provision Pass", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("lock.svg", LucideLock), func() {
 		if len(passEntry.Text) < 6 {
 			w.IsError = true
 			w.StatusText = "Password must contain at least 6 characters during grace period"
@@ -410,8 +409,8 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 
 // Step 5: Celebration & Gateway Handoff
 func (w *OnboardingWizard) renderCompleteStep() {
-	checkIcon := ResourceFromSVG("verified.svg", SVGCheckVerified)
-	verifiedVisual := RenderSVGImage(checkIcon, 40, 40)
+	checkIcon := ResourceFromSVG("sparkles.svg", LucideSparkles)
+	verifiedVisual := RenderSVGImage(checkIcon, 48, 48)
 
 	header := NewPageHeader(
 		"Account Activated Successfully",
@@ -448,7 +447,7 @@ func (w *OnboardingWizard) renderCompleteStep() {
 		Content: idBadge,
 	})
 
-	enterBtn := NewShadcnButton("Finish & Ready", ButtonDefault, ButtonSizeDefault, theme.HomeIcon(), func() {
+	enterBtn := NewShadcnButton("Finish & Ready", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("badge.svg", LucideBadgeCheck), func() {
 		if w.onComplete != nil {
 			w.onComplete()
 		}

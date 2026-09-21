@@ -118,15 +118,28 @@ func TestIcons_SVGResources(t *testing.T) {
 		name string
 		svg  string
 	}{
-		{"shield", SVGShieldCheck},
-		{"qr", SVGQRCodeFrame},
-		{"sim_act", SVGSIMCardActive},
-		{"sim_sec", SVGSIMCardSecondary},
-		{"fingerprint", SVGFingerprint},
-		{"clock", SVGClockGrace},
-		{"academic", SVGAcademicCap},
-		{"check", SVGCheckVerified},
-		{"logo", SVGCampusLogo},
+		{"bbdit_logo", SVGBBDITLogo},
+		{"lucide_scan", LucideScan},
+		{"lucide_qr", LucideQrCode},
+		{"lucide_sim", LucideSim},
+		{"lucide_sim_sec", LucideSimSecondary},
+		{"lucide_smartphone", LucideSmartphone},
+		{"lucide_shield_check", LucideShieldCheck},
+		{"lucide_user_check", LucideUserCheck},
+		{"lucide_file_check", LucideFileCheck},
+		{"lucide_key_round", LucideKeyRound},
+		{"lucide_lock", LucideLock},
+		{"lucide_clock", LucideClock},
+		{"lucide_fingerprint", LucideFingerprint},
+		{"lucide_id_card", LucideIdCard},
+		{"lucide_badge_check", LucideBadgeCheck},
+		{"lucide_alert_triangle", LucideAlertTriangle},
+		{"lucide_alert_circle", LucideAlertCircle},
+		{"lucide_check_circle2", LucideCheckCircle2},
+		{"lucide_info", LucideInfo},
+		{"lucide_flag", LucideFlag},
+		{"lucide_chevron_right", LucideChevronRight},
+		{"lucide_sparkles", LucideSparkles},
 	}
 
 	for _, s := range svgList {

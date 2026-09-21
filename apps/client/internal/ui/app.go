@@ -32,7 +32,7 @@ func NewApplication(apiClient *api.Client) *Application {
 // BLOCK_UI_APP_BUILD_001
 // Purpose: Assembles fully responsive Account Activation layout matching institutional design tokens.
 func (a *Application) BuildLayout() fyne.CanvasObject {
-	topBar := NewTopBar("CAMPUS OS", "Account Activation")
+	topBar := NewTopBar("BBDIT CAMPUS OS", "Account Activation")
 
 	header := NewPageHeader(
 		"Student & Scholar Onboarding",
