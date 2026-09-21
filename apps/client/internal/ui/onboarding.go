@@ -95,16 +95,16 @@ func (w *OnboardingWizard) render() {
 		w.content.Add(stepper)
 	}
 
-	// Status / Error Banner with wrapping
+	// Status / Error Banner using NewShadcnAlert
 	if w.StatusText != "" {
-		pillVariant := PillSuccess
+		variant := AlertSuccess
 		svgIcon := ResourceFromSVG("check.svg", SVGCheckVerified)
 		if w.IsError {
-			pillVariant = PillError
+			variant = AlertDestructive
 			svgIcon = ResourceFromSVG("alert.svg", SVGClockGrace)
 		}
-		banner := NewBannerNotice("Status Notification", w.StatusText, pillVariant, svgIcon)
-		w.content.Add(banner)
+		alert := NewShadcnAlert("Status Notification", w.StatusText, variant, svgIcon)
+		w.content.Add(alert)
 	}
 
 	switch w.step {
@@ -126,7 +126,7 @@ func (w *OnboardingWizard) renderScanStep() {
 	header := NewPageHeader(
 		"Scan Sealed Admission QR",
 		"Position camera viewfinder over the tamper-evident QR on your official admission slip",
-		NewStatusPill("STEP 1 OF 4", PillInfo),
+		NewBadge("STEP 1 OF 4", BadgeDefault, BadgeShapePill),
 	)
 
 	qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
@@ -137,15 +137,18 @@ func (w *OnboardingWizard) renderScanStep() {
 			widget.NewLabel("Optical Sensor Ready"),
 		),
 	)
-	scannerCard := NewStyledCard("Optical Capture Interface", scannerVisual)
+	scannerCard := NewShadcnCard(CardParts{
+		Title:   "Optical Capture Interface",
+		Content: scannerVisual,
+	})
 
-	tokenEntry := widget.NewEntry()
-	tokenEntry.SetPlaceHolder("Enter 16-character code (or leave blank for demo)")
+	tokenEntry := NewShadcnInput("Enter 16-character code (or leave blank for demo)", false)
 	if w.ClaimToken != "" {
 		tokenEntry.SetText(w.ClaimToken)
 	}
 
-	scanBtn := widget.NewButtonWithIcon("Validate QR Code Token", theme.ConfirmIcon(), func() {
+	var scanBtn *widget.Button
+	scanBtn = NewShadcnButton("Validate QR Code Token", ButtonDefault, ButtonSizeDefault, theme.ConfirmIcon(), func() {
 		token := tokenEntry.Text
 		if token == "" {
 			token = "claim_genesis_test_demo"
@@ -177,12 +180,14 @@ func (w *OnboardingWizard) renderScanStep() {
 			w.SetStep(StepSIMVerify)
 		}()
 	})
-	scanBtn.Importance = widget.HighImportance
 
-	formCard := NewStyledCard("Manual Token Input", container.NewVBox(
-		tokenEntry,
-		scanBtn,
-	))
+	formCard := NewShadcnCard(CardParts{
+		Title: "Manual Token Input",
+		Content: container.NewVBox(
+			tokenEntry,
+			scanBtn,
+		),
+	})
 
 	w.content.Add(header)
 	w.content.Add(scannerCard)
@@ -194,7 +199,7 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 	header := NewPageHeader(
 		"Device SIM & Telephony Handshake",
 		"Hardware carrier binding ensures activation is locked strictly to your physical handset",
-		NewStatusPill("STEP 2 OF 4", PillWarning),
+		NewBadge("STEP 2 OF 4", BadgeWarning, BadgeShapePill),
 	)
 
 	phoneInfo := widget.NewLabel(fmt.Sprintf("Registered Scholar Phone: %s", w.MaskedPhone))
@@ -205,7 +210,7 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 	sim1Label.Wrapping = fyne.TextWrapWord
 	sim1Row := container.NewBorder(nil, nil,
 		container.NewHBox(sim1Icon),
-		NewStatusPill("MATCH", PillSuccess),
+		NewBadge("MATCH", BadgeSuccess, BadgeShapePill),
 		sim1Label,
 	)
 
@@ -214,21 +219,23 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 	sim2Label.Wrapping = fyne.TextWrapWord
 	sim2Row := container.NewBorder(nil, nil,
 		container.NewHBox(sim2Icon),
-		NewStatusPill("SECONDARY", PillNeutral),
+		NewBadge("SECONDARY", BadgeSecondary, BadgeShapePill),
 		sim2Label,
 	)
 
-	simCard := NewStyledCard("Hardware Telephony Slots", container.NewVBox(
-		phoneInfo,
-		widget.NewSeparator(),
-		sim1Row,
-		sim2Row,
-	))
+	simCard := NewShadcnCard(CardParts{
+		Title: "Hardware Telephony Slots",
+		Content: container.NewVBox(
+			phoneInfo,
+			widget.NewSeparator(),
+			sim1Row,
+			sim2Row,
+		),
+	})
 
-	otpEntry := widget.NewEntry()
-	otpEntry.SetPlaceHolder("Enter 6-digit SMS OTP (e.g. 123456)")
+	otpEntry := NewShadcnInput("Enter 6-digit SMS OTP (e.g. 123456)", false)
 
-	verifyBtn := widget.NewButtonWithIcon("Verify Carrier SIM & Submit OTP", theme.ConfirmIcon(), func() {
+	verifyBtn := NewShadcnButton("Verify Carrier SIM & Submit OTP", ButtonDefault, ButtonSizeDefault, theme.ConfirmIcon(), func() {
 		w.OTPCode = otpEntry.Text
 		if w.OTPCode == "" {
 			w.OTPCode = "123456"
@@ -237,12 +244,14 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		w.StatusText = "SIM Binding & OTP Confirmed. Review official admission dossier."
 		w.SetStep(StepReviewProfile)
 	})
-	verifyBtn.Importance = widget.HighImportance
 
-	otpCard := NewStyledCard("SMS Challenge Verification", container.NewVBox(
-		otpEntry,
-		verifyBtn,
-	))
+	otpCard := NewShadcnCard(CardParts{
+		Title: "SMS Challenge Verification",
+		Content: container.NewVBox(
+			otpEntry,
+			verifyBtn,
+		),
+	})
 
 	w.content.Add(header)
 	w.content.Add(simCard)
@@ -254,7 +263,7 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 	header := NewPageHeader(
 		"Review Official Records",
 		"Verify correspondence between secondary marksheet and govt identification",
-		NewStatusPill("STEP 3 OF 4", PillInfo),
+		NewBadge("STEP 3 OF 4", BadgeDefault, BadgeShapePill),
 	)
 
 	acadLabel := widget.NewLabel(w.AcademicName)
@@ -273,7 +282,10 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 		widget.NewFormItem("Notes", notesLabel),
 	)
 
-	profileCard := NewStyledCard("Verified Admission Dossier", profileForm)
+	profileCard := NewShadcnCard(CardParts{
+		Title:   "Verified Admission Dossier",
+		Content: profileForm,
+	})
 
 	confirmCheck := widget.NewCheck("", nil)
 	confirmCheck.SetChecked(true)
@@ -281,7 +293,7 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 	checkText.Wrapping = fyne.TextWrapWord
 	confirmRow := container.NewBorder(nil, nil, confirmCheck, nil, checkText)
 
-	nextBtn := widget.NewButtonWithIcon("Records Confirmed, Set Password ->", theme.NavigateNextIcon(), func() {
+	nextBtn := NewShadcnButton("Records Confirmed, Set Password ->", ButtonDefault, ButtonSizeDefault, theme.NavigateNextIcon(), func() {
 		if !confirmCheck.Checked {
 			w.IsError = true
 			w.StatusText = "Please acknowledge record verification before proceeding"
@@ -292,7 +304,6 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 		w.StatusText = "Identity records confirmed. Create your password."
 		w.SetStep(StepSetPassword)
 	})
-	nextBtn.Importance = widget.HighImportance
 
 	w.content.Add(header)
 	w.content.Add(profileCard)
@@ -305,22 +316,19 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 	header := NewPageHeader(
 		"Set Your Access Password",
 		"Create a secure password to finalize institutional account provisioning",
-		NewStatusPill("STEP 4 OF 4", PillWarning),
+		NewBadge("STEP 4 OF 4", BadgeWarning, BadgeShapePill),
 	)
 
 	clockIcon := ResourceFromSVG("clock.svg", SVGClockGrace)
-	graceBanner := NewBannerNotice(
+	graceAlert := NewShadcnAlert(
 		"Orientation Grace Period Active",
 		"A simplified 6+ character password is accepted during your first 72 hours of enrollment",
-		PillWarning,
+		AlertWarning,
 		clockIcon,
 	)
 
-	passEntry := widget.NewPasswordEntry()
-	passEntry.SetPlaceHolder("Enter new password (min 6 characters)")
-
-	confirmPassEntry := widget.NewPasswordEntry()
-	confirmPassEntry.SetPlaceHolder("Confirm new password")
+	passEntry := NewShadcnInput("Enter new password (min 6 characters)", true)
+	confirmPassEntry := NewShadcnInput("Confirm new password", true)
 
 	fingerprintIcon := RenderSVGImage(ResourceFromSVG("fingerprint.svg", SVGFingerprint), 20, 20)
 	biometricCheck := widget.NewCheck("Enable Biometric Keyring (Fingerprint / Face ID)", func(b bool) {
@@ -329,7 +337,7 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 	biometricCheck.SetChecked(true)
 	biometricRow := container.NewHBox(fingerprintIcon, biometricCheck)
 
-	completeBtn := widget.NewButtonWithIcon("Complete Activation & Provision Pass", theme.ConfirmIcon(), func() {
+	completeBtn := NewShadcnButton("Complete Activation & Provision Pass", ButtonDefault, ButtonSizeDefault, theme.ConfirmIcon(), func() {
 		if len(passEntry.Text) < 6 {
 			w.IsError = true
 			w.StatusText = "Password must contain at least 6 characters during grace period"
@@ -348,17 +356,19 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 		w.StatusText = "Account Successfully Activated"
 		w.SetStep(StepComplete)
 	})
-	completeBtn.Importance = widget.HighImportance
 
-	passwordCard := NewStyledCard("Credential Security", container.NewVBox(
-		graceBanner,
-		widget.NewLabel("New Password:"),
-		passEntry,
-		widget.NewLabel("Confirm Password:"),
-		confirmPassEntry,
-		biometricRow,
-		completeBtn,
-	))
+	passwordCard := NewShadcnCard(CardParts{
+		Title: "Credential Security",
+		Content: container.NewVBox(
+			graceAlert,
+			widget.NewLabel("New Password:"),
+			passEntry,
+			widget.NewLabel("Confirm Password:"),
+			confirmPassEntry,
+			biometricRow,
+			completeBtn,
+		),
+	})
 
 	w.content.Add(header)
 	w.content.Add(passwordCard)
@@ -372,7 +382,7 @@ func (w *OnboardingWizard) renderCompleteStep() {
 	header := NewPageHeader(
 		"Account Activated Successfully",
 		"Your institutional credentials and gate pass are active and verified",
-		NewStatusPill("ACCOUNT ACTIVE", PillSuccess),
+		NewBadge("ACCOUNT ACTIVE", BadgeSuccess, BadgeShapePill),
 	)
 
 	scholarLabel := widget.NewLabel("Scholar: " + w.AcademicName)
@@ -390,7 +400,7 @@ func (w *OnboardingWizard) renderCompleteStep() {
 		container.NewCenter(verifiedVisual),
 		container.NewBorder(nil, nil,
 			scholarLabel,
-			NewStatusPill("VERIFIED SCHOLAR", PillSuccess),
+			NewBadge("VERIFIED SCHOLAR", BadgeSuccess, BadgeShapePill),
 		),
 		widget.NewSeparator(),
 		userLabel,
@@ -399,14 +409,16 @@ func (w *OnboardingWizard) renderCompleteStep() {
 		affilLabel,
 	)
 
-	idCard := NewStyledCard("Digital Campus Pass", idBadge)
+	idCard := NewShadcnCard(CardParts{
+		Title:   "Digital Campus Pass",
+		Content: idBadge,
+	})
 
-	enterBtn := widget.NewButtonWithIcon("Finish & Ready", theme.HomeIcon(), func() {
+	enterBtn := NewShadcnButton("Finish & Ready", ButtonDefault, ButtonSizeDefault, theme.HomeIcon(), func() {
 		if w.onComplete != nil {
 			w.onComplete()
 		}
 	})
-	enterBtn.Importance = widget.HighImportance
 
 	w.content.Add(header)
 	w.content.Add(idCard)
