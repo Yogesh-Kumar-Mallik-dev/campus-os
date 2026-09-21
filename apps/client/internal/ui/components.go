@@ -175,20 +175,20 @@ func NewStepIndicator(currentStep int, stepNames []string) fyne.CanvasObject {
 
 	for i, name := range stepNames {
 		stepNum := i + 1
-		var stepPill fyne.CanvasObject
+		var stepBadge fyne.CanvasObject
 
 		if stepNum < currentStep {
-			// Completed step: compact checkmark number
-			stepPill = NewStatusPill(fmt.Sprintf("%d", stepNum), PillSuccess)
+			// Completed step: secondary surface badge with checkmark
+			stepBadge = NewBadge(fmt.Sprintf("%d ✓", stepNum), BadgeSecondary, BadgeShapePill)
 		} else if stepNum == currentStep {
-			// Active step: highlighted with full name
-			stepPill = NewStatusPill(fmt.Sprintf("%d: %s", stepNum, name), PillInfo)
+			// Active step: primary terracotta badge with step number & name
+			stepBadge = NewBadge(fmt.Sprintf("%d: %s", stepNum, name), BadgeDefault, BadgeShapePill)
 		} else {
-			// Pending step: compact number
-			stepPill = NewStatusPill(fmt.Sprintf("%d", stepNum), PillNeutral)
+			// Pending step: outline badge
+			stepBadge = NewBadge(fmt.Sprintf("%d", stepNum), BadgeOutline, BadgeShapePill)
 		}
 
-		stepItems = append(stepItems, stepPill)
+		stepItems = append(stepItems, stepBadge)
 
 		if i < len(stepNames)-1 {
 			sep := canvas.NewLine(color.NRGBA{R: 60, G: 72, B: 92, A: 255})

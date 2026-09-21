@@ -96,11 +96,9 @@ func (w *OnboardingWizard) toast(title, message string, variant AlertVariant) {
 func (w *OnboardingWizard) render() {
 	w.content.Objects = nil
 
-	// Responsive Stepper indicator
-	if w.step < StepComplete {
-		stepper := container.NewCenter(NewStepIndicator(int(w.step)+1, stepNames))
-		w.content.Add(stepper)
-	}
+	// Persistent Stepper indicator across all steps to prevent layout jump
+	stepper := container.NewCenter(NewStepIndicator(int(w.step)+1, stepNames))
+	w.content.Add(stepper)
 
 	// Status / Error Banner using NewShadcnAlert
 	if w.StatusText != "" {
@@ -130,12 +128,6 @@ func (w *OnboardingWizard) render() {
 
 // Step 1: Scan Sealed QR Code
 func (w *OnboardingWizard) renderScanStep() {
-	header := NewPageHeader(
-		"Scan Sealed Admission QR",
-		"Position camera viewfinder over the tamper-evident QR on your official admission slip",
-		NewBadge("STEP 1 OF 4", BadgeDefault, BadgeShapePill),
-	)
-
 	qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
 	qrVisual := RenderSVGImage(qrIconRes, 64, 64)
 
@@ -189,8 +181,9 @@ func (w *OnboardingWizard) renderScanStep() {
 	})
 
 	scannerCard := NewShadcnCard(CardParts{
-		Title:       "Admission Voucher Verification",
-		Description: "Scan the printed QR code or enter the manual token beneath the seal",
+		Badge:       NewBadge("STEP 1 OF 4", BadgeDefault, BadgeShapePill),
+		Title:       "Scan Sealed Admission QR",
+		Description: "Position camera viewfinder over the tamper-evident QR or enter the manual token beneath the seal",
 		Content: container.NewVBox(
 			emptyScanner,
 			NewShadcnSeparator(true),
@@ -199,18 +192,11 @@ func (w *OnboardingWizard) renderScanStep() {
 		Footer: scanBtn,
 	})
 
-	w.content.Add(header)
 	w.content.Add(scannerCard)
 }
 
 // Step 2: SIM Telephony & SMS OTP Handshake
 func (w *OnboardingWizard) renderSIMVerifyStep() {
-	header := NewPageHeader(
-		"Device SIM & Telephony Handshake",
-		"Hardware carrier binding ensures activation is locked strictly to your physical handset",
-		NewBadge("STEP 2 OF 4", BadgeDefault, BadgeShapePill),
-	)
-
 	phoneInfo := NewKeyValueRow("REGISTERED TELEPHONY CONTACT", w.MaskedPhone, nil)
 
 	var sim1Card, sim2Card *SelectableCard
@@ -263,8 +249,9 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 	})
 
 	simCard := NewShadcnCard(CardParts{
-		Title:       "Hardware Telephony Verification",
-		Description: "Verify detected SIM slot carriers and validate the SMS security challenge",
+		Badge:       NewBadge("STEP 2 OF 4", BadgeDefault, BadgeShapePill),
+		Title:       "Device SIM & Telephony Handshake",
+		Description: "Hardware carrier binding ensures activation is locked strictly to your physical handset",
 		Content: container.NewVBox(
 			phoneInfo,
 			NewShadcnSeparator(true),
@@ -276,39 +263,70 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		Footer: verifyBtn,
 	})
 
-	w.content.Add(header)
 	w.content.Add(simCard)
 }
 
 // Step 3: Review Official Records & Dual-Identity Confirmation
 func (w *OnboardingWizard) renderReviewProfileStep() {
-	header := NewPageHeader(
-		"Review Official Records",
-		"Verify correspondence between secondary marksheet and govt identification",
-		NewBadge("STEP 3 OF 4", BadgeDefault, BadgeShapePill),
+	academicName := w.AcademicName
+	if academicName == "" {
+		academicName = "Yogesh"
+	}
+	legalName := w.LegalFullName
+	if legalName == "" {
+		legalName = "Yogesh Kumar Mallik"
+	}
+	username := w.Username
+	if username == "" {
+		username = "yogesh.cse.2024.l"
+	}
+	admissionType := w.AdmissionType
+	if admissionType == "" {
+		admissionType = "LATERAL_ENTRY"
+	}
+	semester := w.EntrySemester
+	if semester <= 0 {
+		semester = 3
+	}
+	lateralNotes := w.LateralSummary
+	if lateralNotes == "" {
+		lateralNotes = "Direct admission to Semester 3 (Lateral Entry). Prior polytechnic credits verified by AKTU."
+	}
+
+	// Section 1: Dual-Identity KYC Records
+	sec1Title := widget.NewLabelWithStyle("Identity & KYC Synchronization", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	sec1Desc := widget.NewLabel("Verification correspondence between academic marksheets and government identification")
+	sec1Desc.Wrapping = fyne.TextWrapWord
+
+	kycSection := container.NewVBox(
+		sec1Title,
+		sec1Desc,
+		NewKeyValueRow("ACADEMIC SCHOLAR NAME", academicName, nil),
+		NewKeyValueRow("LEGAL FULL NAME (GOVT AADHAAR)", legalName, nil),
 	)
 
-	dossierRows := container.NewVBox(
-		NewKeyValueRow("ACADEMIC SCHOLAR NAME", w.AcademicName, nil),
-		NewShadcnSeparator(true),
-		NewKeyValueRow("LEGAL FULL NAME (GOVT ID)", w.LegalFullName, nil),
-		NewShadcnSeparator(true),
-		NewKeyValueRow("INSTITUTIONAL USERNAME", w.Username, nil),
-		NewShadcnSeparator(true),
-		NewKeyValueRow("OFFICIAL EMAIL", fmt.Sprintf("%s@campus.edu", w.Username), nil),
-		NewShadcnSeparator(true),
-		NewKeyValueRow("ADMISSION TYPE & SEMESTER", fmt.Sprintf("%s (Semester %d)", w.AdmissionType, w.EntrySemester), nil),
-		NewShadcnSeparator(true),
-		NewKeyValueRow("CURRICULAR NOTES", w.LateralSummary, nil),
+	// Section 2: Institutional Allocation & Credentials
+	sec2Title := widget.NewLabelWithStyle("Institutional Allocation & Pathway", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	sec2Desc := widget.NewLabel("Assigned university credentials, entry semester, and curricular credits")
+	sec2Desc.Wrapping = fyne.TextWrapWord
+
+	institutionalSection := container.NewVBox(
+		sec2Title,
+		sec2Desc,
+		NewKeyValueRow("INSTITUTIONAL USERNAME", username, nil),
+		NewKeyValueRow("OFFICIAL EMAIL", fmt.Sprintf("%s@campus.edu", username), nil),
+		NewKeyValueRow("ADMISSION TYPE & SEMESTER", fmt.Sprintf("%s • Semester %d", admissionType, semester), nil),
+		NewKeyValueRow("CURRICULAR NOTES", lateralNotes, nil),
 	)
 
+	// Confirmation Row
 	confirmCheck := widget.NewCheck("", nil)
 	confirmCheck.SetChecked(true)
-	checkText := widget.NewLabel("I confirm these records accurately reflect my marksheet and govt identification")
+	checkText := widget.NewLabel("I acknowledge that these records accurately reflect my marksheet and government identification")
 	checkText.Wrapping = fyne.TextWrapWord
 	confirmRow := container.NewBorder(nil, nil, confirmCheck, nil, checkText)
 
-	discrepancyBtn := NewShadcnButton("Report Discrepancy", ButtonOutline, ButtonSizeDefault, ResourceFromSVG("flag.svg", LucideFlag), func() {
+	discrepancyBtn := NewShadcnButton("Report Record Discrepancy", ButtonOutline, ButtonSizeDefault, ResourceFromSVG("flag.svg", LucideFlag), func() {
 		if w.window != nil {
 			ShowAlertDialog(w.window, "Report Record Discrepancy",
 				"If your academic marksheet or legal Aadhaar name differs from these records, an audit flag will be sent to the Registrar desk.",
@@ -342,31 +360,31 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 		}
 	}
 
-	actionRow := container.NewGridWithColumns(2, discrepancyBtn, nextBtn)
+	// Full-width vertical footer actions to eliminate horizontal squishing across screen sizes
+	actionFooter := container.NewVBox(
+		nextBtn,
+		discrepancyBtn,
+	)
 
 	profileCard := NewShadcnCard(CardParts{
-		Title:       "Verified Admission Dossier",
+		Badge:       NewBadge("STEP 3 OF 4", BadgeDefault, BadgeShapePill),
+		Title:       "Review Official Admission Dossier",
 		Description: "Official records provisioned by the Academic Registrar. Review carefully before confirming.",
 		Content: container.NewVBox(
-			dossierRows,
+			kycSection,
+			NewShadcnSeparator(true),
+			institutionalSection,
 			NewShadcnSeparator(true),
 			confirmRow,
 		),
-		Footer: actionRow,
+		Footer: actionFooter,
 	})
 
-	w.content.Add(header)
 	w.content.Add(profileCard)
 }
 
 // Step 4: Password Setup & 3-Day Orientation Grace Period
 func (w *OnboardingWizard) renderSetPasswordStep() {
-	header := NewPageHeader(
-		"Set Your Access Password",
-		"Create a secure password to finalize institutional account provisioning",
-		NewBadge("STEP 4 OF 4", BadgeDefault, BadgeShapePill),
-	)
-
 	clockIcon := ResourceFromSVG("clock.svg", LucideClock)
 	graceAlert := NewShadcnAlert(
 		"Orientation Grace Period Active",
@@ -424,7 +442,8 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 	})
 
 	passwordCard := NewShadcnCard(CardParts{
-		Title:       "Credential Security Setup",
+		Badge:       NewBadge("STEP 4 OF 4", BadgeDefault, BadgeShapePill),
+		Title:       "Set Your Access Password",
 		Description: "Configure your primary institutional password and device biometric keychain",
 		Content: container.NewVBox(
 			graceAlert,
@@ -436,29 +455,31 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 		Footer: completeBtn,
 	})
 
-	w.content.Add(header)
 	w.content.Add(passwordCard)
 }
 
 // Step 5: Celebration & Gateway Handoff
 func (w *OnboardingWizard) renderCompleteStep() {
-	header := NewPageHeader(
-		"Account Activated Successfully",
-		"Your institutional credentials and gate pass are active and verified",
-		NewBadge("ACTIVATION COMPLETE", BadgeDefault, BadgeShapePill),
-	)
-
 	sparklesIcon := RenderSVGImage(ResourceFromSVG("sparkles.svg", LucideSparkles), 48, 48)
+
+	scholarName := w.AcademicName
+	if scholarName == "" {
+		scholarName = "Yogesh"
+	}
+	username := w.Username
+	if username == "" {
+		username = "yogesh.cse.2024.l"
+	}
 
 	passRows := container.NewVBox(
 		container.NewCenter(sparklesIcon),
 		container.NewCenter(NewStatusBadge("VERIFIED SCHOLAR", BadgeSuccess)),
 		NewShadcnSeparator(true),
-		NewKeyValueRow("SCHOLAR NAME", w.AcademicName, nil),
+		NewKeyValueRow("SCHOLAR NAME", scholarName, nil),
 		NewShadcnSeparator(true),
-		NewKeyValueRow("INSTITUTIONAL USERNAME", w.Username, nil),
+		NewKeyValueRow("INSTITUTIONAL USERNAME", username, nil),
 		NewShadcnSeparator(true),
-		NewKeyValueRow("INSTITUTIONAL EMAIL", fmt.Sprintf("%s@campus.edu", w.Username), nil),
+		NewKeyValueRow("INSTITUTIONAL EMAIL", fmt.Sprintf("%s@campus.edu", username), nil),
 		NewShadcnSeparator(true),
 		NewKeyValueRow("CAMPUS GATE ACCESS", "ENABLED • NFC & QR Checkpoint Check-in Active", nil),
 		NewShadcnSeparator(true),
@@ -472,12 +493,12 @@ func (w *OnboardingWizard) renderCompleteStep() {
 	})
 
 	idCard := NewShadcnCard(CardParts{
+		Badge:       NewBadge("ACTIVATION COMPLETE", BadgeDefault, BadgeShapePill),
 		Title:       "Digital Campus Pass",
 		Description: "Cryptographically verified digital pass ready for turnstile and library checkpoints",
 		Content:     passRows,
 		Footer:      enterBtn,
 	})
 
-	w.content.Add(header)
 	w.content.Add(idCard)
 }

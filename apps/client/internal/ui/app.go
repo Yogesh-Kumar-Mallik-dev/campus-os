@@ -34,23 +34,12 @@ func NewApplication(apiClient *api.Client) *Application {
 func (a *Application) BuildLayout() fyne.CanvasObject {
 	topBar := NewTopBar("BBDIT CAMPUS OS", "Account Activation")
 
-	header := NewPageHeader(
-		"Student & Scholar Onboarding",
-		"Verify sealed admission QR, validate hardware SIM, and generate your Digital Campus Pass",
-		nil,
-	)
-
 	wizard := NewOnboardingWizard(a.APIClient, a.Window, func() {
 		// Callback on onboarding completion
 	})
 
-	contentBox := container.NewVBox(
-		header,
-		wizard.CanvasObject(),
-	)
-
 	// Responsive card container adapting fluidly across desktop & mobile screens
-	responsiveBody := NewResponsiveCardContainer(contentBox, 660)
+	responsiveBody := NewResponsiveCardContainer(wizard.CanvasObject(), 640)
 
 	return container.NewBorder(
 		topBar,
