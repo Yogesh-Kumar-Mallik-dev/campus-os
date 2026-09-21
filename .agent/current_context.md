@@ -35,6 +35,7 @@
 18. Updated build pipeline (`scripts/build.sh`) to compile both `bin/campus-backend` and `bin/campus-client` natively.
 19. Designed and formalized Canonical Identity Conventions and Onboarding Architecture in `docs/adrs/ADR-0005-canonical-identity-and-onboarding.md` and `docs/04-authorization-specification.md`: Option A student usernames (`first.course.YYYY[.l][.increment]`), faculty usernames (`first.last.YYYY[.increment]`), Zero-Faculty-Knowledge QR code credential delivery, immediate mandatory password update, and 3-day progressive grace period.
 20. Formalized Bulk Credential Generation Authority Matrix (Registrar for students, HR for faculty/staff, CSO/Estate for operational staff with immutable manifests) and Hardware SIM-Presence Binding with Mobile OTP Verification during onboarding, plus audited post-onboarding contact change workflows.
+21. Designed and implemented Dual-Identity Alt-Name Architecture in `student.prisma`, `auth.prisma`, `docs/adrs/ADR-0005`, and `docs/04-authorization-specification.md`: tri-name modeling (`academicName` vs `legalFullName` vs `preferredName`), decoupled parent/guardian alt-names (academic Class X vs legal Govt ID names), document-type regulatory routing matrix, and the official "One and the Same" Dual-Identity Verification Certificate template.
 
 ---
 

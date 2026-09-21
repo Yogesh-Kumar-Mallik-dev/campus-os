@@ -60,11 +60,11 @@ erDiagram
 
 * **Domain Owner:** Registrar / Student Affairs.
 * **Tables:**
-  * `student_profiles` — Canonical student demographics, roll number, PRN, registration date.
+  * `student_profiles` — Canonical student demographics, roll number, PRN, dual-identity tracking (`academic_name` vs `legal_full_name` vs `preferred_name`), parental/guardian dual alt-names (`father_academic_name`/`father_legal_name`, `mother_academic_name`/`mother_legal_name`, `guardian_academic_name`/`guardian_legal_name`), lateral entry details, and name discrepancy evidence links.
   * `student_lifecycle_history` — Audited transitions across `APPLICANT`, `ENROLLED`, `ACTIVE`, `SUSPENDED_OR_ON_LEAVE`, `ALUMNI_GRADUATED`, etc.
   * `student_enrollments` — Active course and semester enrollment mappings.
   * `student_section_memberships` — Historical and current section memberships.
-  * `student_attendance` — Attendance registers and individual session logs.
+  * `student_attendance` — Time-series attendance ledger with session dates and status codes.
 
 ### 2.4 `hostel_schema` (Campus Life & Hostel Domain)
 

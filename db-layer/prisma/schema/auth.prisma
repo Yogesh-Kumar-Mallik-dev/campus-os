@@ -4,6 +4,7 @@
 
 model User {
   id               String           @id @default(uuid())
+  username         String           @unique
   email            String           @unique
   fullName         String           @map("full_name")
   phoneNumber      String?          @map("phone_number")
@@ -81,8 +82,8 @@ model RoleAssignment {
 model AssignmentScope {
   id           String         @id @default(uuid())
   assignmentId String         @map("assignment_id")
-  dimension    String // e.g. "department", "course", "semester", "section", "subject", "lab", "hostel_block_floor"
-  value        String // target ID of the scoped resource
+  dimension    String 
+  value        String 
   createdAt    DateTime       @default(now()) @map("created_at")
   assignment   RoleAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 

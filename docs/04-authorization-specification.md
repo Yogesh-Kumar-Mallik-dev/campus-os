@@ -123,3 +123,13 @@ Bulk credential generation and QR printing are strictly segregated administrativ
 * **Mobile OTP Handshake:** A single-use cryptographic token dispatched via SMS must be verified directly on the device hosting the SIM.
 * **Physical Theft Defense:** Possession of the physical QR paper slip alone is insufficient to claim an account; any claim attempt on a device lacking the registered SIM is blocked (`ERR_SIM_ABSENT_OR_MISMATCH`).
 * **Post-Onboarding Mobile Updates:** Users may update their contact phone number post-onboarding via authenticated self-service requiring step-up re-authentication and Dual-OTP verification (OTP to both old and new numbers), or via Registrar/HR biometric verification if the old SIM is lost.
+
+### 6.6 Dual-Identity & Alt-Name Discrepancy Governance
+To resolve persistent discrepancies between Indian secondary school examination records (Class X / Matriculation) and statutory government identification (Aadhaar, Passport, PAN):
+* **Tri-Name Separation:** `StudentProfile` distinctly maintains `academicName` (verbatim from 10th marksheet / university roll, e.g. `Yogesh`), `legalFullName` (statutory identity from photo ID, e.g. `Yogesh Kumar Mallik`), and `preferredName` (display name).
+* **Canonical Username Anchor:** The canonical username `[first]` token is strictly extracted from `academicName` (e.g. `yogesh`), maintaining synchronization with exam rolls and attendance rosters.
+* **Parent & Guardian Alt-Names:** `StudentProfile` maintains decoupled academic and legal names for Father (`fatherAcademicName` vs `fatherLegalName`), Mother (`motherAcademicName` vs `motherLegalName`), and Legal Guardian (`guardianAcademicName` vs `guardianLegalName`).
+* **Document Routing Policy:**
+  * Academic artifacts (Markcards, Degree Certificates, Transcripts, Hall Tickets) consume `academicName` and parental academic names.
+  * Statutory artifacts (DBT/Scholarships, Bank Loan Letters, Placement/Corporate KYC, Visa/Passport Bonafide, Legal Notices) consume `legalFullName` and parental legal names.
+* **Dual-Identity Certification:** A standardized institutional certificate (`DOC_CERT_DUAL_IDENTITY`) certifies that the legal name and academic name belong to one and the same individual, backed by an evidentiary affidavit link (`hasNameDiscrepancy` and `nameDiscrepancyAffidavitDocId`).

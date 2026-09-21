@@ -14,6 +14,35 @@ model StudentProfile {
   admissionType         String                     @default("REGULAR") @map("admission_type") 
   entrySemesterNumber   Int                        @default(1) @map("entry_semester_number")  
   lateralEntryDetails   Json?                      @map("lateral_entry_details") 
+
+  // Dual-Identity & Academic vs Legal Name Architecture
+  academicName          String                     @map("academic_name") // Verbatim string as per Class X / Board Certificate (e.g. "Yogesh")
+  legalFullName         String                     @map("legal_full_name") // Statutory legal name as per Aadhaar/Passport (e.g. "Yogesh Kumar Mallik")
+  preferredName         String?                    @map("preferred_name") // Preferred daily display name
+
+
+  fatherAcademicName    String?                    @map("father_academic_name") 
+  fatherLegalName       String?                    @map("father_legal_name")  
+  fatherPhoneNumber     String?                    @map("father_phone_number")
+  fatherEmail           String?                    @map("father_email")
+  fatherOccupation      String?                    @map("father_occupation")
+
+  motherAcademicName    String?                    @map("mother_academic_name")
+  motherLegalName       String?                    @map("mother_legal_name")
+  motherPhoneNumber     String?                    @map("mother_phone_number")
+  motherEmail           String?                    @map("mother_email")
+  motherOccupation      String?                    @map("mother_occupation")
+
+  guardianAcademicName  String?                    @map("guardian_academic_name") 
+  guardianLegalName     String?                    @map("guardian_legal_name")
+  guardianRelationship  String?                    @map("guardian_relationship")  
+  guardianPhoneNumber   String?                    @map("guardian_phone_number")
+  guardianEmail         String?                    @map("guardian_email")
+  guardianAddress       String?                    @map("guardian_address")
+
+
+  hasNameDiscrepancy            Boolean            @default(false) @map("has_name_discrepancy")
+  nameDiscrepancyAffidavitDocId String?            @map("name_discrepancy_affidavit_doc_id") // 
   
   lifecycleState        String                     @default("APPLICANT") @map("lifecycle_state")
   dateOfBirth           DateTime?                  @map("date_of_birth")
@@ -28,6 +57,8 @@ model StudentProfile {
 
   @@index([departmentId, currentSemesterNumber])
   @@index([admissionType])
+  @@index([academicName])
+  @@index([legalFullName])
   @@map("student_profiles")
   @@schema("student_schema")
 }
@@ -54,7 +85,7 @@ model StudentEnrollment {
   courseId         String         @map("course_id")
   semesterId       String         @map("semester_id")
   academicSession  String         @map("academic_session")
-  enrollmentStatus String         @default("ACTIVE") @map("enrollment_status") // "ACTIVE", "DETAINED", "COMPLETED"
+  enrollmentStatus String         @default("ACTIVE") @map("enrollment_status") 
   createdAt        DateTime       @default(now()) @map("created_at")
   student          StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
