@@ -178,6 +178,13 @@ func TestIcons_SVGResources(t *testing.T) {
 		{"lucide_graduation_cap", LucideGraduationCap},
 		{"lucide_image", LucideImage},
 		{"lucide_upload", LucideUpload},
+		{"lucide_menu", LucideMenu},
+		{"lucide_dashboard", LucideLayoutDashboard},
+		{"lucide_pull_request", LucideGitPullRequest},
+		{"lucide_login", LucideLogIn},
+		{"lucide_logout", LucideLogOut},
+		{"lucide_sun", LucideSun},
+		{"lucide_moon", LucideMoon},
 	}
 
 	for _, s := range svgList {

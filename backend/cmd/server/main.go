@@ -15,6 +15,7 @@ import (
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/internal/config"
 	transportGrpc "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/internal/transport/grpc"
 	transportHttp "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/internal/transport/http"
+	"github.com/skip2/go-qrcode"
 	campusv1 "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/pkg/proto/campus/v1"
 )
 
@@ -92,6 +93,7 @@ func runBootstrapCLI(cfg *config.Config) {
 	name := fs.String("name", "Chairperson", "Full legal name of the institutional Chairperson")
 	email := fs.String("email", "chairperson@campus.edu", "Official email address of the Chairperson")
 	phone := fs.String("phone", "+919876543210", "Registered mobile phone number (used for SIM binding & OTP)")
+	outFile := fs.String("out", "genesis_docket.png", "Path to export high-resolution QR docket image file for physical printing")
 
 	_ = fs.Parse(os.Args[2:])
 
@@ -124,7 +126,16 @@ func runBootstrapCLI(cfg *config.Config) {
 		os.Exit(1)
 	}
 
-	fmt.Println("\n  SCAN THIS SEALED CLAIM QR CODE USING CAMPUS OS MOBILE CLIENT:")
+	// Export printable high-resolution QR docket image
+	if *outFile != "" {
+		if err := qrcode.WriteFile(resp.ClaimToken, qrcode.Medium, 512, *outFile); err == nil {
+			fmt.Printf("  Exported Docket File   : %s (High-Resolution 512x512 PNG)\n", *outFile)
+		} else {
+			fmt.Printf("  Warning: Failed to export docket image to %s: %v\n", *outFile, err)
+		}
+	}
+
+	fmt.Println("\n  SCAN THIS SEALED CLAIM QR CODE USING CAMPUS OS CLIENT:")
 	fmt.Println()
 	fmt.Println(resp.AsciiQr)
 	fmt.Println()
@@ -132,8 +143,8 @@ func runBootstrapCLI(cfg *config.Config) {
 	fmt.Printf("  Expires At (Unix)      : %d\n", resp.ExpiresAtUnix)
 	fmt.Println("========================================================================")
 	fmt.Println("  INSTRUCTIONS:")
-	fmt.Println("  1. Open Campus OS Native Client on the Chairperson's registered phone.")
-	fmt.Println("  2. Point camera at the terminal QR code above to initiate SIM verification.")
-	fmt.Println("  3. Complete SMS OTP verification and set your master administrator password.")
+	fmt.Println("  1. Open Campus OS Native Client on the Chairperson's registered device.")
+	fmt.Println("  2. Point camera at the QR code above or upload the exported genesis_docket.png.")
+	fmt.Println("  3. Verify cellular SIM binding and set your master administrator password.")
 	fmt.Println("========================================================================")
 }

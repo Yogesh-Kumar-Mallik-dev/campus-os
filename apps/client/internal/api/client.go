@@ -220,3 +220,69 @@ func (c *Client) CompleteClaim(ctx context.Context, claimToken, otpID, otpCode, 
 	}
 	return &res, nil
 }
+
+// LoginResponse contains credentials and user metadata returned upon authentication.
+type LoginResponse struct {
+	AccessToken      string   `json:"access_token"`
+	RefreshToken     string   `json:"refresh_token"`
+	ExpiresInSeconds int64    `json:"expires_in_seconds"`
+	UserID           string   `json:"user_id"`
+	Username         string   `json:"username"`
+	FullName         string   `json:"full_name"`
+	RoleCodes        []string `json:"role_codes"`
+}
+
+// BLOCK_CLIENT_API_LOGIN_001
+// Purpose: Authenticates a user with identifier (username, email, or PRN) and password.
+func (c *Client) Login(ctx context.Context, identifier, password, totp string) (*LoginResponse, error) {
+	reqBody, _ := json.Marshal(map[string]string{
+		"identifier": identifier,
+		"password":   password,
+		"totp_code":  totp,
+	})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v1/auth/login", bytes.NewReader(reqBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("backend unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, parseHTTPError(resp, "invalid credentials")
+	}
+
+	var res LoginResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// BLOCK_CLIENT_API_REVOKE_001
+// Purpose: Invalidates active session on the backend.
+func (c *Client) RevokeSession(ctx context.Context, refreshToken string) error {
+	reqBody, _ := json.Marshal(map[string]string{
+		"refresh_token": refreshToken,
+	})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v1/auth/revoke", bytes.NewReader(reqBody))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("backend unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return parseHTTPError(resp, "revocation failed")
+	}
+	return nil
+}

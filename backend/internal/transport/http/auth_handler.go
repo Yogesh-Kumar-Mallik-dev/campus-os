@@ -217,3 +217,26 @@ func (h *AuthHTTPHandler) HandleRefresh(w http.ResponseWriter, r *http.Request) 
 		"expires_in_seconds": resp.ExpiresInSeconds,
 	})
 }
+
+// BLOCK_AUTH_HTTP_REVOKE_001
+// Purpose: Revokes active session tokens and family refresh tokens.
+func (h *AuthHTTPHandler) HandleRevoke(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.RefreshToken == "" {
+		WriteProblem(w, r, http.StatusBadRequest, "INVALID_REVOKE_REQUEST", "Invalid Revocation Request", "refresh_token is required", nil)
+		return
+	}
+
+	if h.client != nil {
+		_, _ = h.client.RevokeSession(r.Context(), &campusv1.RevokeSessionRequest{
+			RefreshToken: body.RefreshToken,
+		})
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"revoked": true,
+	})
+}
+

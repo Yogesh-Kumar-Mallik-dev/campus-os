@@ -176,3 +176,53 @@ func TestIsUnreachable(t *testing.T) {
 		t.Errorf("expected HTTP 401 to not be unreachable")
 	}
 }
+
+// BLOCK_API_CLIENT_TEST_006
+// Purpose: Verifies Login endpoint with credentials and RFC 7807 error responses.
+func TestClientLogin(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/auth/login" {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"access_token": "jwt_access_123",
+			"refresh_token": "jwt_refresh_456",
+			"expires_in_seconds": 900,
+			"user_id": "u-chairperson-1",
+			"username": "chairperson.2024",
+			"full_name": "Yogesh Kumar Mallik",
+			"role_codes": ["SUPER_ADMIN"]
+		}`))
+	}))
+	defer ts.Close()
+
+	client := NewClient(ts.URL)
+	resp, err := client.Login(context.Background(), "chairperson.2024", "password123", "")
+	if err != nil {
+		t.Fatalf("expected login success, got %v", err)
+	}
+	if resp.Username != "chairperson.2024" || len(resp.RoleCodes) == 0 || resp.RoleCodes[0] != "SUPER_ADMIN" {
+		t.Errorf("unexpected login response %+v", resp)
+	}
+}
+
+// BLOCK_API_CLIENT_TEST_007
+// Purpose: Verifies RevokeSession endpoint.
+func TestClientRevokeSession(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/auth/revoke" {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"revoked":true}`))
+	}))
+	defer ts.Close()
+
+	client := NewClient(ts.URL)
+	if err := client.RevokeSession(context.Background(), "jwt_refresh_456"); err != nil {
+		t.Fatalf("expected revoke success, got %v", err)
+	}
+}

@@ -36,8 +36,9 @@ type OnboardingWizard struct {
 	client     *api.Client
 	window     fyne.Window
 	content    *fyne.Container
-	step       OnboardingStep
-	onComplete func()
+	step              OnboardingStep
+	onComplete        func()
+	onNavigateToLogin func()
 
 	// Wizard Form State
 	ClaimToken        string
@@ -274,6 +275,12 @@ func (w *OnboardingWizard) renderScanStep() {
 		}()
 	})
 
+	signInBtn := NewShadcnButton("Already Activated? Institutional Sign In", ButtonGhost, ButtonSizeDefault, ResourceFromSVG("login.svg", LucideLogIn), func() {
+		if w.onNavigateToLogin != nil {
+			w.onNavigateToLogin()
+		}
+	})
+
 	scannerCard := NewShadcnCard(CardParts{
 		Badge:       NewBadge("STEP 1 OF 4", BadgeDefault, BadgeShapePill),
 		Title:       "Scan Sealed Admission QR",
@@ -284,7 +291,11 @@ func (w *OnboardingWizard) renderScanStep() {
 			NewShadcnSeparator(true),
 			tokenField,
 		),
-		Footer: scanBtn,
+		Footer: container.NewVBox(
+			scanBtn,
+			NewShadcnSeparator(true),
+			signInBtn,
+		),
 	})
 
 	w.content.Add(scannerCard)
