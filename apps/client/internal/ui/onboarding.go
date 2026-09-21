@@ -164,7 +164,44 @@ func (w *OnboardingWizard) renderScanStep() {
 		tokenEntry.SetText(w.ClaimToken)
 	}
 
-	uploadBtn := NewShadcnButton("Select QR Screenshot or Picture", ButtonOutline, ButtonSizeDefault, ResourceFromSVG("upload.svg", LucideUpload), func() {
+	scanCameraBtn := NewShadcnButton("Open Optical Camera", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("camera.svg", LucideCamera), func() {
+		if w.window == nil {
+			return
+		}
+
+		launchScanner := func() {
+			ShowCameraScannerModal(w.window, func(token string) {
+				w.ClaimToken = token
+				w.ScannedImageName = "Live Optical Camera"
+				tokenEntry.SetText(token)
+				w.IsError = false
+				w.StatusText = fmt.Sprintf("QR code decoded successfully from Camera: %s", token)
+				w.toast("QR Code Scanned", fmt.Sprintf("Token: %s", token), AlertSuccess)
+				w.render()
+			}, func() {
+				// Cancelled by user
+			})
+		}
+
+		perm := GetCameraPermission()
+		switch perm {
+		case PermissionGranted:
+			launchScanner()
+		case PermissionDenied:
+			ShowAlertDialog(w.window, "Camera Access Denied", "Camera permission is currently disabled on this device. Would you like to enable it?", "Enable Camera", false, func() {
+				_ = SetCameraPermission(PermissionGranted)
+				launchScanner()
+			})
+		default: // PermissionPrompt
+			ShowCameraPermissionModal(w.window, func() {
+				launchScanner()
+			}, func() {
+				w.toast("Camera Access Denied", "Camera access was not granted. You can still select a picture file.", AlertDestructive)
+			})
+		}
+	})
+
+	uploadBtn := NewShadcnButton("Select QR Picture", ButtonOutline, ButtonSizeDefault, ResourceFromSVG("upload.svg", LucideUpload), func() {
 		if w.window == nil {
 			return
 		}
@@ -287,7 +324,7 @@ func (w *OnboardingWizard) renderScanStep() {
 		Description: "Position camera viewfinder, select a screenshot/picture, or enter the manual token beneath the seal",
 		Content: container.NewVBox(
 			emptyScanner,
-			container.NewCenter(uploadBtn),
+			container.NewCenter(container.NewHBox(scanCameraBtn, uploadBtn)),
 			NewShadcnSeparator(true),
 			tokenField,
 		),
