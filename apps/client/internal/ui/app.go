@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -50,8 +52,22 @@ func (a *Application) BuildLayout() fyne.CanvasObject {
 
 // Run launches the native Fyne window loop.
 func (a *Application) Run() {
-	a.Window.SetContent(a.BuildLayout())
 	a.Window.Resize(fyne.NewSize(820, 680))
+	content := a.BuildLayout()
+	a.Window.SetContent(content)
 	a.Window.CenterOnScreen()
+
+	// Proactively trigger a layout refresh to eliminate Wayland/Hyprland first-frame stalls
+	go func() {
+		for _, delay := range []time.Duration{30 * time.Millisecond, 120 * time.Millisecond} {
+			time.Sleep(delay)
+			if a.Window != nil && a.Window.Canvas() != nil {
+				if c := a.Window.Content(); c != nil {
+					a.Window.Canvas().Refresh(c)
+				}
+			}
+		}
+	}()
+
 	a.Window.ShowAndRun()
 }

@@ -27,17 +27,22 @@ func NewResponsiveLayout(maxWidth, margin float32) fyne.Layout {
 
 func (r *responsiveCardLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
 	for _, child := range objects {
-		targetW := size.Width - (r.margin * 2)
-		if targetW > r.maxWidth {
+		var targetW float32
+		if size.Width <= 0 {
 			targetW = r.maxWidth
-		}
-		if targetW < 240 {
-			targetW = 240
+		} else {
+			targetW = size.Width - (r.margin * 2)
+			if targetW > r.maxWidth {
+				targetW = r.maxWidth
+			}
+			if targetW < 240 {
+				targetW = 240
+			}
 		}
 
-		posX := (size.Width - targetW) / 2
-		if posX < r.margin {
-			posX = r.margin
+		var posX float32 = r.margin
+		if size.Width > targetW {
+			posX = (size.Width - targetW) / 2
 		}
 
 		// Ensure child is given targetW before computing wrapped height
