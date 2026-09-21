@@ -142,13 +142,14 @@ func (a *Application) Run() {
 	a.Window.SetContent(content)
 	a.Window.CenterOnScreen()
 
-	// Proactively trigger a layout refresh to eliminate Wayland/Hyprland first-frame stalls
+	// Proactively trigger layout refreshes to eliminate Wayland/Hyprland first-frame stalls and scale lag
 	go func() {
-		for _, delay := range []time.Duration{30 * time.Millisecond, 120 * time.Millisecond} {
+		for _, delay := range []time.Duration{40 * time.Millisecond, 120 * time.Millisecond, 250 * time.Millisecond, 450 * time.Millisecond} {
 			time.Sleep(delay)
 			fyne.Do(func() {
 				if a.Window != nil && a.Window.Canvas() != nil {
 					if c := a.Window.Content(); c != nil {
+						c.Refresh()
 						a.Window.Canvas().Refresh(c)
 					}
 				}
