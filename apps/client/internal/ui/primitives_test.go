@@ -139,6 +139,102 @@ func TestShadcnButton_VariantsAndActions(t *testing.T) {
 	}
 }
 
+func TestAnimatedArrowButton_Interaction(t *testing.T) {
+	clicked := false
+	leadIcon := WhiteResourceFromSVG("lead.svg", LucideFileCheck)
+	btn := NewAnimatedArrowButton("Records Confirmed, Set Password", ButtonDefault, ButtonSizeDefault, leadIcon, func() {
+		clicked = true
+	})
+
+	if btn == nil {
+		t.Fatal("expected non-nil animated arrow button")
+	}
+
+	// Tap interaction
+	btn.Tapped(nil)
+	if !clicked {
+		t.Fatal("expected animated button click to fire")
+	}
+	clicked = false
+
+	// Hover interactions
+	btn.MouseIn(nil)
+	if !btn.Hovered {
+		t.Fatal("expected button to be hovered after MouseIn")
+	}
+	btn.MouseOut()
+	if btn.Hovered {
+		t.Fatal("expected button not to be hovered after MouseOut")
+	}
+
+	// Active press
+	btn.MouseDown(nil)
+	if !btn.Pressed {
+		t.Fatal("expected button to be pressed")
+	}
+	btn.MouseUp(nil)
+	if btn.Pressed {
+		t.Fatal("expected button not to be pressed after MouseUp")
+	}
+
+	// Focus and Keyboard accessibility
+	btn.FocusGained()
+	if !btn.Focused {
+		t.Fatal("expected button to be focused")
+	}
+	btn.TypedRune(' ')
+	if !clicked {
+		t.Fatal("expected spacebar to trigger click")
+	}
+	clicked = false
+
+	btn.TypedKey(&fyne.KeyEvent{Name: fyne.KeyReturn})
+	if !clicked {
+		t.Fatal("expected enter key to trigger click")
+	}
+	clicked = false
+	btn.FocusLost()
+	if btn.Focused {
+		t.Fatal("expected button not to be focused after FocusLost")
+	}
+
+	// Disabled state
+	btn.Disable()
+	if !btn.Disabled() {
+		t.Fatal("expected button to report disabled")
+	}
+	btn.Tapped(nil)
+	if clicked {
+		t.Fatal("expected disabled button to ignore tap")
+	}
+	btn.TypedRune(' ')
+	if clicked {
+		t.Fatal("expected disabled button to ignore space key")
+	}
+	btn.Enable()
+	if btn.Disabled() {
+		t.Fatal("expected button to be re-enabled")
+	}
+
+	// Dynamic label update
+	btn.SetText("Proceed Next")
+	if btn.Text != "Proceed Next" {
+		t.Fatalf("expected updated text 'Proceed Next', got '%s'", btn.Text)
+	}
+
+	// Renderer assertions
+	renderer := btn.CreateRenderer()
+	if renderer == nil {
+		t.Fatal("expected non-nil renderer for animated arrow button")
+	}
+	renderer.Layout(fyne.NewSize(300, 40))
+	minSize := renderer.MinSize()
+	if minSize.Width <= 0 || minSize.Height < 38 {
+		t.Errorf("expected accessible min height >= 38, got %v", minSize)
+	}
+	renderer.Destroy()
+}
+
 func TestShadcnCard_CompoundStructure(t *testing.T) {
 	badge := NewBadge("ACTIVE", BadgeSuccess, BadgeShapePill)
 	content := widget.NewLabel("Body Content")

@@ -122,8 +122,8 @@ func (t *CampusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant)
 			// --primary: oklch(0.67 0.19 27) -> #f45a51
 			return color.NRGBA{R: 244, G: 90, B: 81, A: 255}
 		case theme.ColorNameForegroundOnPrimary:
-			// --primary-foreground: oklch(0.14 0.02 240)
-			return color.NRGBA{R: 18, G: 21, B: 29, A: 255}
+			// Crisp pure white text and icons so buttons shine with high contrast against terracotta
+			return color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 		case theme.ColorNameButton:
 			// --secondary: oklch(0.27 0.018 239)
 			return color.NRGBA{R: 40, G: 46, B: 62, A: 255}

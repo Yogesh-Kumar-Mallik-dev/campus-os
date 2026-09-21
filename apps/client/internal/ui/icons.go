@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 )
@@ -157,6 +159,11 @@ const (
 		<path d="m9 18 6-6-6-6"/>
 	</svg>`
 
+	LucideArrowRight = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<path d="M5 12h14"/>
+		<path d="m12 5 7 7-7 7"/>
+	</svg>`
+
 	LucideSparkles = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#f45a51" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 		<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
 		<path d="M5 3v4"/>
@@ -180,6 +187,18 @@ const (
 // Resource helpers
 func ResourceFromSVG(name, svgContent string) fyne.Resource {
 	return fyne.NewStaticResource(name, []byte(svgContent))
+}
+
+// WhiteResourceFromSVG produces a pure white version of an SVG resource designed to complement primary action buttons.
+func WhiteResourceFromSVG(name, svgContent string) fyne.Resource {
+	re := strings.NewReplacer(
+		`stroke="#f45a51"`, `stroke="#ffffff"`,
+		`stroke="#10b981"`, `stroke="#ffffff"`,
+		`stroke="#f59e0b"`, `stroke="#ffffff"`,
+		`stroke="#64748b"`, `stroke="#ffffff"`,
+		`stroke="#38bdf8"`, `stroke="#ffffff"`,
+	)
+	return fyne.NewStaticResource(name, []byte(re.Replace(svgContent)))
 }
 
 // RenderSVGImage creates an SVG canvas image with explicit bounding dimensions.

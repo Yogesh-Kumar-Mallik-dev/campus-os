@@ -154,7 +154,7 @@ func (w *OnboardingWizard) renderScanStep() {
 		tokenEntry.SetText(w.ClaimToken)
 	}
 
-	scanBtn := NewShadcnButton("Validate Admission Token", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("scan.svg", LucideScan), func() {
+	scanBtn := NewShadcnButton("Validate Admission Token", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("scan.svg", LucideScan), func() {
 		token := tokenEntry.Text
 		if token == "" {
 			token = "claim_genesis_test_demo"
@@ -251,7 +251,7 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		HelperText:  "Sent via cellular carrier handshake to verify registered SIM presence",
 	})
 
-	verifyBtn := NewShadcnButton("Verify Carrier SIM & Submit OTP", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("phone.svg", LucideSmartphone), func() {
+	verifyBtn := NewShadcnButton("Verify Carrier SIM & Submit OTP", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("phone.svg", LucideSmartphone), func() {
 		w.OTPCode = otpEntry.Text
 		if w.OTPCode == "" {
 			w.OTPCode = "123456"
@@ -321,7 +321,7 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 		}
 	})
 
-	nextBtn := NewShadcnButton("Records Confirmed, Set Password ->", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("file-check.svg", LucideFileCheck), func() {
+	nextBtn := NewAnimatedArrowButton("Records Confirmed, Set Password", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("file-check.svg", LucideFileCheck), func() {
 		if !confirmCheck.Checked {
 			w.IsError = true
 			w.StatusText = "Please acknowledge record verification before proceeding"
@@ -333,6 +333,14 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 		w.StatusText = "Identity records confirmed. Create your password."
 		w.SetStep(StepSetPassword)
 	})
+
+	confirmCheck.OnChanged = func(checked bool) {
+		if checked {
+			nextBtn.Enable()
+		} else {
+			nextBtn.Disable()
+		}
+	}
 
 	actionRow := container.NewGridWithColumns(2, discrepancyBtn, nextBtn)
 
@@ -392,7 +400,7 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 		bioLabel,
 	)
 
-	completeBtn := NewShadcnButton("Complete Activation & Provision Pass", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("lock.svg", LucideLock), func() {
+	completeBtn := NewShadcnButton("Complete Activation & Provision Pass", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("lock.svg", LucideLock), func() {
 		if len(passEntry.Text) < 6 {
 			w.IsError = true
 			w.StatusText = "Password must contain at least 6 characters during grace period"
@@ -457,7 +465,7 @@ func (w *OnboardingWizard) renderCompleteStep() {
 		NewKeyValueRow("INSTITUTIONAL AFFILIATION", "Dr. A.P.J. Abdul Kalam Technical University (AKTU)", nil),
 	)
 
-	enterBtn := NewShadcnButton("Finish & Enter Scholar Portal", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("badge.svg", LucideBadgeCheck), func() {
+	enterBtn := NewShadcnButton("Finish & Enter Scholar Portal", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("badge.svg", LucideBadgeCheck), func() {
 		if w.onComplete != nil {
 			w.onComplete()
 		}
