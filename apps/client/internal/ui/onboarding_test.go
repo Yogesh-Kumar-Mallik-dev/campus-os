@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"fyne.io/fyne/v2/test"
@@ -94,4 +97,82 @@ func TestOnboardingWizard_ToastAndActions(t *testing.T) {
 		t.Fatalf("expected step %v, got %v", StepSIMVerify, wizard.CurrentStep())
 	}
 }
+
+// BLOCK_UI_ONBOARDING_TEST_003
+// Purpose: Verifies frontend-to-backend live synchronization for claim validation, SIM match, and completion.
+func TestOnboardingWizard_BackendSync(t *testing.T) {
+	testApp := test.NewApp()
+	defer testApp.Quit()
+	testWindow := test.NewWindow(nil)
+
+	// Spin up mock HTTP backend matching backend/internal/transport/http
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/v1/auth/claim/validate":
+			_, _ = w.Write([]byte(`{
+				"is_valid": true,
+				"user_id": "u-sync-1",
+				"masked_phone_number": "+91 98XXX-XX210",
+				"username": "scholar.sync",
+				"academic_name": "Scholar Sync",
+				"legal_full_name": "Scholar Sync Kumar",
+				"admission_type": "LATERAL_ENTRY",
+				"entry_semester_number": 3,
+				"lateral_entry_summary": "Sync verified",
+				"grace_period_remaining_seconds": 86400
+			}`))
+		case "/api/v1/auth/claim/verify-sim":
+			_, _ = w.Write([]byte(`{
+				"sim_matched": true,
+				"otp_challenge_id": "otp_sync_challenge_456",
+				"resend_available_in_seconds": 45
+			}`))
+		case "/api/v1/auth/claim/complete":
+			_, _ = w.Write([]byte(`{
+				"success": true,
+				"access_token": "token_sync_access",
+				"refresh_token": "token_sync_refresh",
+				"user_id": "u-sync-1",
+				"username": "scholar.sync",
+				"email": "scholar.sync@campus.edu",
+				"role_code": "STUDENT"
+			}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	client := api.NewClient(server.URL)
+	wizard := NewOnboardingWizard(client, testWindow, nil)
+
+	// 1. Direct validation via synced client
+	resp, err := wizard.client.ValidateClaim(context.Background(), "sync_token")
+	if err != nil || !resp.IsValid {
+		t.Fatalf("expected valid claim from backend, got %v", err)
+	}
+	if resp.Username != "scholar.sync" {
+		t.Errorf("expected scholar.sync, got %s", resp.Username)
+	}
+
+	// 2. SIM verification via synced client
+	simResp, err := wizard.client.VerifySIM(context.Background(), "sync_token", "hash", "+919876543210")
+	if err != nil || !simResp.SimMatched {
+		t.Fatalf("expected sim match from backend, got %v", err)
+	}
+	if simResp.OTPChallengeID != "otp_sync_challenge_456" {
+		t.Errorf("expected otp_sync_challenge_456, got %s", simResp.OTPChallengeID)
+	}
+
+	// 3. Claim completion via synced client
+	compResp, err := wizard.client.CompleteClaim(context.Background(), "sync_token", simResp.OTPChallengeID, "123456", "securePassword", true)
+	if err != nil || !compResp.Success {
+		t.Fatalf("expected successful claim completion, got %v", err)
+	}
+	if compResp.RoleCode != "STUDENT" {
+		t.Errorf("expected STUDENT role, got %s", compResp.RoleCode)
+	}
+}
+
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -13,6 +14,39 @@ import (
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
+}
+
+// ProblemDetails represents an RFC 7807 standardized problem envelope from the backend.
+type ProblemDetails struct {
+	Type     string `json:"type"`
+	Title    string `json:"title"`
+	Status   int    `json:"status"`
+	Detail   string `json:"detail"`
+	Instance string `json:"instance"`
+	Code     string `json:"code"`
+}
+
+// IsUnreachable returns true if the error indicates network or connection failure to the backend.
+func IsUnreachable(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "backend unreachable") ||
+		strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "no such host") ||
+		strings.Contains(msg, "context deadline exceeded")
+}
+
+func parseHTTPError(resp *http.Response, defaultMsg string) error {
+	var prob ProblemDetails
+	if err := json.NewDecoder(resp.Body).Decode(&prob); err == nil && prob.Detail != "" {
+		if prob.Title != "" {
+			return fmt.Errorf("%s: %s", prob.Title, prob.Detail)
+		}
+		return fmt.Errorf("%s", prob.Detail)
+	}
+	return fmt.Errorf("%s (status %d)", defaultMsg, resp.StatusCode)
 }
 
 // HealthResponse represents the health payload from backend.
@@ -92,7 +126,7 @@ func (c *Client) ValidateClaim(ctx context.Context, claimToken string) (*ClaimVa
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("invalid claim token (status %d)", resp.StatusCode)
+		return nil, parseHTTPError(resp, "invalid claim token")
 	}
 
 	var res ClaimValidationResponse
@@ -133,7 +167,7 @@ func (c *Client) VerifySIM(ctx context.Context, claimToken, simHash, phone strin
 		return &SIMVerificationResponse{SimMatched: false}, nil
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("SIM verification failed (status %d)", resp.StatusCode)
+		return nil, parseHTTPError(resp, "SIM verification failed")
 	}
 
 	var res SIMVerificationResponse
@@ -177,7 +211,7 @@ func (c *Client) CompleteClaim(ctx context.Context, claimToken, otpID, otpCode, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("account claim failed (status %d)", resp.StatusCode)
+		return nil, parseHTTPError(resp, "account claim failed")
 	}
 
 	var res ClaimCompletionResponse
