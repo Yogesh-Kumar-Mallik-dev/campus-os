@@ -60,7 +60,11 @@ func NewShadcnCard(parts CardParts) fyne.CanvasObject {
 
 	// Footer section
 	if parts.Footer != nil {
-		elements = append(elements, widget.NewSeparator(), parts.Footer)
+		if parts.Content != nil || (parts.Title == "" && parts.Description == "" && parts.Badge == nil) {
+			elements = append(elements, widget.NewSeparator(), parts.Footer)
+		} else {
+			elements = append(elements, parts.Footer)
+		}
 	}
 
 	return container.NewStack(

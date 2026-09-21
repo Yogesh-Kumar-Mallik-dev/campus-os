@@ -3,6 +3,7 @@ package ui
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -31,6 +32,7 @@ func ShowAlertDialog(w fyne.Window, title, description, confirmText string, isDe
 	})
 
 	buttons := container.NewHBox(
+		layout.NewSpacer(),
 		cancelBtn,
 		confirmBtn,
 	)
@@ -38,10 +40,17 @@ func ShowAlertDialog(w fyne.Window, title, description, confirmText string, isDe
 	card := NewShadcnCard(CardParts{
 		Title:       title,
 		Description: description,
-		Footer:      container.NewBorder(nil, nil, nil, buttons),
+		Footer:      buttons,
 	})
 
-	popup = widget.NewModalPopUp(container.NewGridWrap(fyne.NewSize(420, card.MinSize().Height), card), w.Canvas())
+	cardMin := card.MinSize()
+	targetWidth := float32(440)
+	targetHeight := cardMin.Height
+	if targetHeight < 200 {
+		targetHeight = 200
+	}
+
+	popup = widget.NewModalPopUp(container.NewGridWrap(fyne.NewSize(targetWidth, targetHeight), card), w.Canvas())
 	popup.Show()
 	return popup
 }
