@@ -146,11 +146,13 @@ func (a *Application) Run() {
 	go func() {
 		for _, delay := range []time.Duration{30 * time.Millisecond, 120 * time.Millisecond} {
 			time.Sleep(delay)
-			if a.Window != nil && a.Window.Canvas() != nil {
-				if c := a.Window.Content(); c != nil {
-					a.Window.Canvas().Refresh(c)
+			fyne.Do(func() {
+				if a.Window != nil && a.Window.Canvas() != nil {
+					if c := a.Window.Content(); c != nil {
+						a.Window.Canvas().Refresh(c)
+					}
 				}
-			}
+			})
 		}
 	}()
 

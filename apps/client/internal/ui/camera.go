@@ -166,19 +166,25 @@ func ShowCameraPermissionModal(window fyne.Window, onAllow func(), onDeny func()
 
 	contentBox := container.NewVBox(
 		container.NewCenter(iconVisual),
-		titleLabel,
+		container.NewCenter(titleLabel),
 		widget.NewSeparator(),
 		descLabel,
 		rememberCheck,
-		widget.NewSeparator(),
-		actionButtons,
 	)
 
 	card := NewShadcnCard(CardParts{
 		Content: contentBox,
+		Footer:  actionButtons,
 	})
 
-	popup = widget.NewModalPopUp(container.NewGridWrap(fyne.NewSize(460, 320), card), window.Canvas())
+	cardMin := card.MinSize()
+	targetWidth := float32(480)
+	targetHeight := cardMin.Height
+	if targetHeight < 380 {
+		targetHeight = 380
+	}
+
+	popup = widget.NewModalPopUp(container.NewGridWrap(fyne.NewSize(targetWidth, targetHeight), card), window.Canvas())
 	popup.Show()
 	return popup
 }
@@ -254,7 +260,14 @@ func ShowCameraScannerModal(window fyne.Window, onTokenScanned func(token string
 		Content: contentBox,
 	})
 
-	popup = widget.NewModalPopUp(container.NewGridWrap(fyne.NewSize(520, 420), card), window.Canvas())
+	cardMin := card.MinSize()
+	targetWidth := float32(520)
+	targetHeight := cardMin.Height
+	if targetHeight < 440 {
+		targetHeight = 440
+	}
+
+	popup = widget.NewModalPopUp(container.NewGridWrap(fyne.NewSize(targetWidth, targetHeight), card), window.Canvas())
 	popup.Show()
 
 	// Launch live camera capture routine
