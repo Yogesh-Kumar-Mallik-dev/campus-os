@@ -79,7 +79,9 @@ Campus OS enforces a **Strict Need-to-Know** access boundary:
 
 ## 5. Super Admin Governance
 
-* **Singleton Principle:** Exactly **one** active Super Admin seat exists at any point in time.
+* **Singleton Principle:** Exactly **one** active Super Admin seat exists at any point in time, occupied by the **Chairperson** (Head of the Governing Trust / Society).
+* **Genesis Bootstrapping via Backend CLI:** The Super Admin account can **never** be provisioned via HTTP or external network APIs. It is generated exclusively on the bare-metal server console via `campus-backend bootstrap-superadmin`, which renders an ASCII QR claim token bound to the Chairperson's registered SIM.
+* **Executive Council Provisioning Authority:** The Chairperson (Super Admin) holds exclusive authority (`executive.qr.generate`) to generate sealed credential QR codes for the institutional Executive Council (**Director**, **Executive Director**, **Dean**, and **Registrar**).
 * **Atomic Succession:** Succession occurs via an atomic database transaction where the incumbent seat is retired and the successor is crowned simultaneously.
 * **Separation from Developer:** The Super Admin is an institutional administrator and cannot invoke Developer-exclusive capabilities (such as break-glass emergency procedures).
 
@@ -105,18 +107,21 @@ $$\mathbf{\left[\text{first}\right]} \boldsymbol{.} \mathbf{\left[\text{last}\ri
 * **Zero-Faculty-Knowledge QR Delivery:** Student initial credentials/claim tokens are delivered via sealed, tamper-evident QR codes on admission slips. Faculty and department staff never see or handle student initial passwords.
 * **First-Scan Mandatory Password Reset:** Scanning the onboarding QR prompts the user to immediately set their personal password before accessing any institutional data.
 * **3-Day Grace Period:** During the initial 72 hours, users may set a simplified password (minimum 6 characters). After 3 days, enterprise password complexity (10+ characters, mixed case, numbers, symbols) is strictly enforced.
-* **Faculty MFA:** Mandatory TOTP Multi-Factor Authentication enrolled during invitation activation.
+* **Executive & Faculty MFA:** Mandatory TOTP Multi-Factor Authentication enrolled during invitation activation.
 * **Session Lifecycle:** 15-minute JWT Access Tokens paired with 7-day HttpOnly Refresh Tokens enforcing automatic Family Token rotation breach detection.
 
-### 6.4 Bulk Credential Generation Authority Matrix
-Bulk credential generation and QR printing are strictly segregated administrative operations governed by Scoped RBAC. General teaching faculty and staff have zero authority to generate student or peer QR credentials:
+### 6.4 Cascading Credential Generation Authority Matrix
+Credential generation and QR printing are strictly segregated administrative operations governed by Scoped RBAC across a cascading chain of authority:
 
-| Target Cohort | Authorized Generation Role | Permission Code | Mandatory Prerequisite |
-| :--- | :--- | :--- | :--- |
-| **Students (UG, PG, Lateral)** | **Registrar / Admissions Office** | `admissions.qr.generate_bulk` | Approved gazetted admission roll with verified phone & email |
-| **Faculty & Academic Staff** | **Human Resources (HR) / Dean** | `hr.faculty_qr.generate_bulk` | Executed appointment orders & personnel file |
-| **Operational Staff (Guards, Estate)** | **Chief Security Officer (CSO) / Estate** | `staff.qr.generate_bulk` | Background check clearance & operational roster |
+| Tier | Target Cohort | Authorized Provisioning Role | Permission Code | Mandatory Prerequisite |
+| :--- | :--- | :--- | :--- | :--- |
+| **Tier 0 (Genesis)** | **Super Admin (Chairperson)** | **Backend CLI (Local Server)** | `CLI_BARE_METAL_ONLY` | Physical bare-metal server access; singleton seat check. |
+| **Tier 1 (Executives)** | **Director, Executive Director, Dean, Registrar** | **Chairperson (Super Admin)** | `executive.qr.generate` | Governing Trust resolution order; verified personal phone. |
+| **Tier 2 (Students)** | **Students (UG, PG, Lateral)** | **Registrar / Admissions Office** | `admissions.qr.generate_bulk` | Approved gazetted admission roll with verified phone & personal email. |
+| **Tier 2 (Faculty)** | **Teaching Faculty, HODs, Lab Techs** | **Human Resources (HR) / Dean** | `hr.faculty_qr.generate_bulk` | Executed appointment orders & employee personnel file. |
+| **Tier 2 (Operations)** | **Wardens, Estate Workers, Guards** | **Executive Director & CSO / Estate** | `staff.qr.generate_bulk` | Background check clearance & operational deployment roster. |
 
+* **Zero Faculty Generation Invariant:** General teaching faculty and department staff have **zero authority** to generate student, peer, or executive QR credentials.
 * **Immutable Batch Manifest:** Each bulk QR generation action is recorded in `audit.qr_batch_manifest` containing `batch_id`, operator `user_id`, cohort type, target record count, cryptographic checksum, timestamp, and print station terminal ID.
 
 ### 6.5 Hardware SIM-Binding & Mobile Number Verification

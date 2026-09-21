@@ -39,25 +39,59 @@ $$\mathbf{\left[\text{first}\right]} \boldsymbol{.} \mathbf{\left[\text{last}\ri
 
 ### 3. Onboarding & Account Claiming Protocols
 
-#### 3.1 Bulk Generation Authority Matrix
-Bulk credential generation and QR printing are strictly segregated administrative capabilities restricted by Scoped RBAC. Teaching faculty and general staff have **zero** authority to generate student or peer QR credentials:
+#### 3.1 Genesis Bootstrapping: Super Admin (Chairperson) CLI Provisioning
+The platform enforces a strict zero-trust root-of-trust bootstrap:
+1. **Zero-Remote Creation Invariant:** The Super Admin account can **never** be created over HTTP, GraphQL, or external APIs. It must be initiated directly on the bare-metal host server via the backend CLI.
+2. **Backend CLI Execution:**
+   ```bash
+   campus-backend bootstrap-superadmin \
+     --name="Chairperson Full Name" \
+     --email="chairperson@trust.edu" \
+     --phone="+9198XXXXXXXX"
+   ```
+3. **Genesis Verification Protocol:**
+   * Validates that `auth_schema.super_admin_seat` is vacant (`singleton` check).
+   * Generates a 256-bit Ed25519 single-use cryptographic claim token bound to the Chairperson's registered phone number.
+   * Renders an ANSI ASCII QR code directly to the secure terminal `stdout` and outputs an encrypted one-time claim token.
+   * Records the genesis installation event in `audit_schema.audit_logs`.
+4. **Chairperson Mobile SIM Claim:**
+   * The Chairperson scans the terminal QR using the Campus OS native client.
+   * SIM-presence and SMS-OTP verification are completed on the Chairperson's device.
+   * Chairperson sets the master password, configures hardware/TOTP MFA, and crowns the active `super_admin_seat`.
 
-| Cohort | Bulk Generation Authority | Authorization Scope | Manifest & Ingestion Prerequisite |
+#### 3.2 Executive Council Tier-1 Provisioning (Chairperson Authority)
+The Chairperson (Super Admin) possesses exclusive institutional authority (`executive.qr.generate`) to generate sealed credential QR codes for the Top Institutional Executive Council:
+
+| Executive Role | Institutional Mandate | Provisioned By | Verification & Security Invariant |
 | :--- | :--- | :--- | :--- |
-| **Students (UG, PG, Lateral Entry)** | **Registrar / Central Admissions Office** | System-wide admissions scope (`admissions.qr.generate_bulk`) | Pre-verified, gazetted admission master list with verified mobile number and personal email. |
-| **Faculty & Academic Staff** | **Human Resources (HR) & Dean of Academic Affairs** | Institutional HR scope (`hr.faculty_qr.generate_bulk`) | Executed appointment letters and verified employee master records. |
-| **Operational Staff (Estate, Wardens, Guards)** | **Chief Security Officer (CSO) & Estate Manager / HR** | Operational scope (`staff.qr.generate_bulk`) | Validated background verification and operational staffing rosters. |
+| **Director** | Academic & Campus Administrative Head | **Chairperson (Super Admin)** | Sealed QR + SIM-Bound Mobile OTP + Mandatory MFA |
+| **Executive Director (ED)** | Institutional Operations, Finance & Infrastructure | **Chairperson (Super Admin)** | Sealed QR + SIM-Bound Mobile OTP + Mandatory MFA |
+| **Dean** | Dean of Academic Affairs / Dean of Student Welfare | **Chairperson (Super Admin)** | Sealed QR + SIM-Bound Mobile OTP + Mandatory MFA |
+| **Registrar** | Official Custodian of University Records, Admissions & Exams | **Chairperson (Super Admin)** | Sealed QR + SIM-Bound Mobile OTP + Mandatory MFA |
 
-* **Immutable Batch Manifest:** Every bulk QR generation triggers an immutable audit log (`audit.qr_batch_manifest`) recording `batch_id`, operator `user_id`, cohort type, target count, cryptographic hash of the batch, generation timestamp, and print station terminal ID.
+* **Zero-Knowledge Invariant:** The Chairperson never sees, sets, or handles the passwords of executive officers. The generated QR contains a single-use token that triggers private password creation and TOTP MFA setup during the executive's first scan.
 
-#### 3.2 Zero-Faculty-Knowledge QR Delivery
+#### 3.3 Cascading Institutional Authority Matrix
+Credentials and onboarding QRs flow through a strict, multi-tiered hierarchy of authority:
+
+| Tier | Target Cohort | Provisioning Authority | Permission Code | Mandate & Evidence Prerequisite |
+| :--- | :--- | :--- | :--- | :--- |
+| **Tier 0 (Genesis)** | **Super Admin (Chairperson)** | **Backend CLI (Local Server)** | `CLI_BARE_METAL_ONLY` | Physical bare-metal server access; singleton seat check. |
+| **Tier 1 (Executives)** | **Director, Executive Director, Dean, Registrar** | **Chairperson (Super Admin)** | `executive.qr.generate` | Governing Trust / Board of Trustees resolution orders. |
+| **Tier 2 (Students)** | **Students (UG, PG, Lateral Entry)** | **Registrar / Admissions Office** | `admissions.qr.generate_bulk` | Pre-verified, gazetted admission master list with phone & personal email. |
+| **Tier 2 (Faculty)** | **Teaching Faculty, HODs, Lab Techs** | **Human Resources (HR) & Dean** | `hr.faculty_qr.generate_bulk` | Executed appointment letters and verified employee master files. |
+| **Tier 2 (Operations)** | **Wardens, Estate Workers, Security Guards** | **Executive Director & CSO / Estate** | `staff.qr.generate_bulk` | Background verification and active operational deployment rosters. |
+
+* **Zero Faculty Generation Invariant:** General teaching faculty and department staff have **zero authority** to generate student, peer, or executive QR credentials.
+* **Immutable Batch Manifest:** Every QR generation batch creates an immutable audit log (`audit.qr_batch_manifest`) recording `batch_id`, operator `user_id`, cohort type, target count, cryptographic hash of the batch, generation timestamp, and workstation terminal ID.
+
+#### 3.4 Zero-Faculty-Knowledge QR Delivery
 * Credentials and account claim payloads are delivered directly to users via **sealed, tamper-evident physical QR slips** printed during official enrollment or issued on identity cards.
-* **Zero-Knowledge Invariant:** Faculty, teachers, and department staff **never** see, handle, or generate student initial passwords. This eliminates faculty impersonation risks, student coercion, and credential leakage.
 * **Cryptographic Claim Token:** The sealed QR encodes a signed single-use claim token:
   $$\text{ClaimToken} = \text{Sign}_{\text{Ed25519}}\left(\text{UserID}, \text{MobileHash}, \text{BatchID}, \text{Nonce}, \text{Expiry}\right)$$
   The token has an absolute expiry (e.g. 14 days from issue).
 
-#### 3.3 SIM-Presence Hardware Binding & Mobile OTP Verification
+#### 3.5 SIM-Presence Hardware Binding & Mobile OTP Verification
 Claiming an account requires dual verification combining physical QR possession with active SIM hardware binding:
 1. **Device SIM Verification:** When scanned via the Campus OS native mobile client, the application probes device telephony services to confirm that the physical/eSIM currently inserted in the device matches the pre-registered mobile number recorded during admissions.
 2. **SIM-Bound SMS OTP:** An automated one-time passkey (OTP) is dispatched over SMS to the registered mobile number.
@@ -65,13 +99,13 @@ Claiming an account requires dual verification combining physical QR possession 
 4. **Rejection of Remote Claims:** If an unauthorized party steals or photographs a physical QR slip, they cannot claim the account on their own device because the physical SIM is absent (`ERR_SIM_ABSENT_OR_MISMATCH`).
 5. **Workstation / Laboratory Fallback:** In institutional computer laboratories or on desktop clients where mobile telephony hardware is absent, onboarding requires a Proctored Dual-Factor mode (SMS OTP sent to student's phone + physical proctor / admission officer verification code).
 
-#### 3.4 First-Scan Mandatory Password Reset & 3-Day Grace Period
+#### 3.6 First-Scan Mandatory Password Reset & 3-Day Grace Period
 * **Mandatory Initial Update:** Scanning the QR and completing SIM verification immediately places the user in an isolated onboarding state. The platform requires the user to set a personal password before any institutional resources can be accessed.
 * **Days 1–3 (Orientation Grace Period):** To eliminate cognitive fatigue and boarding friction during campus orientation days, users may set a simplified password (minimum 6 characters, no complex character rules required).
 * **Post Day 3 (Hard Compliance Enforcement):** After 72 hours from first claim, any user with a simplified password is automatically blocked with an unskippable credential upgrade modal enforcing enterprise complexity (minimum 10 characters, upper, lower, numeric, and special characters).
 * **Lateral Entry Review:** Lateral entry students review and acknowledge their prior polytechnic/diploma credits, Semester 3 placement, and course exemptions before password commitment.
 
-#### 3.5 Post-Onboarding Mobile Number Update Workflow
+#### 3.7 Post-Onboarding Mobile Number Update Workflow
 Users are completely free to change their registered mobile phone number after initial onboarding:
 1. **Self-Service Dual-OTP Verification:**
    * User logs into their authenticated profile and requests a phone number update.
