@@ -26,8 +26,8 @@ const (
 var stepNames = []string{
 	"QR Scan",
 	"SIM Binding",
-	"Review Dossier",
-	"Set Password",
+	"Dossier",
+	"Password",
 }
 
 // OnboardingWizard manages the UI state and transitions for account activation.
@@ -89,14 +89,13 @@ func (w *OnboardingWizard) SetStep(step OnboardingStep) {
 func (w *OnboardingWizard) render() {
 	w.content.Objects = nil
 
-	// Stepper indicator
+	// Responsive Stepper indicator
 	if w.step < StepComplete {
 		stepper := container.NewCenter(NewStepIndicator(int(w.step)+1, stepNames))
 		w.content.Add(stepper)
-		w.content.Add(layout.NewSpacer())
 	}
 
-	// Status / Error Banner
+	// Status / Error Banner with wrapping
 	if w.StatusText != "" {
 		pillVariant := PillSuccess
 		svgIcon := ResourceFromSVG("check.svg", SVGCheckVerified)
@@ -131,17 +130,17 @@ func (w *OnboardingWizard) renderScanStep() {
 	)
 
 	qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
-	qrVisual := RenderSVGImage(qrIconRes, 96, 96)
+	qrVisual := RenderSVGImage(qrIconRes, 72, 72)
 	scannerVisual := container.NewCenter(
 		container.NewVBox(
 			container.NewCenter(qrVisual),
-			widget.NewLabel("Optical Viewfinder Ready • Awaiting Alignment"),
+			widget.NewLabel("Optical Sensor Ready"),
 		),
 	)
 	scannerCard := NewStyledCard("Optical Capture Interface", scannerVisual)
 
 	tokenEntry := widget.NewEntry()
-	tokenEntry.SetPlaceHolder("Or enter 16-character claim code manually (e.g. claim_genesis_test_demo)")
+	tokenEntry.SetPlaceHolder("Enter 16-character code (or leave blank for demo)")
 	if w.ClaimToken != "" {
 		tokenEntry.SetText(w.ClaimToken)
 	}
@@ -199,17 +198,24 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 	)
 
 	phoneInfo := widget.NewLabel(fmt.Sprintf("Registered Scholar Phone: %s", w.MaskedPhone))
+	phoneInfo.Wrapping = fyne.TextWrapWord
 
-	sim1Icon := RenderSVGImage(ResourceFromSVG("sim_active.svg", SVGSIMCardActive), 24, 24)
+	sim1Icon := RenderSVGImage(ResourceFromSVG("sim_active.svg", SVGSIMCardActive), 20, 20)
+	sim1Label := widget.NewLabel("Slot 1 (Jio 5G): +91 98765-43210")
+	sim1Label.Wrapping = fyne.TextWrapWord
 	sim1Row := container.NewBorder(nil, nil,
-		container.NewHBox(sim1Icon, widget.NewLabel("Slot 1 (Jio 5G): +91 98765-43210")),
-		NewStatusPill("CARRIER MATCH", PillSuccess),
+		container.NewHBox(sim1Icon),
+		NewStatusPill("MATCH", PillSuccess),
+		sim1Label,
 	)
 
-	sim2Icon := RenderSVGImage(ResourceFromSVG("sim_sec.svg", SVGSIMCardSecondary), 24, 24)
+	sim2Icon := RenderSVGImage(ResourceFromSVG("sim_sec.svg", SVGSIMCardSecondary), 20, 20)
+	sim2Label := widget.NewLabel("Slot 2 (Airtel): +91 91234-56789")
+	sim2Label.Wrapping = fyne.TextWrapWord
 	sim2Row := container.NewBorder(nil, nil,
-		container.NewHBox(sim2Icon, widget.NewLabel("Slot 2 (Airtel): +91 91234-56789")),
+		container.NewHBox(sim2Icon),
 		NewStatusPill("SECONDARY", PillNeutral),
+		sim2Label,
 	)
 
 	simCard := NewStyledCard("Hardware Telephony Slots", container.NewVBox(
@@ -247,23 +253,33 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 func (w *OnboardingWizard) renderReviewProfileStep() {
 	header := NewPageHeader(
 		"Review Official Records",
-		"Verify the correspondence between secondary marksheet and govt identification",
+		"Verify correspondence between secondary marksheet and govt identification",
 		NewStatusPill("STEP 3 OF 4", PillInfo),
 	)
 
+	acadLabel := widget.NewLabel(w.AcademicName)
+	acadLabel.Wrapping = fyne.TextWrapWord
+	legalLabel := widget.NewLabel(w.LegalFullName)
+	legalLabel.Wrapping = fyne.TextWrapWord
+	notesLabel := widget.NewLabel(w.LateralSummary)
+	notesLabel.Wrapping = fyne.TextWrapWord
+
 	profileForm := widget.NewForm(
-		widget.NewFormItem("Academic Name (Marksheet)", widget.NewLabel(w.AcademicName)),
-		widget.NewFormItem("Legal Full Name (Govt ID)", widget.NewLabel(w.LegalFullName)),
-		widget.NewFormItem("Canonical Username", widget.NewLabel(w.Username)),
-		widget.NewFormItem("Institutional Email", widget.NewLabel(fmt.Sprintf("%s@campus.edu", w.Username))),
-		widget.NewFormItem("Admission Type", widget.NewLabel(fmt.Sprintf("%s (Entry Sem %d)", w.AdmissionType, w.EntrySemester))),
-		widget.NewFormItem("Curriculum Notes", widget.NewLabel(w.LateralSummary)),
+		widget.NewFormItem("Academic Name", acadLabel),
+		widget.NewFormItem("Legal Full Name", legalLabel),
+		widget.NewFormItem("Username", widget.NewLabel(w.Username)),
+		widget.NewFormItem("Email", widget.NewLabel(fmt.Sprintf("%s@campus.edu", w.Username))),
+		widget.NewFormItem("Admission", widget.NewLabel(fmt.Sprintf("%s (Sem %d)", w.AdmissionType, w.EntrySemester))),
+		widget.NewFormItem("Notes", notesLabel),
 	)
 
 	profileCard := NewStyledCard("Verified Admission Dossier", profileForm)
 
-	confirmCheck := widget.NewCheck("I confirm these records accurately reflect my secondary marksheet and govt identification", nil)
+	confirmCheck := widget.NewCheck("", nil)
 	confirmCheck.SetChecked(true)
+	checkText := widget.NewLabel("I confirm these records accurately reflect my marksheet and govt identification")
+	checkText.Wrapping = fyne.TextWrapWord
+	confirmRow := container.NewBorder(nil, nil, confirmCheck, nil, checkText)
 
 	nextBtn := widget.NewButtonWithIcon("Records Confirmed, Set Password ->", theme.NavigateNextIcon(), func() {
 		if !confirmCheck.Checked {
@@ -280,7 +296,7 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 
 	w.content.Add(header)
 	w.content.Add(profileCard)
-	w.content.Add(confirmCheck)
+	w.content.Add(confirmRow)
 	w.content.Add(nextBtn)
 }
 
@@ -351,7 +367,7 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 // Step 5: Celebration & Gateway Handoff
 func (w *OnboardingWizard) renderCompleteStep() {
 	checkIcon := ResourceFromSVG("verified.svg", SVGCheckVerified)
-	verifiedVisual := RenderSVGImage(checkIcon, 48, 48)
+	verifiedVisual := RenderSVGImage(checkIcon, 40, 40)
 
 	header := NewPageHeader(
 		"Account Activated Successfully",
@@ -359,17 +375,28 @@ func (w *OnboardingWizard) renderCompleteStep() {
 		NewStatusPill("ACCOUNT ACTIVE", PillSuccess),
 	)
 
+	scholarLabel := widget.NewLabel("Scholar: " + w.AcademicName)
+	scholarLabel.Wrapping = fyne.TextWrapWord
+	userLabel := widget.NewLabel("Username:    " + w.Username)
+	userLabel.Wrapping = fyne.TextWrapWord
+	emailLabel := widget.NewLabel("Email:       " + w.Username + "@campus.edu")
+	emailLabel.Wrapping = fyne.TextWrapWord
+	gateLabel := widget.NewLabel("Campus Gate: ENABLED (Ready for NFC/QR Checkpoint Scanning)")
+	gateLabel.Wrapping = fyne.TextWrapWord
+	affilLabel := widget.NewLabel("Affiliation: Dr. A.P.J. Abdul Kalam Technical University (AKTU)")
+	affilLabel.Wrapping = fyne.TextWrapWord
+
 	idBadge := container.NewVBox(
 		container.NewCenter(verifiedVisual),
 		container.NewBorder(nil, nil,
-			widget.NewLabel("Scholar: "+w.AcademicName),
+			scholarLabel,
 			NewStatusPill("VERIFIED SCHOLAR", PillSuccess),
 		),
 		widget.NewSeparator(),
-		widget.NewLabel("Username:    "+w.Username),
-		widget.NewLabel("Email:       "+w.Username+"@campus.edu"),
-		widget.NewLabel("Campus Gate: ENABLED (Ready for NFC/QR Checkpoint Scanning)"),
-		widget.NewLabel("Affiliation: Dr. A.P.J. Abdul Kalam Technical University (AKTU)"),
+		userLabel,
+		emailLabel,
+		gateLabel,
+		affilLabel,
 	)
 
 	idCard := NewStyledCard("Digital Campus Pass", idBadge)

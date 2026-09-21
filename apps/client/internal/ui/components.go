@@ -59,35 +59,37 @@ func NewStatusPill(text string, variant PillVariant) fyne.CanvasObject {
 	)
 }
 
-// NewPageHeader constructs a styled domain screen banner with clean typographic hierarchy.
+// NewPageHeader constructs a mobile-first responsive screen banner with word wrapping.
 func NewPageHeader(title, subtitle string, pill fyne.CanvasObject) fyne.CanvasObject {
-	titleText := canvas.NewText(title, theme.Color(theme.ColorNameForeground))
-	titleText.TextSize = 20
-	titleText.TextStyle = fyne.TextStyle{Bold: true}
+	titleLabel := widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	titleLabel.Wrapping = fyne.TextWrapWord
 
-	subText := canvas.NewText(subtitle, theme.Color(theme.ColorNamePlaceHolder))
-	subText.TextSize = 13
-
-	leftBox := container.NewVBox(titleText, subText)
-
+	items := make([]fyne.CanvasObject, 0, 3)
 	if pill != nil {
-		return container.NewBorder(nil, nil, leftBox, pill)
+		items = append(items, container.NewHBox(pill))
 	}
-	return leftBox
+	items = append(items, titleLabel)
+
+	if subtitle != "" {
+		subLabel := widget.NewLabel(subtitle)
+		subLabel.Wrapping = fyne.TextWrapWord
+		items = append(items, subLabel)
+	}
+
+	return container.NewVBox(items...)
 }
 
 // NewStyledCard wraps any content into a card with uniform padding and rounded corners.
 func NewStyledCard(title string, content fyne.CanvasObject) fyne.CanvasObject {
 	cardBg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
-	cardBg.CornerRadius = 12
+	cardBg.CornerRadius = 10
 	cardBg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
 	cardBg.StrokeWidth = 1
 
 	var header fyne.CanvasObject
 	if title != "" {
-		headerText := canvas.NewText(title, theme.Color(theme.ColorNameForeground))
-		headerText.TextSize = 15
-		headerText.TextStyle = fyne.TextStyle{Bold: true}
+		headerText := widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+		headerText.Wrapping = fyne.TextWrapWord
 		header = container.NewVBox(headerText, widget.NewSeparator())
 	}
 
@@ -123,16 +125,15 @@ func NewBannerNotice(title, message string, variant PillVariant, svgIcon fyne.Re
 	}
 
 	bgRect := canvas.NewRectangle(bg)
-	bgRect.CornerRadius = 10
+	bgRect.CornerRadius = 8
 	bgRect.StrokeColor = border
 	bgRect.StrokeWidth = 1
 
-	titleText := canvas.NewText(title, theme.Color(theme.ColorNameForeground))
-	titleText.TextSize = 13
-	titleText.TextStyle = fyne.TextStyle{Bold: true}
+	titleText := widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	titleText.Wrapping = fyne.TextWrapWord
 
-	msgText := canvas.NewText(message, theme.Color(theme.ColorNamePlaceHolder))
-	msgText.TextSize = 11.5
+	msgText := widget.NewLabel(message)
+	msgText.Wrapping = fyne.TextWrapWord
 
 	textVBox := container.NewVBox(titleText, msgText)
 

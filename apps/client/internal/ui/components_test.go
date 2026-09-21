@@ -158,8 +158,8 @@ func TestResponsiveLayout(t *testing.T) {
 
 	// Test layout calculation on wide viewport (desktop 1200px)
 	rl.Layout([]fyne.CanvasObject{btn}, fyne.NewSize(1200, 800))
-	if btn.Size().Width != 640 { // clamped to maxWidth 640
-		t.Errorf("expected desktop width clamped to 640, got %f", btn.Size().Width)
+	if btn.Size().Width != 580 { // clamped to maxWidth 580
+		t.Errorf("expected desktop width clamped to 580, got %f", btn.Size().Width)
 	}
 
 	// Min size test

@@ -14,7 +14,7 @@ type responsiveCardLayout struct {
 
 func NewResponsiveLayout(maxWidth, margin float32) fyne.Layout {
 	if maxWidth <= 0 {
-		maxWidth = 640
+		maxWidth = 580
 	}
 	if margin <= 0 {
 		margin = 12
@@ -40,19 +40,20 @@ func (r *responsiveCardLayout) Layout(objects []fyne.CanvasObject, size fyne.Siz
 			posX = r.margin
 		}
 
-		minH := child.MinSize().Height
-		targetH := size.Height
-		if targetH < minH {
-			targetH = minH
+		// Ensure child is given targetW before computing wrapped height
+		child.Resize(fyne.NewSize(targetW, child.MinSize().Height))
+		contentH := child.MinSize().Height + 28 // 28px bottom breathing margin
+		if contentH < size.Height {
+			contentH = size.Height
 		}
 
-		child.Move(fyne.NewPos(posX, 0))
-		child.Resize(fyne.NewSize(targetW, targetH))
+		child.Move(fyne.NewPos(posX, 8))
+		child.Resize(fyne.NewSize(targetW, contentH))
 	}
 }
 
 func (r *responsiveCardLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
-	var maxMinW float32 = 260
+	var maxMinW float32 = 240
 	var maxMinH float32 = 0
 
 	for _, child := range objects {
@@ -65,7 +66,7 @@ func (r *responsiveCardLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
 		}
 	}
 
-	return fyne.NewSize(maxMinW, maxMinH)
+	return fyne.NewSize(maxMinW, maxMinH+28)
 }
 
 // NewResponsiveCardContainer wraps a CanvasObject in a fluidly adapting container.
