@@ -38,6 +38,11 @@
 21. Designed and implemented Dual-Identity Alt-Name Architecture in `student.prisma`, `auth.prisma`, `docs/adrs/ADR-0005`, and `docs/04-authorization-specification.md`: tri-name modeling (`academicName` vs `legalFullName` vs `preferredName`), decoupled parent/guardian alt-names (academic Class X vs legal Govt ID names), document-type regulatory routing matrix, and the official "One and the Same" Dual-Identity Verification Certificate template.
 22. Designed and implemented Affiliating University (AKTU) Result Ingestion, PDF Parsing & Revision Ledger in `academic.prisma`, `docs/adrs/ADR-0006`, `docs/03-domain-catalog.md`, `docs/04-authorization-specification.md`, and `docs/05-workflow-specification.md`: dual-channel upload (`INSTITUTION_BULK` vs `STUDENT_SELF`), automated conflict detection (`CONFLICT_RESOLUTION_NEEDED`) with Exam Cell review queue, immutable revision history tracking full examination lifecycle (Challenge Evaluation Stage 1/2, Scrutiny, Back Papers, Grace Marks, Year Backs), and cryptographic document linkage.
 23. Formalized Genesis Bootstrapping and Executive Council Provisioning in `ADR-0005` and `docs/04-authorization-specification.md`: Super Admin (Chairperson) QR credential generation via backend bare-metal server CLI (`campus-backend bootstrap-superadmin`), exclusive Chairperson authority (`executive.qr.generate`) to provision Tier-1 Executive Council (Director, Executive Director, Dean, Registrar), and cascading zero-knowledge trust chain.
+24. Implemented full-stack Onboarding & Authentication system:
+    - Protobuf service definitions (`proto/campus/v1/auth.proto`) with Go stubs and TypeScript contracts.
+    - TypeScript DB persistence handlers (`db-layer/src/handles/auth.ts`) with Prisma 8 models (`ClaimToken`, `RefreshToken`, `User`, `SuperAdminSeat`) and unit tests.
+    - Go Logical Backend bare-metal CLI (`campus-backend bootstrap-superadmin`), gRPC persistence client, and RFC 7807 HTTP onboarding endpoints (`/api/v1/auth/claim/*`, `/api/v1/auth/login`, `/api/v1/auth/refresh`).
+    - Go Fyne Native Client Onboarding Wizard (`apps/client/internal/ui/onboarding.go`) featuring 5-step state machine (Scan QR, SIM Telephony Check & SMS OTP, Official Records Review with Lateral Entry, Password Setup with 3-Day Grace Period, and Digital ID Gate Card).
 
 ---
 
