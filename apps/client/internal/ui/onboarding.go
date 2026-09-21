@@ -104,11 +104,13 @@ func (w *OnboardingWizard) render() {
 	if w.StatusText != "" {
 		variant := AlertSuccess
 		svgIcon := ResourceFromSVG("check.svg", SVGCheckVerified)
+		title := "Verification Confirmed"
 		if w.IsError {
 			variant = AlertDestructive
 			svgIcon = ResourceFromSVG("alert.svg", SVGClockGrace)
+			title = "Action Required"
 		}
-		alert := NewShadcnAlert("Status Notification", w.StatusText, variant, svgIcon)
+		alert := NewShadcnAlert(title, w.StatusText, variant, svgIcon)
 		w.content.Add(alert)
 	}
 

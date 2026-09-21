@@ -19,29 +19,71 @@ const (
 	AlertSuccess
 )
 
-// NewShadcnAlert constructs an Alert component mirroring shadcn-svelte's Alert.
+type alertLayout struct {
+	padX float32
+	padY float32
+}
+
+func (l *alertLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	if len(objects) == 0 {
+		return
+	}
+	// Object 0: background rectangle
+	objects[0].Resize(size)
+	objects[0].Move(fyne.NewPos(0, 0))
+
+	// Object 1: content container
+	if len(objects) > 1 {
+		w := size.Width - (l.padX * 2)
+		h := size.Height - (l.padY * 2)
+		if w < 0 {
+			w = 0
+		}
+		if h < 0 {
+			h = 0
+		}
+		objects[1].Resize(fyne.NewSize(w, h))
+		objects[1].Move(fyne.NewPos(l.padX, l.padY))
+	}
+}
+
+func (l *alertLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	if len(objects) < 2 {
+		return fyne.NewSize(120, 36)
+	}
+	min := objects[1].MinSize()
+	return fyne.NewSize(min.Width+(l.padX*2), min.Height+(l.padY*2))
+}
+
+// NewShadcnAlert constructs a modern translucent glass Alert component matching 2026 design standards.
 func NewShadcnAlert(title, description string, variant AlertVariant, icon fyne.Resource) fyne.CanvasObject {
-	var bg color.Color
-	var border color.Color
-	var titleColor color.Color
+	var bg, border, iconBg, titleColor color.Color
 
 	switch variant {
 	case AlertDestructive:
-		bg = color.NRGBA{R: 50, G: 18, B: 18, A: 220}
-		border = color.NRGBA{R: 120, G: 35, B: 35, A: 255}
+		// Luminous Rose tint
+		bg = color.NRGBA{R: 239, G: 68, B: 68, A: 22}
+		border = color.NRGBA{R: 239, G: 68, B: 68, A: 65}
+		iconBg = color.NRGBA{R: 239, G: 68, B: 68, A: 40}
 		titleColor = color.NRGBA{R: 248, G: 113, B: 113, A: 255}
 	case AlertWarning:
-		bg = color.NRGBA{R: 48, G: 32, B: 12, A: 220}
-		border = color.NRGBA{R: 120, G: 85, B: 20, A: 255}
+		// Warm Luminous Amber tint
+		bg = color.NRGBA{R: 245, G: 158, B: 11, A: 22}
+		border = color.NRGBA{R: 245, G: 158, B: 11, A: 65}
+		iconBg = color.NRGBA{R: 245, G: 158, B: 11, A: 40}
 		titleColor = color.NRGBA{R: 251, G: 191, B: 36, A: 255}
 	case AlertSuccess:
-		bg = color.NRGBA{R: 12, G: 44, B: 32, A: 220}
-		border = color.NRGBA{R: 20, G: 100, B: 70, A: 255}
+		// Crisp Luminous Emerald tint
+		bg = color.NRGBA{R: 16, G: 185, B: 129, A: 22}
+		border = color.NRGBA{R: 16, G: 185, B: 129, A: 65}
+		iconBg = color.NRGBA{R: 16, G: 185, B: 129, A: 40}
 		titleColor = color.NRGBA{R: 52, G: 211, B: 153, A: 255}
 	default:
-		bg = color.NRGBA{R: 24, G: 32, B: 42, A: 220}
-		border = color.NRGBA{R: 46, G: 56, B: 68, A: 255}
-		titleColor = color.NRGBA{R: 242, G: 246, B: 248, A: 255}
+		// Neutral Slate / Info tint
+		bg = color.NRGBA{R: 59, G: 130, B: 246, A: 20}
+		border = color.NRGBA{R: 59, G: 130, B: 246, A: 60}
+		iconBg = color.NRGBA{R: 59, G: 130, B: 246, A: 35}
+		titleColor = color.NRGBA{R: 96, G: 165, B: 250, A: 255}
 	}
 
 	bgBox := canvas.NewRectangle(bg)
@@ -49,30 +91,43 @@ func NewShadcnAlert(title, description string, variant AlertVariant, icon fyne.R
 	bgBox.StrokeColor = border
 	bgBox.StrokeWidth = 1
 
-	titleLbl := widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	titleLbl.Wrapping = fyne.TextWrapWord
+	textItems := make([]fyne.CanvasObject, 0, 2)
 
-	descLbl := widget.NewLabel(description)
-	descLbl.Wrapping = fyne.TextWrapWord
+	if title != "" {
+		titleText := canvas.NewText(title, titleColor)
+		titleText.TextSize = 12
+		titleText.TextStyle = fyne.TextStyle{Bold: true}
+		textItems = append(textItems, titleText)
+	}
 
-	contentVBox := container.NewVBox(titleLbl, descLbl)
+	if description != "" {
+		descLbl := widget.NewLabel(description)
+		descLbl.Wrapping = fyne.TextWrapWord
+		textItems = append(textItems, descLbl)
+	}
 
-	var iconObj fyne.CanvasObject
+	textBox := container.NewVBox(textItems...)
+
+	var content fyne.CanvasObject
 	if icon != nil {
-		iconObj = RenderSVGImage(icon, 20, 20)
-	}
+		iconImg := RenderSVGImage(icon, 16, 16)
+		iconTileBg := canvas.NewRectangle(iconBg)
+		iconTileBg.CornerRadius = 6
+		iconTileBg.StrokeColor = border
+		iconTileBg.StrokeWidth = 1
 
-	var innerRow fyne.CanvasObject
-	if iconObj != nil {
-		innerRow = container.NewBorder(nil, nil, container.NewCenter(iconObj), nil, contentVBox)
+		iconBadge := container.NewStack(
+			iconTileBg,
+			container.NewCenter(iconImg),
+		)
+		iconBadgeWrapper := container.NewVBox(
+			container.NewGridWrap(fyne.NewSize(28, 28), iconBadge),
+		)
+
+		content = container.NewBorder(nil, nil, iconBadgeWrapper, nil, textBox)
 	} else {
-		innerRow = contentVBox
+		content = textBox
 	}
 
-	_ = titleColor // preserved for thematic contrast
-
-	return container.NewStack(
-		bgBox,
-		container.NewPadded(innerRow),
-	)
+	return container.New(&alertLayout{padX: 12, padY: 9}, bgBox, content)
 }

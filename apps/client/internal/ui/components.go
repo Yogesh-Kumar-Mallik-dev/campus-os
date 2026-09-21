@@ -23,29 +23,35 @@ const (
 
 // NewStatusPill returns a custom styled badge capsule for status values.
 func NewStatusPill(text string, variant PillVariant) fyne.CanvasObject {
-	var bg color.Color
-	var fg color.Color
+	var bg, border, fg color.Color
 
 	switch variant {
 	case PillSuccess:
-		bg = color.NRGBA{R: 16, G: 80, B: 55, A: 220}
+		bg = color.NRGBA{R: 16, G: 185, B: 129, A: 35}
+		border = color.NRGBA{R: 16, G: 185, B: 129, A: 85}
 		fg = color.NRGBA{R: 52, G: 211, B: 153, A: 255}
 	case PillWarning:
-		bg = color.NRGBA{R: 90, G: 65, B: 15, A: 220}
+		bg = color.NRGBA{R: 245, G: 158, B: 11, A: 35}
+		border = color.NRGBA{R: 245, G: 158, B: 11, A: 85}
 		fg = color.NRGBA{R: 251, G: 191, B: 36, A: 255}
 	case PillError:
-		bg = color.NRGBA{R: 90, G: 25, B: 25, A: 220}
+		bg = color.NRGBA{R: 239, G: 68, B: 68, A: 35}
+		border = color.NRGBA{R: 239, G: 68, B: 68, A: 85}
 		fg = color.NRGBA{R: 248, G: 113, B: 113, A: 255}
 	case PillInfo:
-		bg = color.NRGBA{R: 20, G: 55, B: 95, A: 220}
-		fg = color.NRGBA{R: 119, G: 186, B: 255, A: 255}
+		bg = color.NRGBA{R: 59, G: 130, B: 246, A: 35}
+		border = color.NRGBA{R: 59, G: 130, B: 246, A: 85}
+		fg = color.NRGBA{R: 96, G: 165, B: 250, A: 255}
 	default:
-		bg = color.NRGBA{R: 35, G: 45, B: 65, A: 220}
-		fg = color.NRGBA{R: 200, G: 210, B: 230, A: 255}
+		bg = color.NRGBA{R: 255, G: 255, B: 255, A: 14}
+		border = color.NRGBA{R: 255, G: 255, B: 255, A: 28}
+		fg = color.NRGBA{R: 226, G: 232, B: 240, A: 240}
 	}
 
 	pillBg := canvas.NewRectangle(bg)
 	pillBg.CornerRadius = 12
+	pillBg.StrokeColor = border
+	pillBg.StrokeWidth = 1
 
 	pillText := canvas.NewText("  "+text+"  ", fg)
 	pillText.TextSize = 11
@@ -125,20 +131,30 @@ func NewStyledCard(title string, content fyne.CanvasObject) fyne.CanvasObject {
 func NewBannerNotice(title, message string, variant PillVariant, svgIcon fyne.Resource) fyne.CanvasObject {
 	var bg color.Color
 	var border color.Color
+	var iconBg color.Color
+	var titleColor color.Color
 
 	switch variant {
 	case PillWarning:
-		bg = color.NRGBA{R: 45, G: 32, B: 10, A: 200}
-		border = color.NRGBA{R: 120, G: 85, B: 20, A: 255}
+		bg = color.NRGBA{R: 245, G: 158, B: 11, A: 22}
+		border = color.NRGBA{R: 245, G: 158, B: 11, A: 65}
+		iconBg = color.NRGBA{R: 245, G: 158, B: 11, A: 40}
+		titleColor = color.NRGBA{R: 251, G: 191, B: 36, A: 255}
 	case PillSuccess:
-		bg = color.NRGBA{R: 10, G: 40, B: 30, A: 200}
-		border = color.NRGBA{R: 20, G: 100, B: 70, A: 255}
+		bg = color.NRGBA{R: 16, G: 185, B: 129, A: 22}
+		border = color.NRGBA{R: 16, G: 185, B: 129, A: 65}
+		iconBg = color.NRGBA{R: 16, G: 185, B: 129, A: 40}
+		titleColor = color.NRGBA{R: 52, G: 211, B: 153, A: 255}
 	case PillError:
-		bg = color.NRGBA{R: 45, G: 15, B: 15, A: 200}
-		border = color.NRGBA{R: 120, G: 35, B: 35, A: 255}
+		bg = color.NRGBA{R: 239, G: 68, B: 68, A: 22}
+		border = color.NRGBA{R: 239, G: 68, B: 68, A: 65}
+		iconBg = color.NRGBA{R: 239, G: 68, B: 68, A: 40}
+		titleColor = color.NRGBA{R: 248, G: 113, B: 113, A: 255}
 	default:
-		bg = color.NRGBA{R: 15, G: 30, B: 55, A: 200}
-		border = color.NRGBA{R: 35, G: 75, B: 130, A: 255}
+		bg = color.NRGBA{R: 59, G: 130, B: 246, A: 20}
+		border = color.NRGBA{R: 59, G: 130, B: 246, A: 60}
+		iconBg = color.NRGBA{R: 59, G: 130, B: 246, A: 35}
+		titleColor = color.NRGBA{R: 96, G: 165, B: 250, A: 255}
 	}
 
 	bgRect := canvas.NewRectangle(bg)
@@ -146,22 +162,31 @@ func NewBannerNotice(title, message string, variant PillVariant, svgIcon fyne.Re
 	bgRect.StrokeColor = border
 	bgRect.StrokeWidth = 1
 
-	titleText := widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	titleText.Wrapping = fyne.TextWrapWord
+	titleText := canvas.NewText(title, titleColor)
+	titleText.TextSize = 12
+	titleText.TextStyle = fyne.TextStyle{Bold: true}
 
 	msgText := widget.NewLabel(message)
 	msgText.Wrapping = fyne.TextWrapWord
 
 	textVBox := container.NewVBox(titleText, msgText)
 
-	var leftIcon fyne.CanvasObject
+	var iconBadge fyne.CanvasObject
 	if svgIcon != nil {
-		leftIcon = RenderSVGImage(svgIcon, 24, 24)
+		iconImg := RenderSVGImage(svgIcon, 16, 16)
+		tileBg := canvas.NewRectangle(iconBg)
+		tileBg.CornerRadius = 6
+		tileBg.StrokeColor = border
+		tileBg.StrokeWidth = 1
+
+		badge := container.NewStack(tileBg, container.NewCenter(iconImg))
+		iconBadge = container.NewVBox(container.NewGridWrap(fyne.NewSize(28, 28), badge))
 	} else {
-		leftIcon = widget.NewIcon(theme.InfoIcon())
+		iconImg := widget.NewIcon(theme.InfoIcon())
+		iconBadge = container.NewVBox(container.NewGridWrap(fyne.NewSize(28, 28), container.NewCenter(iconImg)))
 	}
 
-	content := container.NewBorder(nil, nil, container.NewCenter(leftIcon), nil, textVBox)
+	content := container.NewBorder(nil, nil, iconBadge, nil, textVBox)
 
 	return container.NewStack(
 		bgRect,
