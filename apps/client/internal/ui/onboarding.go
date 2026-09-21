@@ -7,7 +7,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
 )
@@ -138,24 +137,24 @@ func (w *OnboardingWizard) renderScanStep() {
 	)
 
 	qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
-	qrVisual := RenderSVGImage(qrIconRes, 68, 68)
+	qrVisual := RenderSVGImage(qrIconRes, 64, 64)
 
 	emptyScanner := NewEmptyState(EmptyStateParams{
 		Media:       qrVisual,
 		Title:       "Optical Camera Ready",
 		Description: "Align official QR code within optical brackets",
 	})
-	scannerCard := NewShadcnCard(CardParts{
-		Title:   "Optical Capture Interface",
-		Content: emptyScanner,
-	})
 
-	tokenEntry := NewShadcnInput("Enter 16-character code (or leave blank for demo)", false)
+	tokenField, tokenEntry := NewFormField(FormField{
+		Label:       "Voucher Claim Token",
+		Placeholder: "Enter 16-character code (or leave blank for demo)",
+		HelperText:  "Located beneath the tamper-evident scratch foil on your admission docket",
+	})
 	if w.ClaimToken != "" {
 		tokenEntry.SetText(w.ClaimToken)
 	}
 
-	scanBtn := NewShadcnButton("Validate QR Code Token", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("scan.svg", LucideScan), func() {
+	scanBtn := NewShadcnButton("Validate Admission Token", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("scan.svg", LucideScan), func() {
 		token := tokenEntry.Text
 		if token == "" {
 			token = "claim_genesis_test_demo"
@@ -189,17 +188,19 @@ func (w *OnboardingWizard) renderScanStep() {
 		}()
 	})
 
-	formCard := NewShadcnCard(CardParts{
-		Title: "Manual Token Input",
+	scannerCard := NewShadcnCard(CardParts{
+		Title:       "Admission Voucher Verification",
+		Description: "Scan the printed QR code or enter the manual token beneath the seal",
 		Content: container.NewVBox(
-			tokenEntry,
-			scanBtn,
+			emptyScanner,
+			NewShadcnSeparator(true),
+			tokenField,
 		),
+		Footer: scanBtn,
 	})
 
 	w.content.Add(header)
 	w.content.Add(scannerCard)
-	w.content.Add(formCard)
 }
 
 // Step 2: SIM Telephony & SMS OTP Handshake
@@ -210,15 +211,14 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		NewBadge("STEP 2 OF 4", BadgeWarning, BadgeShapePill),
 	)
 
-	phoneInfo := widget.NewLabel(fmt.Sprintf("Registered Scholar Phone: %s", w.MaskedPhone))
-	phoneInfo.Wrapping = fyne.TextWrapWord
+	phoneInfo := NewKeyValueRow("REGISTERED TELEPHONY CONTACT", w.MaskedPhone, NewStatusBadge("TELEPHONY DETECTED", BadgeSuccess))
 
 	sim1Icon := RenderSVGImage(ResourceFromSVG("sim_active.svg", SVGSIMCardActive), 20, 20)
 	sim1Label := widget.NewLabel("Slot 1 (Jio 5G): +91 98765-43210")
 	sim1Label.Wrapping = fyne.TextWrapWord
 	sim1Row := container.NewBorder(nil, nil,
 		container.NewHBox(sim1Icon),
-		NewBadge("MATCH", BadgeSuccess, BadgeShapePill),
+		NewStatusBadge("CARRIER MATCH", BadgeSuccess),
 		sim1Label,
 	)
 
@@ -231,17 +231,11 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		sim2Label,
 	)
 
-	simCard := NewShadcnCard(CardParts{
-		Title: "Hardware Telephony Slots",
-		Content: container.NewVBox(
-			phoneInfo,
-			NewShadcnSeparator(true),
-			sim1Row,
-			sim2Row,
-		),
+	otpField, otpEntry := NewFormField(FormField{
+		Label:       "One-Time Challenge Code (OTP)",
+		Placeholder: "Enter 6-digit SMS OTP (e.g. 123456)",
+		HelperText:  "Sent via cellular carrier handshake to verify registered SIM presence",
 	})
-
-	otpEntry := NewShadcnInput("Enter 6-digit SMS OTP (e.g. 123456)", false)
 
 	verifyBtn := NewShadcnButton("Verify Carrier SIM & Submit OTP", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("phone.svg", LucideSmartphone), func() {
 		w.OTPCode = otpEntry.Text
@@ -254,17 +248,22 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		w.SetStep(StepReviewProfile)
 	})
 
-	otpCard := NewShadcnCard(CardParts{
-		Title: "SMS Challenge Verification",
+	simCard := NewShadcnCard(CardParts{
+		Title:       "Hardware Telephony Verification",
+		Description: "Verify detected SIM slot carriers and validate the SMS security challenge",
 		Content: container.NewVBox(
-			otpEntry,
-			verifyBtn,
+			phoneInfo,
+			NewShadcnSeparator(true),
+			sim1Row,
+			sim2Row,
+			NewShadcnSeparator(true),
+			otpField,
 		),
+		Footer: verifyBtn,
 	})
 
 	w.content.Add(header)
 	w.content.Add(simCard)
-	w.content.Add(otpCard)
 }
 
 // Step 3: Review Official Records & Dual-Identity Confirmation
@@ -275,26 +274,19 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 		NewBadge("STEP 3 OF 4", BadgeDefault, BadgeShapePill),
 	)
 
-	acadLabel := widget.NewLabel(w.AcademicName)
-	acadLabel.Wrapping = fyne.TextWrapWord
-	legalLabel := widget.NewLabel(w.LegalFullName)
-	legalLabel.Wrapping = fyne.TextWrapWord
-	notesLabel := widget.NewLabel(w.LateralSummary)
-	notesLabel.Wrapping = fyne.TextWrapWord
-
-	profileForm := widget.NewForm(
-		widget.NewFormItem("Academic Name", acadLabel),
-		widget.NewFormItem("Legal Full Name", legalLabel),
-		widget.NewFormItem("Username", widget.NewLabel(w.Username)),
-		widget.NewFormItem("Email", widget.NewLabel(fmt.Sprintf("%s@campus.edu", w.Username))),
-		widget.NewFormItem("Admission", widget.NewLabel(fmt.Sprintf("%s (Sem %d)", w.AdmissionType, w.EntrySemester))),
-		widget.NewFormItem("Notes", notesLabel),
+	dossierRows := container.NewVBox(
+		NewKeyValueRow("ACADEMIC SCHOLAR NAME", w.AcademicName, NewStatusBadge("VERIFIED", BadgeSuccess)),
+		NewShadcnSeparator(true),
+		NewKeyValueRow("LEGAL FULL NAME (GOVT ID)", w.LegalFullName, NewStatusBadge("IDENTITY MATCH", BadgeSuccess)),
+		NewShadcnSeparator(true),
+		NewKeyValueRow("INSTITUTIONAL USERNAME", w.Username, NewBadge("STUDENT SEAT", BadgeSecondary, BadgeShapePill)),
+		NewShadcnSeparator(true),
+		NewKeyValueRow("OFFICIAL EMAIL", fmt.Sprintf("%s@campus.edu", w.Username), nil),
+		NewShadcnSeparator(true),
+		NewKeyValueRow("ADMISSION TYPE & SEMESTER", fmt.Sprintf("%s (Semester %d)", w.AdmissionType, w.EntrySemester), NewStatusBadge("SEAT ALLOCATED", BadgeSuccess)),
+		NewShadcnSeparator(true),
+		NewKeyValueRow("CURRICULAR NOTES", w.LateralSummary, nil),
 	)
-
-	profileCard := NewShadcnCard(CardParts{
-		Title:   "Verified Admission Dossier",
-		Content: profileForm,
-	})
 
 	confirmCheck := widget.NewCheck("", nil)
 	confirmCheck.SetChecked(true)
@@ -330,10 +322,19 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 
 	actionRow := container.NewGridWithColumns(2, discrepancyBtn, nextBtn)
 
+	profileCard := NewShadcnCard(CardParts{
+		Title:       "Verified Admission Dossier",
+		Description: "Official records provisioned by the Academic Registrar. Review carefully before confirming.",
+		Content: container.NewVBox(
+			dossierRows,
+			NewShadcnSeparator(true),
+			confirmRow,
+		),
+		Footer: actionRow,
+	})
+
 	w.content.Add(header)
 	w.content.Add(profileCard)
-	w.content.Add(confirmRow)
-	w.content.Add(actionRow)
 }
 
 // Step 4: Password Setup & 3-Day Orientation Grace Period
@@ -344,7 +345,7 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 		NewBadge("STEP 4 OF 4", BadgeWarning, BadgeShapePill),
 	)
 
-	clockIcon := ResourceFromSVG("clock.svg", SVGClockGrace)
+	clockIcon := ResourceFromSVG("clock.svg", LucideClock)
 	graceAlert := NewShadcnAlert(
 		"Orientation Grace Period Active",
 		"A simplified 6+ character password is accepted during your first 72 hours of enrollment",
@@ -352,10 +353,20 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 		clockIcon,
 	)
 
-	passEntry := NewShadcnInput("Enter new password (min 6 characters)", true)
-	confirmPassEntry := NewShadcnInput("Confirm new password", true)
+	passField, passEntry := NewFormField(FormField{
+		Label:       "New Access Password",
+		Placeholder: "Enter password (min 6 characters)",
+		HelperText:  "Choose a secure pass-phrase. Must be at least 6 characters during grace period.",
+		IsPassword:  true,
+	})
 
-	fingerprintIcon := RenderSVGImage(ResourceFromSVG("fingerprint.svg", SVGFingerprint), 20, 20)
+	confirmPassField, confirmPassEntry := NewFormField(FormField{
+		Label:       "Confirm New Password",
+		Placeholder: "Re-enter new password to verify",
+		IsPassword:  true,
+	})
+
+	fingerprintIcon := RenderSVGImage(ResourceFromSVG("fingerprint.svg", LucideFingerprint), 20, 20)
 	bioLabel := widget.NewLabel("Enable Biometric Keyring (Fingerprint / Face ID)")
 	bioLabel.Wrapping = fyne.TextWrapWord
 	biometricSwitch := NewSwitch(w.BiometricsEnabled, func(b bool) {
@@ -391,16 +402,16 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 	})
 
 	passwordCard := NewShadcnCard(CardParts{
-		Title: "Credential Security",
+		Title:       "Credential Security Setup",
+		Description: "Configure your primary institutional password and device biometric keychain",
 		Content: container.NewVBox(
 			graceAlert,
-			widget.NewLabel("New Password:"),
-			passEntry,
-			widget.NewLabel("Confirm Password:"),
-			confirmPassEntry,
+			passField,
+			confirmPassField,
+			NewShadcnSeparator(true),
 			biometricRow,
-			completeBtn,
 		),
+		Footer: completeBtn,
 	})
 
 	w.content.Add(header)
@@ -409,52 +420,42 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 
 // Step 5: Celebration & Gateway Handoff
 func (w *OnboardingWizard) renderCompleteStep() {
-	checkIcon := ResourceFromSVG("sparkles.svg", LucideSparkles)
-	verifiedVisual := RenderSVGImage(checkIcon, 48, 48)
-
 	header := NewPageHeader(
 		"Account Activated Successfully",
 		"Your institutional credentials and gate pass are active and verified",
-		NewBadge("ACCOUNT ACTIVE", BadgeSuccess, BadgeShapePill),
+		NewStatusBadge("ACCOUNT ACTIVE", BadgeSuccess),
 	)
 
-	scholarLabel := widget.NewLabel("Scholar: " + w.AcademicName)
-	scholarLabel.Wrapping = fyne.TextWrapWord
-	userLabel := widget.NewLabel("Username:    " + w.Username)
-	userLabel.Wrapping = fyne.TextWrapWord
-	emailLabel := widget.NewLabel("Email:       " + w.Username + "@campus.edu")
-	emailLabel.Wrapping = fyne.TextWrapWord
-	gateLabel := widget.NewLabel("Campus Gate: ENABLED (Ready for NFC/QR Checkpoint Scanning)")
-	gateLabel.Wrapping = fyne.TextWrapWord
-	affilLabel := widget.NewLabel("Affiliation: Dr. A.P.J. Abdul Kalam Technical University (AKTU)")
-	affilLabel.Wrapping = fyne.TextWrapWord
+	sparklesIcon := RenderSVGImage(ResourceFromSVG("sparkles.svg", LucideSparkles), 48, 48)
 
-	idBadge := container.NewVBox(
-		container.NewCenter(verifiedVisual),
-		container.NewBorder(nil, nil,
-			scholarLabel,
-			NewBadge("VERIFIED SCHOLAR", BadgeSuccess, BadgeShapePill),
-		),
+	passRows := container.NewVBox(
+		container.NewCenter(sparklesIcon),
+		container.NewCenter(NewStatusBadge("VERIFIED SCHOLAR", BadgeSuccess)),
 		NewShadcnSeparator(true),
-		userLabel,
-		emailLabel,
-		gateLabel,
-		affilLabel,
+		NewKeyValueRow("SCHOLAR NAME", w.AcademicName, nil),
+		NewShadcnSeparator(true),
+		NewKeyValueRow("INSTITUTIONAL USERNAME", w.Username, nil),
+		NewShadcnSeparator(true),
+		NewKeyValueRow("INSTITUTIONAL EMAIL", fmt.Sprintf("%s@campus.edu", w.Username), nil),
+		NewShadcnSeparator(true),
+		NewKeyValueRow("CAMPUS GATE ACCESS", "ENABLED • NFC & QR Checkpoint Check-in Active", NewStatusBadge("GATE ONLINE", BadgeSuccess)),
+		NewShadcnSeparator(true),
+		NewKeyValueRow("INSTITUTIONAL AFFILIATION", "Dr. A.P.J. Abdul Kalam Technical University (AKTU)", nil),
 	)
 
-	idCard := NewShadcnCard(CardParts{
-		Title:   "Digital Campus Pass",
-		Content: idBadge,
-	})
-
-	enterBtn := NewShadcnButton("Finish & Ready", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("badge.svg", LucideBadgeCheck), func() {
+	enterBtn := NewShadcnButton("Finish & Enter Scholar Portal", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("badge.svg", LucideBadgeCheck), func() {
 		if w.onComplete != nil {
 			w.onComplete()
 		}
 	})
 
+	idCard := NewShadcnCard(CardParts{
+		Title:       "Digital Campus Pass",
+		Description: "Cryptographically verified digital pass ready for turnstile and library checkpoints",
+		Content:     passRows,
+		Footer:      enterBtn,
+	})
+
 	w.content.Add(header)
 	w.content.Add(idCard)
-	w.content.Add(layout.NewSpacer())
-	w.content.Add(enterBtn)
 }

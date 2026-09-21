@@ -79,6 +79,24 @@ func NewPageHeader(title, subtitle string, pill fyne.CanvasObject) fyne.CanvasOb
 	return container.NewVBox(items...)
 }
 
+// NewKeyValueRow renders a modern, scannable metadata row matching Linear/Raycast design standards.
+// It pairs an uppercase muted micro-label with high-contrast text and an optional status badge.
+func NewKeyValueRow(label, value string, badge fyne.CanvasObject) fyne.CanvasObject {
+	lblText := canvas.NewText(label, color.NRGBA{R: 148, G: 163, B: 184, A: 220})
+	lblText.TextSize = 11
+	lblText.TextStyle = fyne.TextStyle{Bold: true}
+
+	valLbl := widget.NewLabel(value)
+	valLbl.Wrapping = fyne.TextWrapWord
+
+	leftBox := container.NewVBox(lblText, valLbl)
+
+	if badge != nil {
+		return container.NewBorder(nil, nil, leftBox, container.NewCenter(badge))
+	}
+	return leftBox
+}
+
 // NewStyledCard wraps any content into a card with uniform padding and rounded corners.
 func NewStyledCard(title string, content fyne.CanvasObject) fyne.CanvasObject {
 	cardBg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))

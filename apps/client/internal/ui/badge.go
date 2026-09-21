@@ -87,3 +87,9 @@ func NewBadge(text string, variant BadgeVariant, shape BadgeShape) fyne.CanvasOb
 		container.NewPadded(badgeText),
 	)
 }
+
+// NewStatusBadge renders an accessible status badge featuring a circular status indicator dot alongside text,
+// adhering to Guardrail 15 (Avoid showing raw status as text; combine visual indicators with text for accessibility).
+func NewStatusBadge(text string, variant BadgeVariant) fyne.CanvasObject {
+	return NewBadge("● "+text, variant, BadgeShapePill)
+}
