@@ -86,3 +86,19 @@ describe("BLOCK_TEST_USER_ACTIVATION_001: User Activation Flow", () => {
 1. **Zero Failing Tests:** All tests must pass with 100% success rate.
 2. **Zero Test Flakiness:** Tests must be idempotent and execution order independent.
 3. **Fast Feedback Loop:** Unit test suites should complete in under 5 seconds locally.
+
+---
+
+## 5. Test File Naming Conventions
+
+To ensure zero friction with language-native test runners and CI tooling:
+
+1. **TypeScript / JavaScript (Vitest / Node.js):**
+   - Files **MUST** follow the `*.test.ts` / `*.test.tsx` structure.
+   - Examples: `auth.test.ts`, `server.test.ts`, `server.mock.test.ts`.
+
+2. **Go (`go test` Toolchain):**
+   - Files **MUST** follow the standard `*_test.go` structure.
+   - The Go toolchain (`go test`, `go build`) strictly identifies test suites via the `_test.go` suffix (files ending in `.test.go` are completely ignored by `go test`).
+   - Examples: `client_test.go`, `onboarding_test.go`, `router_test.go`, `auth_handler_test.go`.
+
