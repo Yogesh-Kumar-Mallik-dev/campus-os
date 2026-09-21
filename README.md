@@ -25,8 +25,12 @@ Campus OS is a high-assurance, digitally sovereign campus operating system engin
 
 The native cross-platform application is implemented in Go Fyne, adhering to institutional design standards and zero-emoji, pure vector aesthetics.
 
-### Recreated Native shadcn-Style Primitives
+### Recreated Native shadcn-Style Primitives & App Views
 All UI components mirror the component architecture of `shadcn-svelte` natively in Go:
+* **`DashboardView`**: Master institutional dashboard shell featuring responsive topbar, 220px fixed navigation sidebar, and executive overview panels.
+* **`LoginView`**: Institutional authentication view with identifier/password inputs and toggle to QR onboarding.
+* **`NewMetricCard`**: Luminous glass KPI metric cards for executive tracking (Scholars, Departments, Approvals, Staff).
+* **`KeyringSessionStore`**: Native OS Keyring session storage via Linux Secret Service D-Bus API (`org.freedesktop.secrets`) with protected `0600` fallback.
 * **`NewShadcnCard`**: Compound card widget with structured header, pill badge, body content, and footer actions.
 * **`NewShadcnButton`**: Modern button with variants (`ButtonDefault`, `ButtonSecondary`, `ButtonOutline`, `ButtonDestructive`, `ButtonGhost`), responsive sizing, and vector SVG icon support.
 * **`NewBadge`**: Visual status tag with variant coloring (`BadgeDefault`, `BadgeSecondary`, `BadgeSuccess`, `BadgeWarning`, `BadgeDestructive`, `BadgeOutline`) and pill/rounded geometry.
@@ -40,7 +44,7 @@ All UI components mirror the component architecture of `shadcn-svelte` natively 
 
 ### Official Institutional Assets & Lucide Icons
 * **Official BBDIT Institutional Logo**: Embedded directly via `//go:embed` from `bbdit-logo-transparent.png`, encapsulated within a high-contrast pill container in `NewTopBar`.
-* **Lucide Vector Icon Pack**: Pure vector SVGs with 24×24 geometry, 2px stroke width, and rounded terminals (`LucideScan`, `LucideQrCode`, `LucideSim`, `LucideSmartphone`, `LucideShieldCheck`, `LucideUserCheck`, `LucideFileCheck`, `LucideKeyRound`, `LucideLock`, `LucideClock`, `LucideFingerprint`, `LucideBadgeCheck`, `LucideSparkles`, `LucideFlag`).
+* **Lucide Vector Icon Pack**: Pure vector SVGs with 24×24 geometry, 2px stroke width, and rounded terminals (`LucideScan`, `LucideQrCode`, `LucideSim`, `LucideSmartphone`, `LucideShieldCheck`, `LucideUserCheck`, `LucideFileCheck`, `LucideKeyRound`, `LucideLock`, `LucideClock`, `LucideFingerprint`, `LucideBadgeCheck`, `LucideSparkles`, `LucideFlag`, `LucideLayoutDashboard`, `LucideGitPullRequest`, `LucideLogIn`, `LucideLogOut`, `LucideMenu`, `LucideSun`, `LucideMoon`).
 * **Design Tokens**: Strict color mapping from `+layout.css`:
   * Dark Canvas: `oklch(0.16 0.018 242)` $\rightarrow$ `#10161C`
   * Dark Card: `oklch(0.205 0.02 240)` $\rightarrow$ `#18202A`
@@ -52,12 +56,13 @@ All UI components mirror the component architecture of `shadcn-svelte` natively 
 
 ## 3. Account Activation & Onboarding Flow
 
-The client delivers a 5-step zero-knowledge onboarding flow:
-1. **Optical QR Capture**: Scans sealed admission QR voucher or accepts fallback token verification.
-2. **Hardware SIM Telephony Binding**: Validates carrier SIM presence and processes SMS OTP challenge.
-3. **Admission Dossier Verification**: Displays academic vs. legal full name, lateral entry semester, and allows discrepancy reporting to the Registrar.
-4. **Credential Provisioning**: Sets account access password under the 72-hour orientation grace period policy and configures biometric keyrings.
-5. **Digital Campus Pass Generation**: Issues active student gate credentials with NFC/QR checkpoint authorization.
+The client delivers a 5-step zero-knowledge onboarding flow and smart session routing:
+1. **Genesis Super Admin Provisioning**: Bare-metal CLI initialization with high-resolution exportable printable PNG docket (`genesis_docket.png`).
+2. **Optical / File QR Capture**: Scans sealed admission QR voucher, imports screenshots/WhatsApp images, or accepts desktop drag-and-drop.
+3. **Hardware SIM Telephony Binding**: Validates carrier SIM presence (Slot 1/2) and processes cellular SMS OTP challenge.
+4. **Admission Dossier Verification**: Displays academic vs. legal full name, lateral entry semester, and allows discrepancy reporting to the Registrar.
+5. **Credential Provisioning**: Sets account access password under the 72-hour orientation grace period policy and configures biometric keyrings.
+6. **Executive & Scholar Dashboard Landing**: Activates Digital Campus Pass or transitions directly into the Executive Portal.
 
 ---
 
@@ -68,7 +73,9 @@ campus_os/
 ├── apps/
 │   └── client/                 # Go Fyne native desktop & mobile client
 │       ├── assets/             # Official BBDIT image assets & photography
-│       └── internal/ui/        # Recreated shadcn primitives, theme, and onboarding wizard
+│       ├── internal/api/       # HTTP backend client with RFC 7807 problem details
+│       ├── internal/auth/      # Native OS Keyring session storage & dual revocation
+│       └── internal/ui/        # Recreated shadcn primitives, login, dashboard, & onboarding
 ├── backend/                    # Go logical backend (Modular Monolith)
 │   ├── cmd/server/             # Backend server & CLI bootstrap entrypoints
 │   ├── internal/config/        # Environment and runtime configuration
@@ -87,7 +94,8 @@ campus_os/
 │   ├── 07-api-and-ipc-contracts.md
 │   ├── 08-ai-agent-instructions.md
 │   ├── 09-engineering-standards.md
-│   └── adrs/                   # Architecture Decision Records (ADR-0001 through ADR-0006)
+│   ├── 10-super-admin-and-dashboard-architecture.md
+│   └── adrs/                   # Architecture Decision Records (ADR-0001 through ADR-0007)
 ├── packages/                   # Shared TypeScript packages & proto contracts
 ├── proto/                      # Canonical Protobuf schema definitions
 └── scripts/                    # Unified lifecycle runners (Bash & PowerShell)
@@ -97,7 +105,7 @@ campus_os/
 
 ## 5. Development & Lifecycle Commands
 
-The repository provides standardized scripts across Linux/macOS (`script.sh`) and Windows (`script.ps1`):
+The repository provides standardized scripts across Linux/macOS (`./script.sh` / `./scripts/*.sh`) and Windows (`script.ps1` / `scripts/*.ps1`):
 
 ### Core Workflows
 ```bash
@@ -111,11 +119,17 @@ The repository provides standardized scripts across Linux/macOS (`script.sh`) an
 ./script.sh build
 
 # Regenerate Protobuf contracts across Go and TypeScript
-./script.sh proto_gen
+./script.sh proto:gen
 ```
 
-### Dev Runners
+### Dev Runners & Genesis Super Admin
 ```bash
+# Bootstrap Genesis Super Admin (outputs terminal ASCII QR and exports genesis_docket.png)
+./scripts/dev.backend.sh bootstrap-superadmin --name="Yogesh Kumar Mallik" --email="chairperson@campus.edu" --phone="+919876543210"
+
+# Launch Zero-Dependency Mock Stack (In-memory mock DB + Go backend + Client)
+./scripts/dev.mock.sh
+
 # Launch Go Fyne Native Client
 ./scripts/dev.client.sh         # On Linux/macOS
 ./scripts/dev.client.ps1        # On Windows (PowerShell)
@@ -142,6 +156,7 @@ The repository provides standardized scripts across Linux/macOS (`script.sh`) an
 * [API & IPC Contracts Specification](docs/07-api-and-ipc-contracts.md) — Go $\leftrightarrow$ TypeScript gRPC boundary over Unix Domain Socket with TxToken transaction sessions.
 * [AI Development Constitution](docs/08-ai-agent-instructions.md) — Guardrails and invariants for AI pair programming.
 * [Engineering Standards](docs/09-engineering-standards.md) — Block construction (`BLOCK_<DOMAIN>_<ACTION>_<ID>`), testing rigor, RFC 7807 error envelopes, and responsive layout standards.
+* [Super Admin Creation & Dashboard Architecture](docs/10-super-admin-and-dashboard-architecture.md) — Genesis Chairperson lifecycle, OS Keyring smart routing, and Base Dashboard Shell.
 * [Architecture Decision Records (ADRs)](docs/adrs/) — Chronological record of locked architectural decisions:
   * [ADR-0001: Go-TypeScript gRPC over UDS Boundary](docs/adrs/ADR-0001-go-ts-grpc-uds-boundary.md)
   * [ADR-0002: Scoped Multi-Dimensional RBAC](docs/adrs/ADR-0002-scoped-rbac-and-semantics.md)
@@ -149,3 +164,4 @@ The repository provides standardized scripts across Linux/macOS (`script.sh`) an
   * [ADR-0004: Academic Course Semester Model](docs/adrs/ADR-0004-academic-course-semester-model.md)
   * [ADR-0005: Canonical Identity Conventions & Onboarding Architecture](docs/adrs/ADR-0005-canonical-identity-and-onboarding.md)
   * [ADR-0006: Affiliating University (AKTU) Result Ingestion & Revision Ledger](docs/adrs/ADR-0006-affiliating-university-result-ingestion-and-marks-ledger.md)
+  * [ADR-0007: Super Admin Provisioning, OS Keyring Sessions, and Base Dashboard Shell](docs/adrs/ADR-0007-super-admin-and-dashboard-shell.md)
