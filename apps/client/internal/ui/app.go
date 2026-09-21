@@ -44,13 +44,9 @@ func (a *Application) BuildLayout() fyne.CanvasObject {
 		// Callback on onboarding completion
 	})
 
-	wizardCard := NewShadcnCard(CardParts{
-		Content: wizard.CanvasObject(),
-	})
-
 	contentBox := container.NewVBox(
 		header,
-		wizardCard,
+		wizard.CanvasObject(),
 	)
 
 	// Responsive card container adapting fluidly across desktop & mobile screens

@@ -78,6 +78,11 @@ func TestEmptyState_Render(t *testing.T) {
 		t.Fatal("expected non-nil empty state component")
 	}
 
+	emptyObj.Resize(fyne.NewSize(400, 200))
+	if emptyObj.Size().Width != 400 {
+		t.Errorf("expected empty state to expand to width 400, got %f", emptyObj.Size().Width)
+	}
+
 	// Minimal empty state
 	emptyMin := NewEmptyState(EmptyStateParams{})
 	if emptyMin == nil {

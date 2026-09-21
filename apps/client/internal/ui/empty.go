@@ -1,7 +1,10 @@
 package ui
 
 import (
+	"image/color"
+
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -40,10 +43,15 @@ func NewEmptyState(params EmptyStateParams) fyne.CanvasObject {
 	}
 
 	box := container.NewVBox(items...)
-	card := container.NewStack(
-		NewShadcnCard(CardParts{Content: container.NewPadded(box)}),
-	)
 
-	_ = theme.ColorNameForeground // reference check
-	return container.NewCenter(card)
+	// Subtle rounded dropzone styling matching shadcn empty.svelte
+	bg := canvas.NewRectangle(color.NRGBA{R: 20, G: 26, B: 34, A: 200})
+	bg.CornerRadius = 10
+	bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
+	bg.StrokeWidth = 1
+
+	return container.NewStack(
+		bg,
+		container.NewPadded(container.NewPadded(box)),
+	)
 }
