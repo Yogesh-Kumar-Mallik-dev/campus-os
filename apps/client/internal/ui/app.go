@@ -93,11 +93,18 @@ func (a *Application) BuildLayout() fyne.CanvasObject {
 		),
 	)
 
+	// 4. Onboarding / QR Activation Tab
+	wizard := NewOnboardingWizard(a.APIClient, func() {
+		// Switch to attendance tab upon onboarding completion
+	})
+	onboardTab := container.NewScroll(wizard.CanvasObject())
+
 	// Tab Container
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Attendance", theme.MenuIcon(), attendanceTab),
 		container.NewTabItemWithIcon("Hostel Outpass", theme.NavigateNextIcon(), outpassTab),
 		container.NewTabItemWithIcon("Academic Profile", theme.AccountIcon(), profileTab),
+		container.NewTabItemWithIcon("Activate Account", theme.LoginIcon(), onboardTab),
 	)
 	tabs.SetTabLocation(container.TabLocationLeading)
 
