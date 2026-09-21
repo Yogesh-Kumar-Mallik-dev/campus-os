@@ -113,6 +113,22 @@ func TestComponents_Render(t *testing.T) {
 	}
 }
 
+func TestAssets_LogoRender(t *testing.T) {
+	if BBDITLogoResource == nil || len(BBDITLogoResource.Content()) == 0 {
+		t.Fatal("expected non-empty BBDIT logo resource")
+	}
+
+	logoImg := RenderLogoImage(160, 30)
+	if logoImg == nil {
+		t.Fatal("expected non-nil logo image")
+	}
+
+	headerLogo := RenderBBDITHeaderLogo(140, 24)
+	if headerLogo == nil {
+		t.Fatal("expected non-nil header logo pill")
+	}
+}
+
 func TestIcons_SVGResources(t *testing.T) {
 	svgList := []struct {
 		name string

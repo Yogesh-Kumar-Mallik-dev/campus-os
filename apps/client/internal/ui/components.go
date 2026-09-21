@@ -189,18 +189,17 @@ func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 	bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
 	bg.StrokeWidth = 1
 
-	logoResource := ResourceFromSVG("campus_logo.svg", SVGCampusLogo)
-	logoImg := RenderSVGImage(logoResource, 28, 28)
+	logoPill := RenderBBDITHeaderLogo(120, 22)
 
 	brandText := canvas.NewText(institutionName, theme.Color(theme.ColorNamePrimary))
-	brandText.TextSize = 16
+	brandText.TextSize = 15
 	brandText.TextStyle = fyne.TextStyle{Bold: true}
 
 	tagline := canvas.NewText("Institutional Operating System", theme.Color(theme.ColorNamePlaceHolder))
 	tagline.TextSize = 11
 
 	brandBox := container.NewHBox(
-		container.NewCenter(logoImg),
+		container.NewCenter(logoPill),
 		container.NewVBox(brandText, tagline),
 	)
 
