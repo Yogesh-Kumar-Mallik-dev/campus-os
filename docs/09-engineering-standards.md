@@ -128,3 +128,15 @@ Developers and CI systems execute standard lifecycle tasks using the unified cro
 * **Windows PowerShell:** `.\script.ps1 <command>`
 
 Supported lifecycle targets: `dev`, `build`, `check`, `test`, `deps`, `proto:gen`, `envi`, `uenvi`, `flush`, `help`.
+
+---
+
+## 9. Fyne UI/UX Anti-Pattern Guardrails (2026 Modern Product Standards)
+
+When building native client interfaces in Go Fyne, engineers must adhere to [`.agent/rules/ui_ux_anti_patterns.md`](file:///home/yogesh/campus_os/.agent/rules/ui_ux_anti_patterns.md):
+1. **Never Replicate Legacy Desktop Apps:** Avoid Windows Forms-style beveled buttons, heavy gradients, grey panels, and dense toolbars. Interfaces must mirror modern 2026 products (Linear, Raycast, Notion, Vercel).
+2. **Avoid Excessive Borders & Nested Cards:** Rely on spacing, background surfaces (`#10161C` canvas vs `#18202A` card), and typography hierarchy. Never create triple-nested cards (`Card -> Card -> Card`).
+3. **No Raw Status Strings:** Replace `Status: ACTIVE` with scannable visual badges (`● Active`).
+4. **Pure Vector Graphics:** Zero emojis, zero generic raster icons. Utilize pure vector Lucide SVGs with 24×24 geometry and uniform 2px stroke.
+5. **Progressive Disclosure & Clear Hierarchy:** Do not cram all administrative data onto a single screen. Prioritize primary actions, use clear touch targets (min 44×44px), and provide explicit state feedback (loading, empty, success, error).
+

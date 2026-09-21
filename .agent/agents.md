@@ -73,3 +73,11 @@ Welcome, AI Agents & Engineers! When working within the **Campus OS** repository
 * Ensure UI interfaces in SvelteKit and Fyne are fluid and resilient across viewports from **280px to 4K**.
 * Never cause horizontal overflow on the root document viewport (`overflow-x: hidden` anti-pattern avoided by fluid containers).
 * Touch targets must satisfy a minimum boundary of 44x44 CSS pixels.
+
+---
+
+## 8. Fyne UI/UX Anti-Pattern Guardrails (2026 Product Standards)
+* All native Go Fyne UI components and screens must strictly follow [`.agent/rules/ui_ux_anti_patterns.md`](file:///home/yogesh/campus_os/.agent/rules/ui_ux_anti_patterns.md).
+* Never produce legacy desktop look-and-feel (no grey beveled panels, no card-in-card-in-card nesting, no excessive borders, no raw status text, no ambiguous icon-only buttons).
+* Deliver a 2026 modern product feel (Linear/Raycast/Vercel standard) using native shadcn primitives, Lucide vector icons, restrained institutional palette, and progressive disclosure.
+
