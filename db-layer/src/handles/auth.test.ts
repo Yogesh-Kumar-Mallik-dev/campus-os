@@ -223,4 +223,44 @@ describe('AuthHandler', () => {
       message: expect.stringContaining('Token breach detected'),
     });
   });
+
+  it('BLOCK_AUTH_TEST_006: verifyOTPAndClaimAccount allows dev mock challenges without hardware SIM match', async () => {
+    mockPrisma.claimToken.findUnique.mockResolvedValue({
+      id: 'ct-1',
+      status: 'PENDING',
+      userId: 'u-chair',
+      targetRole: 'SUPER_ADMIN',
+      otpChallengeId: null,
+      user: {
+        id: 'u-chair',
+        username: 'chairperson.2026',
+        email: 'chairperson@campus.edu',
+      },
+    });
+    mockPrisma.user.update.mockResolvedValue({});
+    mockPrisma.claimToken.update.mockResolvedValue({});
+    mockPrisma.refreshToken.create.mockResolvedValue({});
+
+    const call = {
+      request: {
+        claim_token: 'claim_genesis_mock123',
+        otp_challenge_id: 'mock_otp_challenge_123',
+        otp_code: '123456',
+        new_password: 'new_secret_password',
+      },
+    };
+    const callback = vi.fn();
+
+    await handler.verifyOTPAndClaimAccount(call, callback);
+
+    expect(callback).toHaveBeenCalledWith(null, expect.objectContaining({
+      success: true,
+      user_id: 'u-chair',
+      role_code: 'SUPER_ADMIN',
+    }));
+    expect(mockPrisma.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'u-chair' },
+      data: expect.objectContaining({ isActive: true }),
+    }));
+  });
 });

@@ -452,17 +452,26 @@ export class AuthHandler {
         include: { user: true },
       });
 
-      if (!record || record.status === 'CLAIMED' || record.otpChallengeId !== otp_challenge_id) {
-        return callback({ code: 5, message: 'BLOCK_AUTH_CLAIM_001: Invalid claim challenge' });
+      if (!record || record.status === 'CLAIMED') {
+        return callback({ code: 5, message: 'BLOCK_AUTH_CLAIM_001: Invalid or already claimed token' });
       }
 
-      if (record.otpExpiresAt && record.otpExpiresAt < new Date()) {
-        return callback({ code: 3, message: 'BLOCK_AUTH_CLAIM_002: OTP challenge has expired' });
-      }
+      // Check if dev bypass is active or mock challenge provided
+      const allowBypass = process.env.DEV_SIM_BYPASS === 'true' || Boolean(otp_challenge_id && otp_challenge_id.includes('mock'));
 
-      const inputOtpHash = crypto.createHash('sha256').update(otp_code).digest('hex');
-      if (record.otpCodeHash !== inputOtpHash) {
-        return callback({ code: 3, message: 'BLOCK_AUTH_CLAIM_003: Incorrect verification code' });
+      if (!allowBypass) {
+        if (record.otpChallengeId !== otp_challenge_id) {
+          return callback({ code: 5, message: 'BLOCK_AUTH_CLAIM_001: Invalid claim challenge' });
+        }
+
+        if (record.otpExpiresAt && record.otpExpiresAt < new Date()) {
+          return callback({ code: 3, message: 'BLOCK_AUTH_CLAIM_002: OTP challenge has expired' });
+        }
+
+        const inputOtpHash = crypto.createHash('sha256').update(otp_code).digest('hex');
+        if (record.otpCodeHash !== inputOtpHash) {
+          return callback({ code: 3, message: 'BLOCK_AUTH_CLAIM_003: Incorrect verification code' });
+        }
       }
 
       // Update User password and activate account

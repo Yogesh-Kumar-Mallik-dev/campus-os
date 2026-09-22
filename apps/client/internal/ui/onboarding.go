@@ -509,6 +509,16 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		w.StatusText = "SIM Handshake bypassed in development mode."
 		w.toast("SIM Bypassed (Dev)", "Proceeding directly to dossier verification.", AlertSuccess)
 		w.SetStep(StepReviewProfile)
+
+		go func() {
+			phone := w.SelectedSIMPhone
+			if phone == "" {
+				phone = "+919876543210"
+			}
+			if resp, err := w.client.VerifySIM(context.Background(), w.ClaimToken, "dev_bypass_iccid", phone); err == nil && resp.OTPChallengeID != "" {
+				w.OTPChallengeID = resp.OTPChallengeID
+			}
+		}()
 	})
 
 	simCard := NewShadcnCard(CardParts{
