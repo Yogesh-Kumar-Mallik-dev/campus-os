@@ -40,6 +40,7 @@ describe('AuthHandler', () => {
         create: vi.fn(),
         update: vi.fn(),
         updateMany: vi.fn(),
+        deleteMany: vi.fn(),
       },
       studentProfile: {
         findUnique: vi.fn(),
@@ -94,6 +95,38 @@ describe('AuthHandler', () => {
     const callback = vi.fn();
     await handler.bootstrapSuperAdmin(call, callback);
 
+    expect(callback).toHaveBeenCalledWith(null, expect.objectContaining({
+      claim_token: expect.stringMatching(/^claim_genesis_/),
+    }));
+  });
+
+  it('BLOCK_AUTH_TEST_001c: bootstrapSuperAdmin resets active seat to blank when blank: true is specified', async () => {
+    mockPrisma.superAdminSeat.findFirst.mockResolvedValue({
+      id: 'singleton',
+      activeUserId: 'u-123',
+      activeUser: { isActive: true },
+    });
+    mockPrisma.user.update.mockResolvedValue({});
+    mockPrisma.refreshToken.deleteMany.mockResolvedValue({ count: 1 });
+    mockPrisma.claimToken.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.claimToken.create.mockResolvedValue({});
+
+    const call = {
+      request: {
+        chairperson_name: 'Dr. Sharma',
+        chairperson_email: 'sharma@trust.edu',
+        chairperson_phone: '+919876543210',
+        blank: true,
+      },
+    };
+
+    const callback = vi.fn();
+    await handler.bootstrapSuperAdmin(call, callback);
+
+    expect(mockPrisma.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'u-123' },
+      data: expect.objectContaining({ isActive: false }),
+    }));
     expect(callback).toHaveBeenCalledWith(null, expect.objectContaining({
       claim_token: expect.stringMatching(/^claim_genesis_/),
     }));

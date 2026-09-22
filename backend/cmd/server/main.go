@@ -94,6 +94,7 @@ func runBootstrapCLI(cfg *config.Config) {
 	email := fs.String("email", "chairperson@campus.edu", "Official email address of the Chairperson")
 	phone := fs.String("phone", "+919876543210", "Registered mobile phone number (used for SIM binding & OTP)")
 	outFile := fs.String("out", "genesis_docket.png", "Path to export high-resolution QR docket image file for physical printing")
+	blank := fs.Bool("blank", false, "Reset the Super Admin seat to a completely blank, unactivated state for testing")
 
 	_ = fs.Parse(os.Args[2:])
 
@@ -104,6 +105,7 @@ func runBootstrapCLI(cfg *config.Config) {
 	fmt.Printf("  Chairperson Name     : %s\n", *name)
 	fmt.Printf("  Chairperson Email    : %s\n", *email)
 	fmt.Printf("  Registered Phone     : %s\n", *phone)
+	fmt.Printf("  Blank Sheet Reset    : %t\n", *blank)
 	fmt.Println("------------------------------------------------------------------------")
 
 	grpcClient, err := transportGrpc.NewPersistenceClient(cfg.DBSocketPath)
@@ -120,6 +122,7 @@ func runBootstrapCLI(cfg *config.Config) {
 		ChairpersonName:  *name,
 		ChairpersonEmail: *email,
 		ChairpersonPhone: *phone,
+		Blank:            *blank,
 	})
 	if err != nil {
 		fmt.Printf("Bootstrap Error: %v\n", err)

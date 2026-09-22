@@ -32,7 +32,7 @@ export class AuthHandler {
    */
   async bootstrapSuperAdmin(call: any, callback: any) {
     try {
-      const { chairperson_name, chairperson_email, chairperson_phone } = call.request;
+      const { chairperson_name, chairperson_email, chairperson_phone, blank } = call.request;
 
       if (!chairperson_name || !chairperson_email || !chairperson_phone) {
         return callback({
@@ -41,6 +41,9 @@ export class AuthHandler {
         });
       }
 
+      // Check if blank reset is requested
+      const shouldResetBlank = Boolean(blank);
+
       // 1. Check singleton SuperAdminSeat
       const existingSeat = await this.prisma.superAdminSeat.findFirst({
         where: { retiredAt: null },
@@ -48,17 +51,35 @@ export class AuthHandler {
       });
 
       if (existingSeat) {
-        if (existingSeat.activeUser?.isActive) {
+        if (!shouldResetBlank && existingSeat.activeUser?.isActive) {
           return callback({
             code: 6, // ALREADY_EXISTS
-            message: 'BLOCK_AUTH_BOOTSTRAP_002: Super Admin seat is already occupied and activated',
+            message: 'BLOCK_AUTH_BOOTSTRAP_002: Super Admin seat is already occupied and activated. Use --blank to reset the sheet for clean testing.',
           });
         }
 
-        // Chairperson seat is provisioned but still unactivated (pending claim).
-        // Revoke any prior pending tokens and issue a fresh claim docket.
+        // Reset the user and seat for a clean blank test if requested
+        if (shouldResetBlank) {
+          await this.prisma.user.update({
+            where: { id: existingSeat.activeUserId },
+            data: {
+              isActive: false,
+              passwordHash: crypto.randomBytes(32).toString('hex'),
+              fullName: chairperson_name.trim(),
+              email: chairperson_email.toLowerCase().trim(),
+              phoneNumber: chairperson_phone.trim(),
+            },
+          });
+          // Revoke any active refresh tokens
+          await this.prisma.refreshToken.deleteMany({
+            where: { userId: existingSeat.activeUserId },
+          });
+        }
+
+        // Chairperson seat is provisioned but unactivated (pending claim) or reset.
+        // Revoke any prior tokens and issue a fresh claim docket.
         await this.prisma.claimToken.updateMany({
-          where: { userId: existingSeat.activeUserId, status: 'PENDING' },
+          where: { userId: existingSeat.activeUserId },
           data: { status: 'REVOKED' },
         });
 

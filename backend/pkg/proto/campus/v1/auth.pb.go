@@ -83,6 +83,7 @@ type BootstrapSuperAdminRequest struct {
 	ChairpersonName  string                 `protobuf:"bytes,1,opt,name=chairperson_name,json=chairpersonName,proto3" json:"chairperson_name,omitempty"`
 	ChairpersonEmail string                 `protobuf:"bytes,2,opt,name=chairperson_email,json=chairpersonEmail,proto3" json:"chairperson_email,omitempty"`
 	ChairpersonPhone string                 `protobuf:"bytes,3,opt,name=chairperson_phone,json=chairpersonPhone,proto3" json:"chairperson_phone,omitempty"`
+	Blank            bool                   `protobuf:"varint,4,opt,name=blank,proto3" json:"blank,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -136,6 +137,13 @@ func (x *BootstrapSuperAdminRequest) GetChairpersonPhone() string {
 		return x.ChairpersonPhone
 	}
 	return ""
+}
+
+func (x *BootstrapSuperAdminRequest) GetBlank() bool {
+	if x != nil {
+		return x.Blank
+	}
+	return false
 }
 
 // Genesis Super Admin (Chairperson) bootstrap response
@@ -1384,11 +1392,12 @@ var File_campus_v1_auth_proto protoreflect.FileDescriptor
 
 const file_campus_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x14campus/v1/auth.proto\x12\tcampus.v1\x1a\x16campus/v1/common.proto\"\xa1\x01\n" +
+	"\x14campus/v1/auth.proto\x12\tcampus.v1\x1a\x16campus/v1/common.proto\"\xb7\x01\n" +
 	"\x1aBootstrapSuperAdminRequest\x12)\n" +
 	"\x10chairperson_name\x18\x01 \x01(\tR\x0fchairpersonName\x12+\n" +
 	"\x11chairperson_email\x18\x02 \x01(\tR\x10chairpersonEmail\x12+\n" +
-	"\x11chairperson_phone\x18\x03 \x01(\tR\x10chairpersonPhone\"\x81\x01\n" +
+	"\x11chairperson_phone\x18\x03 \x01(\tR\x10chairpersonPhone\x12\x14\n" +
+	"\x05blank\x18\x04 \x01(\bR\x05blank\"\x81\x01\n" +
 	"\x1bBootstrapSuperAdminResponse\x12\x1f\n" +
 	"\vclaim_token\x18\x01 \x01(\tR\n" +
 	"claimToken\x12\x19\n" +

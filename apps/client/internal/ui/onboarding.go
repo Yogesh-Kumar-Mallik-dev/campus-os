@@ -62,6 +62,7 @@ type OnboardingWizard struct {
 	OTPCode           string
 	NewPassword       string
 	BiometricsEnabled bool
+	QRDetected        bool
 	StatusText        string
 	IsError           bool
 }
@@ -173,11 +174,13 @@ func (w *OnboardingWizard) processUploadedImage(name string, r io.Reader) {
 		w.ScannedImageObj = img
 		w.ScannedImageSize = sizeStr
 		if qrErr != nil {
+			w.QRDetected = false
 			w.ClaimToken = ""
 			w.IsError = true
 			w.StatusText = fmt.Sprintf("No QR code detected in '%s'. Ensure the code is clear, glare-free, and not cropped.", name)
 			w.toast("No QR Code Detected", "Please ensure the QR code is clearly visible.", AlertDestructive)
 		} else {
+			w.QRDetected = true
 			w.ClaimToken = token
 			w.IsError = false
 			w.StatusText = fmt.Sprintf("QR code decoded successfully from %s: %s", name, token)
@@ -203,7 +206,7 @@ func (w *OnboardingWizard) renderScanStep() {
 		var statusBadge fyne.CanvasObject
 		var statusDetail *widget.Label
 
-		if !w.IsError && w.ClaimToken != "" {
+		if w.QRDetected && w.ClaimToken != "" {
 			statusBadge = NewBadge("QR CODE RECOGNIZED", BadgeSuccess, BadgeShapePill)
 			statusDetail = widget.NewLabel(fmt.Sprintf("Extracted Voucher Token:\n%s", w.ClaimToken))
 			statusDetail.TextStyle = fyne.TextStyle{Bold: true}
@@ -218,6 +221,7 @@ func (w *OnboardingWizard) renderScanStep() {
 			w.ScannedImageName = ""
 			w.ScannedImageSize = ""
 			w.ClaimToken = ""
+			w.QRDetected = false
 			w.IsError = false
 			w.StatusText = ""
 			w.render()
