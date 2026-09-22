@@ -20,7 +20,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	"github.com/liyue201/goqr"
 )
 
 // CameraPermissionState defines user permission states for local webcam capture.
@@ -346,22 +345,18 @@ func ShowCameraScannerModal(window fyne.Window, onTokenScanned func(token string
 						frameImg.Refresh()
 
 						// QR scanning
-						qrCodes, _ := goqr.Recognize(img)
-						if len(qrCodes) > 0 {
-							payload := string(qrCodes[0].Payload)
-							token := ExtractTokenFromQRPayload(payload)
-							if token != "" {
-								cancel()
-								fyne.Do(func() {
-									if popup != nil {
-										popup.Hide()
-									}
-									if onTokenScanned != nil {
-										onTokenScanned(token)
-									}
-								})
-								return
-							}
+						token, err := DecodeQRFromLoadedImage(img)
+						if err == nil && token != "" {
+							cancel()
+							fyne.Do(func() {
+								if popup != nil {
+									popup.Hide()
+								}
+								if onTokenScanned != nil {
+									onTokenScanned(token)
+								}
+							})
+							return
 						}
 					}
 

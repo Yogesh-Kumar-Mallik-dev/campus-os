@@ -1,13 +1,18 @@
 package ui
 
 import (
+	"bytes"
 	"context"
+	"image"
+	"image/color"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"fyne.io/fyne/v2/test"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
+	"github.com/skip2/go-qrcode"
 )
 
 // BLOCK_UI_ONBOARDING_TEST_001
@@ -174,5 +179,68 @@ func TestOnboardingWizard_BackendSync(t *testing.T) {
 		t.Errorf("expected STUDENT role, got %s", compResp.RoleCode)
 	}
 }
+
+// BLOCK_UI_ONBOARDING_TEST_004
+// Purpose: Verifies visual feedback and token extraction when uploading images.
+func TestOnboardingWizard_ProcessUploadedImage(t *testing.T) {
+	testApp := test.NewApp()
+	defer testApp.Quit()
+	testWindow := test.NewWindow(nil)
+
+	client := api.NewClient("http://localhost:8080")
+	wizard := NewOnboardingWizard(client, testWindow, nil)
+
+	// Case 1: Uploading a valid QR code image
+	pngData, err := qrcode.Encode("CAMPUS_OS:CLAIM:v1:claim_exec_director_999", qrcode.Medium, 256)
+	if err != nil {
+		t.Fatalf("failed to encode test QR: %v", err)
+	}
+
+	wizard.processUploadedImage("executive_docket.png", bytes.NewReader(pngData))
+
+	if wizard.ScannedImageObj == nil {
+		t.Errorf("expected ScannedImageObj to be populated")
+	}
+	if wizard.ScannedImageName != "executive_docket.png" {
+		t.Errorf("expected executive_docket.png, got %s", wizard.ScannedImageName)
+	}
+	if wizard.ClaimToken != "claim_exec_director_999" {
+		t.Errorf("expected 'claim_exec_director_999', got %q", wizard.ClaimToken)
+	}
+	if wizard.IsError {
+		t.Errorf("expected IsError=false for valid QR image, got true with status: %s", wizard.StatusText)
+	}
+
+	// Verify canvas rendered visual preview
+	obj := wizard.CanvasObject()
+	if obj == nil {
+		t.Errorf("expected CanvasObject to not be nil")
+	}
+
+	// Case 2: Uploading a blank image (no QR code)
+	blankImg := image.NewRGBA(image.Rect(0, 0, 100, 100))
+	for x := 0; x < 100; x++ {
+		for y := 0; y < 100; y++ {
+			blankImg.Set(x, y, color.White)
+		}
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, blankImg); err != nil {
+		t.Fatalf("failed to encode blank image: %v", err)
+	}
+
+	wizard.processUploadedImage("random_photo.png", &buf)
+
+	if wizard.ScannedImageObj == nil {
+		t.Errorf("expected ScannedImageObj to still display uploaded photo")
+	}
+	if wizard.ClaimToken != "" {
+		t.Errorf("expected ClaimToken to be empty for blank photo, got %q", wizard.ClaimToken)
+	}
+	if !wizard.IsError {
+		t.Errorf("expected IsError=true for photo with no QR code")
+	}
+}
+
 
 

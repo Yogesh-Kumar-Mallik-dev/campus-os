@@ -7,6 +7,8 @@ import (
 	"image/png"
 	"strings"
 	"testing"
+
+	"github.com/skip2/go-qrcode"
 )
 
 func TestExtractTokenFromQRPayload(t *testing.T) {
@@ -63,3 +65,23 @@ func TestDecodeQRFromImage_InvalidAndBlank(t *testing.T) {
 		t.Errorf("expected 'no QR code detected' in error, got: %v", err)
 	}
 }
+
+func TestDecodeQRFromImage_RealQRCode(t *testing.T) {
+	// Test with alphanumeric token including consecutive digits
+	pngData, err := qrcode.Encode("CAMPUS_OS:CLAIM:v1:claim_genesis_valid_12345", qrcode.Medium, 256)
+	if err != nil {
+		t.Fatalf("failed to encode test QR: %v", err)
+	}
+
+	token, err := DecodeQRFromImage(bytes.NewReader(pngData))
+	if err != nil {
+		t.Fatalf("failed to decode real QR: %v", err)
+	}
+
+	t.Logf("Decoded token: %q", token)
+	if token != "claim_genesis_valid_12345" {
+		t.Errorf("expected 'claim_genesis_valid_12345', got '%s'", token)
+	}
+}
+
+

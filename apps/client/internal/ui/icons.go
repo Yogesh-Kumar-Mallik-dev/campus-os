@@ -236,6 +236,12 @@ const (
 		<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
 	</svg>`
 
+	LucideX = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+		<path d="M18 6 6 18"/>
+		<path d="m6 6 12 12"/>
+	</svg>`
+
+
 	// Backward compatibility aliases
 	SVGShieldCheck      = LucideShieldCheck
 	SVGQRCodeFrame      = LucideQrCode

@@ -1,14 +1,19 @@
 package ui
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"io"
 	"time"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
 )
@@ -25,8 +30,8 @@ const (
 )
 
 var stepNames = []string{
-	"QR Scan",
-	"SIM Binding",
+	"Voucher",
+	"Telephony",
 	"Dossier",
 	"Password",
 }
@@ -43,6 +48,8 @@ type OnboardingWizard struct {
 	// Wizard Form State
 	ClaimToken        string
 	ScannedImageName  string
+	ScannedImageObj   image.Image
+	ScannedImageSize  string
 	MaskedPhone       string
 	Username          string
 	AcademicName      string
@@ -132,28 +139,133 @@ func (w *OnboardingWizard) render() {
 	}
 }
 
-// Step 1: Scan Sealed QR Code
-func (w *OnboardingWizard) renderScanStep() {
-	var scannerVisual fyne.CanvasObject
-	var scannerTitle, scannerDesc string
-
-	if w.ScannedImageName != "" {
-		checkIconRes := ResourceFromSVG("check_circle.svg", LucideCheckCircle2)
-		scannerVisual = RenderSVGImage(checkIconRes, 56, 56)
-		scannerTitle = "QR Picture Loaded & Decoded"
-		scannerDesc = fmt.Sprintf("Extracted admission token from: %s", w.ScannedImageName)
-	} else {
-		qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
-		scannerVisual = RenderSVGImage(qrIconRes, 56, 56)
-		scannerTitle = "Optical Camera or Picture Scan"
-		scannerDesc = "Align docket under optical camera or select a WhatsApp / screenshot image"
+// processUploadedImage decodes an image stream, provides instant visual feedback, and extracts QR tokens.
+func (w *OnboardingWizard) processUploadedImage(name string, r io.Reader) {
+	data, err := io.ReadAll(r)
+	if err != nil || len(data) == 0 {
+		fyne.Do(func() {
+			w.IsError = true
+			w.StatusText = "Failed to read image file data."
+			w.toast("Read Error", w.StatusText, AlertDestructive)
+			w.render()
+		})
+		return
 	}
 
-	emptyScanner := NewEmptyState(EmptyStateParams{
-		Media:       scannerVisual,
-		Title:       scannerTitle,
-		Description: scannerDesc,
+	sizeStr := fmt.Sprintf("%.1f KB", float64(len(data))/1024.0)
+	img, _, decodeErr := image.Decode(bytes.NewReader(data))
+	if decodeErr != nil {
+		fyne.Do(func() {
+			w.ScannedImageName = name
+			w.ScannedImageObj = nil
+			w.ScannedImageSize = sizeStr
+			w.IsError = true
+			w.StatusText = fmt.Sprintf("Unsupported or corrupt image format: %v", decodeErr)
+			w.toast("Invalid Image", w.StatusText, AlertDestructive)
+			w.render()
+		})
+		return
+	}
+
+	token, qrErr := DecodeQRFromLoadedImage(img)
+	fyne.Do(func() {
+		w.ScannedImageName = name
+		w.ScannedImageObj = img
+		w.ScannedImageSize = sizeStr
+		if qrErr != nil {
+			w.ClaimToken = ""
+			w.IsError = true
+			w.StatusText = fmt.Sprintf("No QR code detected in '%s'. Ensure the code is clear, glare-free, and not cropped.", name)
+			w.toast("No QR Code Detected", "Please ensure the QR code is clearly visible.", AlertDestructive)
+		} else {
+			w.ClaimToken = token
+			w.IsError = false
+			w.StatusText = fmt.Sprintf("QR code decoded successfully from %s: %s", name, token)
+			w.toast("QR Picture Decoded", fmt.Sprintf("Token: %s", token), AlertSuccess)
+		}
+		w.render()
 	})
+}
+
+// Step 1: Scan Sealed QR Code
+func (w *OnboardingWizard) renderScanStep() {
+	var visualPreview fyne.CanvasObject
+
+	if w.ScannedImageObj != nil {
+		thumbnail := canvas.NewImageFromImage(w.ScannedImageObj)
+		thumbnail.FillMode = canvas.ImageFillContain
+		thumbnail.SetMinSize(fyne.NewSize(140, 140))
+		thumbnailBox := container.NewGridWrap(fyne.NewSize(140, 140), thumbnail)
+
+		fileTitle := widget.NewLabelWithStyle(w.ScannedImageName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+		fileTitle.Wrapping = fyne.TextWrapWord
+
+		var statusBadge fyne.CanvasObject
+		var statusDetail *widget.Label
+
+		if !w.IsError && w.ClaimToken != "" {
+			statusBadge = NewBadge("QR CODE RECOGNIZED", BadgeSuccess, BadgeShapePill)
+			statusDetail = widget.NewLabel(fmt.Sprintf("Extracted Voucher Token:\n%s", w.ClaimToken))
+			statusDetail.TextStyle = fyne.TextStyle{Bold: true}
+		} else {
+			statusBadge = NewBadge("NO QR CODE DETECTED", BadgeDestructive, BadgeShapePill)
+			statusDetail = widget.NewLabel("No QR code found in this image. Try another picture, adjust crop, or enter the code manually.")
+			statusDetail.Wrapping = fyne.TextWrapWord
+		}
+
+		removeBtn := NewShadcnButton("Remove / Select Another", ButtonOutline, ButtonSizeSm, ResourceFromSVG("close.svg", LucideX), func() {
+			w.ScannedImageObj = nil
+			w.ScannedImageName = ""
+			w.ScannedImageSize = ""
+			w.ClaimToken = ""
+			w.IsError = false
+			w.StatusText = ""
+			w.render()
+		})
+
+		rightDetails := container.NewVBox(
+			container.NewHBox(statusBadge, NewBadge(w.ScannedImageSize, BadgeSecondary, BadgeShapePill)),
+			fileTitle,
+			statusDetail,
+			removeBtn,
+		)
+
+		previewCard := container.NewBorder(
+			nil, nil,
+			thumbnailBox,
+			nil,
+			container.NewPadded(rightDetails),
+		)
+
+		bg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
+		bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
+		bg.StrokeWidth = 1
+		bg.CornerRadius = 8
+
+		visualPreview = container.NewStack(bg, container.NewPadded(previewCard))
+	} else if w.ScannedImageName != "" {
+		checkIconRes := ResourceFromSVG("check_circle.svg", LucideCheckCircle2)
+		scannerVisual := RenderSVGImage(checkIconRes, 56, 56)
+		scannerTitle := "Live Optical Camera QR Decoded"
+		scannerDesc := fmt.Sprintf("Extracted admission token: %s", w.ClaimToken)
+
+		visualPreview = NewEmptyState(EmptyStateParams{
+			Media:       scannerVisual,
+			Title:       scannerTitle,
+			Description: scannerDesc,
+		})
+	} else {
+		qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
+		scannerVisual := RenderSVGImage(qrIconRes, 56, 56)
+		title := "Optical Camera or Picture Scan"
+		desc := "Align docket under optical camera or select a WhatsApp / screenshot image"
+
+		visualPreview = NewEmptyState(EmptyStateParams{
+			Media:       scannerVisual,
+			Title:       title,
+			Description: desc,
+		})
+	}
 
 	tokenField, tokenEntry := NewFormField(FormField{
 		Label:       "Voucher Claim Token",
@@ -173,6 +285,7 @@ func (w *OnboardingWizard) renderScanStep() {
 			ShowCameraScannerModal(w.window, func(token string) {
 				w.ClaimToken = token
 				w.ScannedImageName = "Live Optical Camera"
+				w.ScannedImageObj = nil
 				tokenEntry.SetText(token)
 				w.IsError = false
 				w.StatusText = fmt.Sprintf("QR code decoded successfully from Camera: %s", token)
@@ -210,23 +323,7 @@ func (w *OnboardingWizard) renderScanStep() {
 				return
 			}
 			defer reader.Close()
-
-			token, decodeErr := DecodeQRFromImage(reader)
-			if decodeErr != nil {
-				w.IsError = true
-				w.StatusText = "Could not detect a QR code in the selected picture. Ensure the image is clear or enter the token manually."
-				w.toast("No QR Code Detected", "Please ensure the QR code is clearly visible.", AlertDestructive)
-				w.render()
-				return
-			}
-
-			w.ClaimToken = token
-			w.ScannedImageName = reader.URI().Name()
-			tokenEntry.SetText(token)
-			w.IsError = false
-			w.StatusText = fmt.Sprintf("QR code decoded successfully from %s", reader.URI().Name())
-			w.toast("QR Picture Decoded", fmt.Sprintf("Token: %s", token), AlertSuccess)
-			w.render()
+			w.processUploadedImage(reader.URI().Name(), reader)
 		}, w.window)
 
 		fd.SetFilter(storage.NewExtensionFileFilter([]string{".png", ".jpg", ".jpeg", ".webp", ".bmp"}))
@@ -245,23 +342,7 @@ func (w *OnboardingWizard) renderScanStep() {
 				return
 			}
 			defer reader.Close()
-
-			token, decodeErr := DecodeQRFromImage(reader)
-			if decodeErr != nil {
-				w.IsError = true
-				w.StatusText = "Could not detect a QR code in the dropped picture."
-				w.toast("No QR Code Detected", "Please ensure the QR code is clear.", AlertDestructive)
-				w.render()
-				return
-			}
-
-			w.ClaimToken = token
-			w.ScannedImageName = uris[0].Name()
-			tokenEntry.SetText(token)
-			w.IsError = false
-			w.StatusText = fmt.Sprintf("QR code decoded successfully from %s", uris[0].Name())
-			w.toast("QR Picture Decoded", fmt.Sprintf("Token: %s", token), AlertSuccess)
-			w.render()
+			w.processUploadedImage(uris[0].Name(), reader)
 		})
 	}
 
@@ -323,7 +404,7 @@ func (w *OnboardingWizard) renderScanStep() {
 		Title:       "Scan Sealed Admission QR",
 		Description: "Position camera viewfinder, select a screenshot/picture, or enter the manual token beneath the seal",
 		Content: container.NewVBox(
-			emptyScanner,
+			visualPreview,
 			container.NewCenter(container.NewHBox(scanCameraBtn, uploadBtn)),
 			NewShadcnSeparator(true),
 			tokenField,
