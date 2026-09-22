@@ -373,24 +373,16 @@ func (d *DashboardView) showMobileDrawer() {
 	}
 
 	drawerWidth := float32(280)
-	if d.windowWidth > 0 && d.windowWidth-40 < drawerWidth {
-		drawerWidth = d.windowWidth - 40
+	if d.windowWidth > 0 && d.windowWidth < drawerWidth {
+		drawerWidth = d.windowWidth
 	}
-	drawerHeight := float32(520)
+	drawerHeight := float32(600)
 	if d.window.Canvas().Size().Height > 0 {
-		drawerHeight = d.window.Canvas().Size().Height - 60
+		drawerHeight = d.window.Canvas().Size().Height
 	}
-
-	closeBtn := widget.NewButtonWithIcon("", ResourceFromSVG("close.svg", LucideX), func() {
-		if d.mobileDrawerPopup != nil {
-			d.mobileDrawerPopup.Hide()
-			d.mobileDrawerPopup = nil
-		}
-	})
-	closeBtn.Importance = widget.LowImportance
 
 	logoImg := container.NewCenter(RenderBBDITHeaderLogo(115, 22))
-	drawerHeader := container.NewBorder(nil, nil, logoImg, closeBtn)
+	drawerHeader := container.NewHBox(logoImg)
 
 	navCol := container.NewVBox()
 	groups := d.getNavGroups()
@@ -422,33 +414,60 @@ func (d *DashboardView) showMobileDrawer() {
 				d.SetSection(sec)
 			})
 
+			var entryObj fyne.CanvasObject
 			if bdg != "" {
 				badgePill := NewBadge(bdg, BadgeWarning, BadgeShapePill)
-				row := container.NewBorder(nil, nil, nil, badgePill, btn)
-				navCol.Add(row)
+				entryObj = container.NewBorder(nil, nil, nil, badgePill, btn)
 			} else {
-				navCol.Add(btn)
+				entryObj = btn
+			}
+
+			if isActive {
+				indicator := canvas.NewRectangle(color.NRGBA{R: 225, G: 29, B: 72, A: 255})
+				indicator.SetMinSize(fyne.NewSize(3, 20))
+				navCol.Add(container.NewBorder(nil, nil, container.NewCenter(indicator), nil, entryObj))
+			} else {
+				placeholder := canvas.NewRectangle(color.Transparent)
+				placeholder.SetMinSize(fyne.NewSize(3, 20))
+				navCol.Add(container.NewBorder(nil, nil, placeholder, nil, entryObj))
 			}
 		}
 		navCol.Add(NewShadcnSeparator(true))
 	}
 
+	// Bottom User Info Card
+	userName := "Chairperson"
+	if d.session != nil && d.session.FullName != "" {
+		userName = d.session.FullName
+	}
+	userIcon := RenderSVGImage(ResourceFromSVG("user_mob.svg", LucideUser), 20, 20)
+	userLabel := widget.NewLabelWithStyle(userName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	userStatus := NewBadge("ONLINE", BadgeSuccess, BadgeShapePill)
+	bottomCard := container.NewBorder(nil, nil, userIcon, userStatus, userLabel)
+
 	drawerBg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
 	drawerBg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
 	drawerBg.StrokeWidth = 1
-	drawerBg.CornerRadius = 10
 
 	drawerBody := container.NewBorder(
 		container.NewPadded(drawerHeader),
-		nil, nil, nil,
-		container.NewVScroll(container.NewPadded(navCol)),
+		container.NewPadded(bottomCard),
+		nil, nil,
+		container.NewVScroll(navCol),
 	)
 
 	drawerCard := container.NewStack(drawerBg, drawerBody)
 	wrapped := container.NewGridWrap(fyne.NewSize(drawerWidth, drawerHeight), drawerCard)
 
-	d.mobileDrawerPopup = widget.NewModalPopUp(wrapped, d.window.Canvas())
-	d.mobileDrawerPopup.Show()
+	opts := ModalOptions{
+		CloseOnEsc:          true,
+		CloseOnClickOutside: true,
+		AlignLeft:           true,
+		OnDismiss: func() {
+			d.mobileDrawerPopup = nil
+		},
+	}
+	d.mobileDrawerPopup = ShowModal(d.window, wrapped, &opts)
 }
 
 // buildSidebar creates the responsive navigation:
@@ -527,9 +546,10 @@ func (d *DashboardView) buildSidebar() fyne.CanvasObject {
 			ic := item.icon
 			bdg := item.badge
 
+			isActive := d.activeSection == sec
 			variant := ButtonGhost
 			var iconRes fyne.Resource
-			if d.activeSection == sec {
+			if isActive {
 				variant = ButtonSecondary
 				iconRes = WhiteResourceFromSVG(lbl+"_act.svg", ic)
 			} else {
@@ -540,12 +560,22 @@ func (d *DashboardView) buildSidebar() fyne.CanvasObject {
 				d.SetSection(sec)
 			})
 
+			var entryObj fyne.CanvasObject
 			if bdg != "" {
 				badgePill := NewBadge(bdg, BadgeWarning, BadgeShapePill)
-				row := container.NewBorder(nil, nil, nil, badgePill, btn)
-				sidebarNav.Add(row)
+				entryObj = container.NewBorder(nil, nil, nil, badgePill, btn)
 			} else {
-				sidebarNav.Add(btn)
+				entryObj = btn
+			}
+
+			if isActive {
+				indicator := canvas.NewRectangle(color.NRGBA{R: 225, G: 29, B: 72, A: 255})
+				indicator.SetMinSize(fyne.NewSize(3, 20))
+				sidebarNav.Add(container.NewBorder(nil, nil, container.NewCenter(indicator), nil, entryObj))
+			} else {
+				placeholder := canvas.NewRectangle(color.Transparent)
+				placeholder.SetMinSize(fyne.NewSize(3, 20))
+				sidebarNav.Add(container.NewBorder(nil, nil, placeholder, nil, entryObj))
 			}
 		}
 		sidebarNav.Add(NewShadcnSeparator(true))
