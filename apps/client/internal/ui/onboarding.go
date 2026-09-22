@@ -17,6 +17,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
+	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/layout"
 )
 
 // sanitizeUIError normalizes raw transport/dial errors into clear institutional messages.
@@ -57,6 +58,7 @@ type OnboardingWizard struct {
 	client     *api.Client
 	window     fyne.Window
 	content    *fyne.Container
+	scroll            *container.Scroll
 	step              OnboardingStep
 	onComplete        func()
 	onNavigateToLogin func()
@@ -102,6 +104,11 @@ func NewOnboardingWizard(client *api.Client, window fyne.Window, onComplete func
 // CanvasObject returns the renderable canvas object.
 func (w *OnboardingWizard) CanvasObject() fyne.CanvasObject {
 	return w.content
+}
+
+// SetScroll binds the outer scroll container to synchronize scroll bounds across steps.
+func (w *OnboardingWizard) SetScroll(scroll *container.Scroll) {
+	w.scroll = scroll
 }
 
 // CurrentStep returns the active wizard step for testing.
@@ -153,6 +160,18 @@ func (w *OnboardingWizard) render() {
 		w.renderSetPasswordStep()
 	case StepComplete:
 		w.renderCompleteStep()
+	}
+
+	w.content.Refresh()
+	if w.scroll != nil {
+		w.scroll.ScrollToTop()
+		w.scroll.Refresh()
+	}
+	if w.window != nil && w.window.Canvas() != nil {
+		if c := w.window.Content(); c != nil {
+			c.Refresh()
+			w.window.Canvas().Refresh(c)
+		}
 	}
 }
 
@@ -208,89 +227,10 @@ func (w *OnboardingWizard) processUploadedImage(name string, r io.Reader) {
 
 // Step 1: Scan Sealed QR Code
 func (w *OnboardingWizard) renderScanStep() {
-	var visualPreview fyne.CanvasObject
-
-	if w.ScannedImageObj != nil {
-		thumbnail := canvas.NewImageFromImage(w.ScannedImageObj)
-		thumbnail.FillMode = canvas.ImageFillContain
-		thumbnail.SetMinSize(fyne.NewSize(140, 140))
-		thumbnailBox := container.NewGridWrap(fyne.NewSize(140, 140), thumbnail)
-
-		fileTitle := widget.NewLabelWithStyle(w.ScannedImageName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-		fileTitle.Wrapping = fyne.TextWrapWord
-
-		var statusBadge fyne.CanvasObject
-		var statusDetail *widget.Label
-
-		if w.QRDetected && w.ClaimToken != "" {
-			statusBadge = NewBadge("QR CODE RECOGNIZED", BadgeSuccess, BadgeShapePill)
-			statusDetail = widget.NewLabel(fmt.Sprintf("Extracted Voucher Token:\n%s", w.ClaimToken))
-			statusDetail.TextStyle = fyne.TextStyle{Bold: true}
-		} else {
-			statusBadge = NewBadge("NO QR CODE DETECTED", BadgeDestructive, BadgeShapePill)
-			statusDetail = widget.NewLabel("No QR code found in this image. Try another picture, adjust crop, or enter the code manually.")
-			statusDetail.Wrapping = fyne.TextWrapWord
-		}
-
-		removeBtn := NewShadcnButton("Remove / Select Another", ButtonOutline, ButtonSizeSm, ResourceFromSVG("close.svg", LucideX), func() {
-			w.ScannedImageObj = nil
-			w.ScannedImageName = ""
-			w.ScannedImageSize = ""
-			w.ClaimToken = ""
-			w.QRDetected = false
-			w.IsError = false
-			w.StatusText = ""
-			w.render()
-		})
-
-		rightDetails := container.NewVBox(
-			container.NewHBox(statusBadge, NewBadge(w.ScannedImageSize, BadgeSecondary, BadgeShapePill)),
-			fileTitle,
-			statusDetail,
-			removeBtn,
-		)
-
-		previewCard := container.NewBorder(
-			nil, nil,
-			thumbnailBox,
-			nil,
-			container.NewPadded(rightDetails),
-		)
-
-		bg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
-		bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
-		bg.StrokeWidth = 1
-		bg.CornerRadius = 8
-
-		visualPreview = container.NewStack(bg, container.NewPadded(previewCard))
-	} else if w.ScannedImageName != "" {
-		checkIconRes := ResourceFromSVG("check_circle.svg", LucideCheckCircle2)
-		scannerVisual := RenderSVGImage(checkIconRes, 56, 56)
-		scannerTitle := "Live Optical Camera QR Decoded"
-		scannerDesc := fmt.Sprintf("Extracted admission token: %s", w.ClaimToken)
-
-		visualPreview = NewEmptyState(EmptyStateParams{
-			Media:       scannerVisual,
-			Title:       scannerTitle,
-			Description: scannerDesc,
-		})
-	} else {
-		qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
-		scannerVisual := RenderSVGImage(qrIconRes, 56, 56)
-		title := "Optical Camera or Picture Scan"
-		desc := "Align docket under optical camera or select a WhatsApp / screenshot image"
-
-		visualPreview = NewEmptyState(EmptyStateParams{
-			Media:       scannerVisual,
-			Title:       title,
-			Description: desc,
-		})
-	}
-
 	tokenField, tokenEntry := NewFormField(FormField{
-		Label:       "Voucher Claim Token",
+		Label:       "Admission Voucher Token",
 		Placeholder: "Enter 16-character code (or leave blank for demo)",
-		HelperText:  "Auto-filled from decoded QR picture or manually entered from admission docket",
+		HelperText:  "Auto-filled from decoded QR voucher or manually entered from docket seal",
 	})
 	if w.ClaimToken != "" {
 		tokenEntry.SetText(w.ClaimToken)
@@ -350,6 +290,91 @@ func (w *OnboardingWizard) renderScanStep() {
 		fd.SetTitleText("Select Admission QR Picture or Screenshot")
 		fd.Show()
 	})
+
+	scanActions := layout.Grid(layout.GridOptions{
+		MinItemWidth: 160,
+		Gap:          8,
+	}, scanCameraBtn, uploadBtn)
+
+	var visualPreview fyne.CanvasObject
+
+	if w.ScannedImageObj != nil {
+		thumbnail := canvas.NewImageFromImage(w.ScannedImageObj)
+		thumbnail.FillMode = canvas.ImageFillContain
+		thumbnail.SetMinSize(fyne.NewSize(120, 120))
+		thumbnailBox := container.NewGridWrap(fyne.NewSize(120, 120), thumbnail)
+
+		fileTitle := widget.NewLabelWithStyle(w.ScannedImageName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+		fileTitle.Wrapping = fyne.TextWrapWord
+
+		var statusBadge fyne.CanvasObject
+		var statusDetail *widget.Label
+
+		if w.QRDetected && w.ClaimToken != "" {
+			statusBadge = NewBadge("QR CODE RECOGNIZED", BadgeSuccess, BadgeShapePill)
+			statusDetail = widget.NewLabel(fmt.Sprintf("Extracted Voucher Token:\n%s", w.ClaimToken))
+			statusDetail.TextStyle = fyne.TextStyle{Bold: true}
+			statusDetail.Wrapping = fyne.TextWrapBreak
+		} else {
+			statusBadge = NewBadge("NO QR CODE DETECTED", BadgeDestructive, BadgeShapePill)
+			statusDetail = widget.NewLabel("No QR code found in this image. Try another picture, adjust crop, or enter the code manually.")
+			statusDetail.Wrapping = fyne.TextWrapWord
+		}
+
+		removeBtn := NewShadcnButton("Remove / Select Another", ButtonOutline, ButtonSizeSm, ResourceFromSVG("close.svg", LucideX), func() {
+			w.ScannedImageObj = nil
+			w.ScannedImageName = ""
+			w.ScannedImageSize = ""
+			w.ClaimToken = ""
+			w.QRDetected = false
+			w.IsError = false
+			w.StatusText = ""
+			w.render()
+		})
+
+		rightDetails := container.NewVBox(
+			container.NewHBox(statusBadge, NewBadge(w.ScannedImageSize, BadgeSecondary, BadgeShapePill)),
+			fileTitle,
+			statusDetail,
+			removeBtn,
+		)
+
+		previewCard := container.NewVBox(
+			container.NewCenter(thumbnailBox),
+			rightDetails,
+		)
+
+		bg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
+		bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
+		bg.StrokeWidth = 1
+		bg.CornerRadius = 8
+
+		visualPreview = container.NewStack(bg, container.NewPadded(previewCard))
+	} else if w.ScannedImageName != "" {
+		checkIconRes := ResourceFromSVG("check_circle.svg", LucideCheckCircle2)
+		scannerVisual := RenderSVGImage(checkIconRes, 56, 56)
+		scannerTitle := "Live Optical Camera QR Decoded"
+		scannerDesc := fmt.Sprintf("Extracted admission token: %s", w.ClaimToken)
+
+		visualPreview = NewEmptyState(EmptyStateParams{
+			Media:       scannerVisual,
+			Title:       scannerTitle,
+			Description: scannerDesc,
+			Action:      scanActions,
+		})
+	} else {
+		qrIconRes := ResourceFromSVG("qr_viewfinder.svg", SVGQRCodeFrame)
+		scannerVisual := RenderSVGImage(qrIconRes, 56, 56)
+		title := "Optical Camera or Picture Scan"
+		desc := "Align docket under optical camera or select an admission voucher screenshot"
+
+		visualPreview = NewEmptyState(EmptyStateParams{
+			Media:       scannerVisual,
+			Title:       title,
+			Description: desc,
+			Action:      scanActions,
+		})
+	}
 
 	// Setup drag-and-drop on desktop window
 	if w.window != nil {
@@ -411,20 +436,21 @@ func (w *OnboardingWizard) renderScanStep() {
 		}()
 	})
 
-	signInBtn := NewShadcnButton("Already Activated? Institutional Sign In", ButtonGhost, ButtonSizeDefault, ResourceFromSVG("login.svg", LucideLogIn), func() {
+	signInBtn := NewShadcnButton("Already Activated? Sign In", ButtonGhost, ButtonSizeDefault, ResourceFromSVG("login.svg", LucideLogIn), func() {
 		if w.onNavigateToLogin != nil {
 			w.onNavigateToLogin()
 		}
 	})
 
+	orDivider := container.NewCenter(widget.NewLabelWithStyle("— OR TRANSCRIBE VOUCHER MANUALLY —", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}))
+
 	scannerCard := NewShadcnCard(CardParts{
 		Badge:       NewBadge("STEP 1 OF 4", BadgeDefault, BadgeShapePill),
-		Title:       "Scan Sealed Admission QR",
+		Title:       "Scan Sealed Admission QR Voucher",
 		Description: "Position camera viewfinder, select a screenshot/picture, or enter the manual token beneath the seal",
 		Content: container.NewVBox(
 			visualPreview,
-			container.NewCenter(container.NewHBox(scanCameraBtn, uploadBtn)),
-			NewShadcnSeparator(true),
+			orDivider,
 			tokenField,
 		),
 		Footer: container.NewVBox(

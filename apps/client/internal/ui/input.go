@@ -1,10 +1,7 @@
 package ui
 
 import (
-	"image/color"
-
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
@@ -56,14 +53,15 @@ func NewFormField(field FormField) (fyne.CanvasObject, *widget.Entry) {
 	items = append(items, entry)
 
 	if field.ErrorText != "" {
-		errText := canvas.NewText("● "+field.ErrorText, color.NRGBA{R: 248, G: 113, B: 113, A: 255})
-		errText.TextSize = 11.5
-		errText.TextStyle = fyne.TextStyle{Bold: true}
-		items = append(items, errText)
+		errLbl := widget.NewLabel("● " + field.ErrorText)
+		errLbl.Wrapping = fyne.TextWrapWord
+		errLbl.Importance = widget.DangerImportance
+		items = append(items, errLbl)
 	} else if field.HelperText != "" {
-		helper := canvas.NewText(field.HelperText, color.NRGBA{R: 153, G: 167, B: 173, A: 220})
-		helper.TextSize = 11.5
-		items = append(items, helper)
+		helperLbl := widget.NewLabel(field.HelperText)
+		helperLbl.Wrapping = fyne.TextWrapWord
+		helperLbl.Importance = widget.LowImportance
+		items = append(items, helperLbl)
 	}
 
 	return container.NewVBox(items...), entry

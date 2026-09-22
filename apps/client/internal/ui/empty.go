@@ -39,7 +39,7 @@ func NewEmptyState(params EmptyStateParams) fyne.CanvasObject {
 	}
 
 	if params.Action != nil {
-		items = append(items, container.NewCenter(params.Action))
+		items = append(items, container.NewPadded(params.Action))
 	}
 
 	box := container.NewVBox(items...)

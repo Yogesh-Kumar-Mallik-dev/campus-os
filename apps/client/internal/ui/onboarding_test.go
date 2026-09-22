@@ -31,6 +31,9 @@ func TestOnboardingWizard_Steps(t *testing.T) {
 	if wizard.CurrentStep() != StepScan {
 		t.Fatalf("expected initial step StepScan, got %v", wizard.CurrentStep())
 	}
+	if sz := wizard.CanvasObject().MinSize(); sz.Width > 360 {
+		t.Errorf("Step 1 min width too wide for mobile, got %v", sz.Width)
+	}
 
 	// Move to SIM Verify
 	wizard.ClaimToken = "tok_test_123"
@@ -39,6 +42,9 @@ func TestOnboardingWizard_Steps(t *testing.T) {
 
 	if wizard.CurrentStep() != StepSIMVerify {
 		t.Fatalf("expected step StepSIMVerify, got %v", wizard.CurrentStep())
+	}
+	if sz := wizard.CanvasObject().MinSize(); sz.Width > 360 {
+		t.Errorf("Step 2 min width too wide for mobile, got %v", sz.Width)
 	}
 
 	// Move to Review Profile
@@ -52,17 +58,26 @@ func TestOnboardingWizard_Steps(t *testing.T) {
 	if wizard.CurrentStep() != StepReviewProfile {
 		t.Fatalf("expected step StepReviewProfile, got %v", wizard.CurrentStep())
 	}
+	if sz := wizard.CanvasObject().MinSize(); sz.Width > 360 {
+		t.Errorf("Step 3 min width too wide for mobile, got %v", sz.Width)
+	}
 
 	// Move to Set Password
 	wizard.SetStep(StepSetPassword)
 	if wizard.CurrentStep() != StepSetPassword {
 		t.Fatalf("expected step StepSetPassword, got %v", wizard.CurrentStep())
 	}
+	if sz := wizard.CanvasObject().MinSize(); sz.Width > 360 {
+		t.Errorf("Step 4 min width too wide for mobile, got %v", sz.Width)
+	}
 
 	// Move to Complete
 	wizard.SetStep(StepComplete)
 	if wizard.CurrentStep() != StepComplete {
 		t.Fatalf("expected step StepComplete, got %v", wizard.CurrentStep())
+	}
+	if sz := wizard.CanvasObject().MinSize(); sz.Width > 360 {
+		t.Errorf("Step 5 min width too wide for mobile, got %v", sz.Width)
 	}
 
 	// Test Step Backward Navigation

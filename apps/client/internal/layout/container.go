@@ -176,7 +176,12 @@ func (f *fluidContainerLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
 	}
 	pad := f.effectivePadding(padWidth)
 
-	return fyne.NewSize(minW+(pad*2), minH+(pad*2))
+	reportedMinW := minW
+	if f.opts.AutoCenter && f.opts.MinWidth > 0 {
+		reportedMinW = f.opts.MinWidth
+	}
+
+	return fyne.NewSize(reportedMinW+(pad*2), minH+(pad*2)+24)
 }
 
 // Container constructs a fluid container that caps max width and centers content on wide screens.

@@ -94,6 +94,9 @@ func (a *Application) NavigateToOnboarding() {
 	}
 
 	body := NewResponsiveCardContainer(wizard.CanvasObject(), 640)
+	if sc, ok := body.(*container.Scroll); ok {
+		wizard.SetScroll(sc)
+	}
 	content := container.NewBorder(topBar, nil, nil, nil, body)
 
 	a.rootContainer.Objects = []fyne.CanvasObject{content}
