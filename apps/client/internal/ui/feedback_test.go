@@ -176,6 +176,81 @@ func TestToast_And_AlertDialog(t *testing.T) {
 	}
 }
 
+func TestShowModal_AccessibilityAndOptions(t *testing.T) {
+	testApp := test.NewApp()
+	defer testApp.Quit()
+
+	win := test.NewWindow(widget.NewLabel("Root"))
+	win.Resize(fyne.NewSize(800, 600))
+
+	// Case 1: Default options with ESC dismissal
+	dismissed := false
+	opts := DefaultModalOptions()
+	opts.OnDismiss = func() {
+		dismissed = true
+	}
+
+	content := widget.NewLabel("Modal Inner Content")
+	popup := ShowModal(win, content, &opts)
+	if popup == nil {
+		t.Fatal("expected non-nil modal popup")
+	}
+
+	// Press ESC key
+	if win.Canvas().OnTypedKey() != nil {
+		win.Canvas().OnTypedKey()(&fyne.KeyEvent{Name: fyne.KeyEscape})
+	}
+	if !dismissed {
+		t.Fatal("expected modal to dismiss when ESC key is typed")
+	}
+
+	// Case 2: Click outside / backdrop dismissal
+	dismissed2 := false
+	opts2 := DefaultModalOptions()
+	opts2.OnDismiss = func() {
+		dismissed2 = true
+	}
+	popup2 := ShowModal(win, widget.NewLabel("Modal 2"), &opts2)
+	if popup2 == nil {
+		t.Fatal("expected non-nil modal 2 popup")
+	}
+
+	backdrop := NewModalBackdrop(func() {
+		if opts2.CloseOnClickOutside {
+			popup2.Hide()
+			if opts2.OnDismiss != nil {
+				opts2.OnDismiss()
+			}
+		}
+	})
+	backdrop.Tapped(&fyne.PointEvent{})
+	if !dismissed2 {
+		t.Fatal("expected modal to dismiss when backdrop is tapped")
+	}
+
+	// Case 3: Disable ESC and Click Outside
+	dismissed3 := false
+	opts3 := ModalOptions{
+		CloseOnEsc:          false,
+		CloseOnClickOutside: false,
+		OnDismiss: func() {
+			dismissed3 = true
+		},
+	}
+	popup3 := ShowModal(win, widget.NewLabel("Modal 3"), &opts3)
+	if popup3 == nil {
+		t.Fatal("expected non-nil modal 3 popup")
+	}
+	if win.Canvas().OnTypedKey() != nil {
+		win.Canvas().OnTypedKey()(&fyne.KeyEvent{Name: fyne.KeyEscape})
+	}
+	if dismissed3 {
+		t.Fatal("expected modal with CloseOnEsc=false to ignore ESC key")
+	}
+	popup3.Hide()
+}
+
+
 func TestSelectableCard_Interaction(t *testing.T) {
 	tapped := false
 	card := NewSelectableCard(widget.NewLabel("Card Content"), false, func() {
