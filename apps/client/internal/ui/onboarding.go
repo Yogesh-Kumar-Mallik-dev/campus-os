@@ -355,41 +355,43 @@ func (w *OnboardingWizard) renderScanStep() {
 
 		go func() {
 			resp, err := w.client.ValidateClaim(context.Background(), token)
-			if err == nil && resp.IsValid {
-				w.MaskedPhone = resp.MaskedPhoneNumber
-				w.Username = resp.Username
-				w.AcademicName = resp.AcademicName
-				w.LegalFullName = resp.LegalFullName
-				w.AdmissionType = resp.AdmissionType
-				w.EntrySemester = resp.EntrySemesterNumber
-				w.LateralSummary = resp.LateralEntrySummary
-				w.IsError = false
-				w.StatusText = "QR Token Verified with Backend. Hardware telephony match required."
-				w.toast("QR Code Recognized", "Hardware carrier binding required next.", AlertSuccess)
-				w.SetStep(StepSIMVerify)
-			} else if err != nil && api.IsUnreachable(err) {
-				// Fallback demo mock values for instant local dev testing when backend is offline
-				w.MaskedPhone = "+91 98XXX-XX210"
-				w.Username = "yogesh.cse.2024.l"
-				w.AcademicName = "Yogesh"
-				w.LegalFullName = "Yogesh Kumar Mallik"
-				w.AdmissionType = "LATERAL_ENTRY"
-				w.EntrySemester = 3
-				w.LateralSummary = "Lateral Entry: Direct admission to Semester 3. Prior polytechnic credits verified."
-				w.IsError = false
-				w.StatusText = "Offline Demo Mode: Backend unreachable, proceeding with simulated profile."
-				w.toast("Offline Mode Active", "Backend offline. Using simulated student record.", AlertWarning)
-				w.SetStep(StepSIMVerify)
-			} else {
-				w.IsError = true
-				if err != nil {
-					w.StatusText = err.Error()
+			fyne.Do(func() {
+				if err == nil && resp.IsValid {
+					w.MaskedPhone = resp.MaskedPhoneNumber
+					w.Username = resp.Username
+					w.AcademicName = resp.AcademicName
+					w.LegalFullName = resp.LegalFullName
+					w.AdmissionType = resp.AdmissionType
+					w.EntrySemester = resp.EntrySemesterNumber
+					w.LateralSummary = resp.LateralEntrySummary
+					w.IsError = false
+					w.StatusText = "QR Token Verified with Backend. Hardware telephony match required."
+					w.toast("QR Code Recognized", "Hardware carrier binding required next.", AlertSuccess)
+					w.SetStep(StepSIMVerify)
+				} else if err != nil && api.IsUnreachable(err) {
+					// Fallback demo mock values for instant local dev testing when backend is offline
+					w.MaskedPhone = "+91 98XXX-XX210"
+					w.Username = "yogesh.cse.2024.l"
+					w.AcademicName = "Yogesh"
+					w.LegalFullName = "Yogesh Kumar Mallik"
+					w.AdmissionType = "LATERAL_ENTRY"
+					w.EntrySemester = 3
+					w.LateralSummary = "Lateral Entry: Direct admission to Semester 3. Prior polytechnic credits verified."
+					w.IsError = false
+					w.StatusText = "Offline Demo Mode: Backend unreachable, proceeding with simulated profile."
+					w.toast("Offline Mode Active", "Backend offline. Using simulated student record.", AlertWarning)
+					w.SetStep(StepSIMVerify)
 				} else {
-					w.StatusText = "Invalid Claim Token: The token is expired, consumed, or invalid."
+					w.IsError = true
+					if err != nil {
+						w.StatusText = err.Error()
+					} else {
+						w.StatusText = "Invalid Claim Token: The token is expired, consumed, or invalid."
+					}
+					w.toast("Validation Failed", w.StatusText, AlertDestructive)
+					w.render()
 				}
-				w.toast("Validation Failed", w.StatusText, AlertDestructive)
-				w.render()
-			}
+			})
 		}()
 	})
 
@@ -470,31 +472,33 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 
 		go func() {
 			resp, err := w.client.VerifySIM(context.Background(), w.ClaimToken, "dummy_sim_iccid_hash", w.SelectedSIMPhone)
-			if err == nil {
-				if !resp.SimMatched {
+			fyne.Do(func() {
+				if err == nil {
+					if !resp.SimMatched {
+						w.IsError = true
+						w.StatusText = fmt.Sprintf("SIM Hardware Mismatch: Selected SIM (%s) does not match the registered telephony contact on file (%s).", w.SelectedSIMPhone, w.MaskedPhone)
+						w.toast("SIM Mismatch", "Physical SIM does not match student record.", AlertDestructive)
+						w.render()
+						return
+					}
+					w.OTPChallengeID = resp.OTPChallengeID
+					w.IsError = false
+					w.StatusText = "SIM Binding & OTP Confirmed via Backend. Review official admission dossier."
+					w.toast("SIM & OTP Verified", "Hardware telephony binding confirmed.", AlertSuccess)
+					w.SetStep(StepReviewProfile)
+				} else if api.IsUnreachable(err) {
+					w.OTPChallengeID = "mock_otp_challenge_123"
+					w.IsError = false
+					w.StatusText = "SIM Binding Simulated (Offline). Review official admission dossier."
+					w.toast("SIM Verified (Offline)", "Review your official admission records.", AlertSuccess)
+					w.SetStep(StepReviewProfile)
+				} else {
 					w.IsError = true
-					w.StatusText = fmt.Sprintf("SIM Hardware Mismatch: Selected SIM (%s) does not match the registered telephony contact on file (%s).", w.SelectedSIMPhone, w.MaskedPhone)
-					w.toast("SIM Mismatch", "Physical SIM does not match student record.", AlertDestructive)
+					w.StatusText = err.Error()
+					w.toast("Verification Failed", err.Error(), AlertDestructive)
 					w.render()
-					return
 				}
-				w.OTPChallengeID = resp.OTPChallengeID
-				w.IsError = false
-				w.StatusText = "SIM Binding & OTP Confirmed via Backend. Review official admission dossier."
-				w.toast("SIM & OTP Verified", "Hardware telephony binding confirmed.", AlertSuccess)
-				w.SetStep(StepReviewProfile)
-			} else if api.IsUnreachable(err) {
-				w.OTPChallengeID = "mock_otp_challenge_123"
-				w.IsError = false
-				w.StatusText = "SIM Binding Simulated (Offline). Review official admission dossier."
-				w.toast("SIM Verified (Offline)", "Review your official admission records.", AlertSuccess)
-				w.SetStep(StepReviewProfile)
-			} else {
-				w.IsError = true
-				w.StatusText = err.Error()
-				w.toast("Verification Failed", err.Error(), AlertDestructive)
-				w.render()
-			}
+			})
 		}()
 	})
 
@@ -697,29 +701,31 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 			}
 
 			resp, err := w.client.CompleteClaim(context.Background(), w.ClaimToken, otpID, otpCode, w.NewPassword, w.BiometricsEnabled)
-			if err == nil && resp.Success {
-				if resp.Username != "" {
-					w.Username = resp.Username
-				}
-				w.IsError = false
-				w.StatusText = "Account Successfully Activated via Backend"
-				w.toast("Success", "Account credentials provisioned.", AlertSuccess)
-				w.SetStep(StepComplete)
-			} else if err != nil && api.IsUnreachable(err) {
-				w.IsError = false
-				w.StatusText = "Account Activated (Offline Demo)"
-				w.toast("Success", "Account credentials provisioned.", AlertSuccess)
-				w.SetStep(StepComplete)
-			} else {
-				w.IsError = true
-				if err != nil {
-					w.StatusText = err.Error()
+			fyne.Do(func() {
+				if err == nil && resp.Success {
+					if resp.Username != "" {
+						w.Username = resp.Username
+					}
+					w.IsError = false
+					w.StatusText = "Account Successfully Activated via Backend"
+					w.toast("Success", "Account credentials provisioned.", AlertSuccess)
+					w.SetStep(StepComplete)
+				} else if err != nil && api.IsUnreachable(err) {
+					w.IsError = false
+					w.StatusText = "Account Activated (Offline Demo)"
+					w.toast("Success", "Account credentials provisioned.", AlertSuccess)
+					w.SetStep(StepComplete)
 				} else {
-					w.StatusText = "Account activation failed"
+					w.IsError = true
+					if err != nil {
+						w.StatusText = err.Error()
+					} else {
+						w.StatusText = "Account activation failed"
+					}
+					w.toast("Activation Failed", w.StatusText, AlertDestructive)
+					w.render()
 				}
-				w.toast("Activation Failed", w.StatusText, AlertDestructive)
-				w.render()
-			}
+			})
 		}()
 	})
 

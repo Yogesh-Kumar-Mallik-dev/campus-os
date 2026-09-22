@@ -94,55 +94,57 @@ func (v *LoginView) render() {
 
 		go func() {
 			resp, err := v.client.Login(context.Background(), ident, pass, "")
-			if err == nil {
-				role := "USER"
-				if len(resp.RoleCodes) > 0 {
-					role = resp.RoleCodes[0]
+			fyne.Do(func() {
+				if err == nil {
+					role := "USER"
+					if len(resp.RoleCodes) > 0 {
+						role = resp.RoleCodes[0]
+					}
+					sess := &auth.AuthSession{
+						AccessToken:  resp.AccessToken,
+						RefreshToken: resp.RefreshToken,
+						UserID:       resp.UserID,
+						Username:     resp.Username,
+						FullName:     resp.FullName,
+						RoleCode:     role,
+						RoleCodes:    resp.RoleCodes,
+					}
+					if v.sessionStore != nil {
+						_ = v.sessionStore.Save(sess)
+					}
+					v.IsError = false
+					v.StatusText = "Authentication successful"
+					if v.onSuccess != nil {
+						v.onSuccess(sess)
+					}
+				} else if api.IsUnreachable(err) {
+					// Offline simulated login for local testing
+					sess := &auth.AuthSession{
+						AccessToken:  "mock_jwt_access_offline",
+						RefreshToken: "mock_jwt_refresh_offline",
+						UserID:       "u-mock-offline",
+						Username:     ident,
+						FullName:     "Offline User",
+						RoleCode:     "SUPER_ADMIN",
+						RoleCodes:    []string{"SUPER_ADMIN"},
+					}
+					if v.sessionStore != nil {
+						_ = v.sessionStore.Save(sess)
+					}
+					v.IsError = false
+					v.StatusText = "Authenticated (Offline Demo Mode)"
+					if v.onSuccess != nil {
+						v.onSuccess(sess)
+					}
+				} else {
+					v.IsError = true
+					v.StatusText = err.Error()
+					if v.window != nil {
+						ShowToast(v.window, "Sign In Failed", err.Error(), AlertDestructive, 3*time.Second)
+					}
+					v.render()
 				}
-				sess := &auth.AuthSession{
-					AccessToken:  resp.AccessToken,
-					RefreshToken: resp.RefreshToken,
-					UserID:       resp.UserID,
-					Username:     resp.Username,
-					FullName:     resp.FullName,
-					RoleCode:     role,
-					RoleCodes:    resp.RoleCodes,
-				}
-				if v.sessionStore != nil {
-					_ = v.sessionStore.Save(sess)
-				}
-				v.IsError = false
-				v.StatusText = "Authentication successful"
-				if v.onSuccess != nil {
-					v.onSuccess(sess)
-				}
-			} else if api.IsUnreachable(err) {
-				// Offline simulated login for local testing
-				sess := &auth.AuthSession{
-					AccessToken:  "mock_jwt_access_offline",
-					RefreshToken: "mock_jwt_refresh_offline",
-					UserID:       "u-mock-offline",
-					Username:     ident,
-					FullName:     "Offline User",
-					RoleCode:     "SUPER_ADMIN",
-					RoleCodes:    []string{"SUPER_ADMIN"},
-				}
-				if v.sessionStore != nil {
-					_ = v.sessionStore.Save(sess)
-				}
-				v.IsError = false
-				v.StatusText = "Authenticated (Offline Demo Mode)"
-				if v.onSuccess != nil {
-					v.onSuccess(sess)
-				}
-			} else {
-				v.IsError = true
-				v.StatusText = err.Error()
-				if v.window != nil {
-					ShowToast(v.window, "Sign In Failed", err.Error(), AlertDestructive, 3*time.Second)
-				}
-				v.render()
-			}
+			})
 		}()
 	})
 

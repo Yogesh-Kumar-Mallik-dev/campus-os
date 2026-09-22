@@ -276,15 +276,19 @@ func ShowCameraScannerModal(window fyne.Window, onTokenScanned func(token string
 		runner := getMockCameraRunner()
 		if runner != nil {
 			_ = runner(ctx, func(img image.Image) {
-				frameImg.Image = img
-				frameImg.Refresh()
+				fyne.Do(func() {
+					frameImg.Image = img
+					frameImg.Refresh()
+				})
 			}, func(tok string) {
-				if popup != nil {
-					popup.Hide()
-				}
-				if onTokenScanned != nil {
-					onTokenScanned(tok)
-				}
+				fyne.Do(func() {
+					if popup != nil {
+						popup.Hide()
+					}
+					if onTokenScanned != nil {
+						onTokenScanned(tok)
+					}
+				})
 			})
 			return
 		}
@@ -301,12 +305,16 @@ func ShowCameraScannerModal(window fyne.Window, onTokenScanned func(token string
 
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			statusLabel.SetText("Failed to access camera stream.")
+			fyne.Do(func() {
+				statusLabel.SetText("Failed to access camera stream.")
+			})
 			return
 		}
 
 		if err := cmd.Start(); err != nil {
-			statusLabel.SetText("Failed to start camera process.")
+			fyne.Do(func() {
+				statusLabel.SetText("Failed to start camera process.")
+			})
 			return
 		}
 		defer func() {
@@ -315,7 +323,9 @@ func ShowCameraScannerModal(window fyne.Window, onTokenScanned func(token string
 			}
 		}()
 
-		statusLabel.SetText("Align docket QR code within the viewfinder")
+		fyne.Do(func() {
+			statusLabel.SetText("Align docket QR code within the viewfinder")
+		})
 
 		buf := make([]byte, 8192)
 		var frameBuf bytes.Buffer
@@ -341,8 +351,10 @@ func ShowCameraScannerModal(window fyne.Window, onTokenScanned func(token string
 					img, decodeErr := jpeg.Decode(bytes.NewReader(jpegBytes))
 					if decodeErr == nil {
 						frameCount++
-						frameImg.Image = img
-						frameImg.Refresh()
+						fyne.Do(func() {
+							frameImg.Image = img
+							frameImg.Refresh()
+						})
 
 						// QR scanning
 						token, err := DecodeQRFromLoadedImage(img)
