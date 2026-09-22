@@ -47,19 +47,21 @@ var sectionCategories = map[DashboardSection]string{
 
 // DashboardView manages the master institutional dashboard shell.
 type DashboardView struct {
-	session        *auth.AuthSession
-	client         *api.Client
-	window         fyne.Window
-	sessionStore   auth.SessionStore
-	onLogout       func()
-	activeSection  DashboardSection
-	sidebarOpen    bool
-	isDark         bool
-	rootContainer  *fyne.Container
-	workspaceArea  *fyne.Container
-	breadcrumbPath *widget.Label
-	pingDot        *canvas.Circle
-	pingLabel      *widget.Label
+	session            *auth.AuthSession
+	client             *api.Client
+	window             fyne.Window
+	sessionStore       auth.SessionStore
+	onLogout           func()
+	activeSection      DashboardSection
+	sidebarOpen        bool
+	userToggledSidebar bool
+	windowWidth        float32
+	isDark             bool
+	rootContainer      *fyne.Container
+	workspaceArea      *fyne.Container
+	breadcrumbPath     *widget.Label
+	pingDot            *canvas.Circle
+	pingLabel          *widget.Label
 }
 
 // BLOCK_UI_DASHBOARD_NEW_001
@@ -82,8 +84,50 @@ func NewDashboardView(
 		isDark:        true,
 		workspaceArea: container.NewStack(),
 	}
+
+	if window != nil && window.Canvas() != nil {
+		sz := window.Canvas().Size()
+		d.windowWidth = sz.Width
+		if sz.Width > 0 && sz.Width < 950 {
+			d.sidebarOpen = false
+		}
+	}
+
 	d.buildShell()
 	return d
+}
+
+func (d *DashboardView) handleWindowResize(sz fyne.Size) {
+	if sz.Width <= 0 {
+		return
+	}
+	prevWidth := d.windowWidth
+	d.windowWidth = sz.Width
+
+	wasCompact := prevWidth > 0 && prevWidth < 950
+	isCompact := sz.Width < 950
+
+	shouldCollapseSidebar := sz.Width < 950
+	sidebarStateChanged := false
+	if !d.userToggledSidebar {
+		if shouldCollapseSidebar && d.sidebarOpen {
+			d.sidebarOpen = false
+			sidebarStateChanged = true
+		} else if !shouldCollapseSidebar && !d.sidebarOpen {
+			d.sidebarOpen = true
+			sidebarStateChanged = true
+		}
+	}
+
+	wasVeryNarrow := prevWidth > 0 && prevWidth < 550
+	isVeryNarrow := sz.Width < 550
+
+	if wasCompact != isCompact || sidebarStateChanged || wasVeryNarrow != isVeryNarrow || prevWidth == 0 {
+		d.buildShell()
+		if d.window != nil && d.window.Canvas() != nil {
+			d.window.Canvas().Refresh(d.rootContainer)
+		}
+	}
 }
 
 // CanvasObject returns the renderable dashboard canvas tree.
@@ -119,25 +163,26 @@ func (d *DashboardView) buildShell() {
 	// Split view: Sidebar on left (rail or expanded), workspace taking the rest
 	splitContent := container.NewBorder(nil, nil, sidebar, nil, d.workspaceArea)
 
+	inner := container.NewBorder(
+		topBar,
+		nil, nil, nil,
+		splitContent,
+	)
+
 	if d.rootContainer == nil {
-		d.rootContainer = container.NewBorder(
-			topBar,
-			nil, nil, nil,
-			splitContent,
+		d.rootContainer = container.New(
+			NewResizeNotifierLayout(func(sz fyne.Size) {
+				d.handleWindowResize(sz)
+			}),
+			inner,
 		)
 	} else {
-		d.rootContainer.Objects = []fyne.CanvasObject{
-			container.NewBorder(
-				topBar,
-				nil, nil, nil,
-				splitContent,
-			),
-		}
+		d.rootContainer.Objects = []fyne.CanvasObject{inner}
 	}
 }
 
 // buildTopBar creates the top navigation bar matching the specified layout:
-// Left: Hamburger toggle + BBDIT Logo + Dynamic Breadcrumbs
+// Left: Hamburger toggle + BBDIT Logo (+ Dynamic Breadcrumbs on desktop)
 // Center: Omni-Search Bar (Ctrl+K trigger)
 // Right: Academic Term pill + Live UDS ping + Theme toggle + User Profile badge + Sign out
 func (d *DashboardView) buildTopBar() fyne.CanvasObject {
@@ -145,9 +190,12 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 	bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
 	bg.StrokeWidth = 1
 
-	// Left: Hamburger toggle + BBDIT Header Logo + Breadcrumb
+	isCompact := d.windowWidth > 0 && d.windowWidth < 950
+
+	// Left: Hamburger toggle + BBDIT Header Logo (+ Breadcrumb on desktop)
 	hamburgerIcon := ResourceFromSVG("menu.svg", LucideMenu)
 	hamburgerBtn := widget.NewButtonWithIcon("", hamburgerIcon, func() {
+		d.userToggledSidebar = true
 		d.sidebarOpen = !d.sidebarOpen
 		d.buildShell()
 		if d.window != nil && d.window.Canvas() != nil {
@@ -158,37 +206,41 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 
 	logoImg := RenderBBDITHeaderLogo(120, 24)
 
-	d.breadcrumbPath = widget.NewLabelWithStyle(
-		fmt.Sprintf("Campus OS  ›  Executive Portal  ›  %s", sectionTitles[d.activeSection]),
-		fyne.TextAlignLeading,
-		fyne.TextStyle{Bold: true},
-	)
-
-	leftCluster := container.NewHBox(
-		hamburgerBtn,
-		logoImg,
-		NewShadcnSeparator(false),
-		d.breadcrumbPath,
-	)
+	var leftCluster *fyne.Container
+	if !isCompact {
+		d.breadcrumbPath = widget.NewLabelWithStyle(
+			fmt.Sprintf("Campus OS  ›  Executive Portal  ›  %s", sectionTitles[d.activeSection]),
+			fyne.TextAlignLeading,
+			fyne.TextStyle{Bold: true},
+		)
+		leftCluster = container.NewHBox(
+			hamburgerBtn,
+			logoImg,
+			NewShadcnSeparator(false),
+			d.breadcrumbPath,
+		)
+	} else {
+		leftCluster = container.NewHBox(
+			hamburgerBtn,
+			logoImg,
+		)
+	}
 
 	// Center: Global Omni-Search Trigger
 	searchIcon := ResourceFromSVG("search.svg", LucideSearch)
-	searchBtn := NewShadcnButton("Search scholars, staff, departments (Ctrl+K)...", ButtonOutline, ButtonSizeSm, searchIcon, func() {
+	searchLabel := "Search scholars, staff, departments (Ctrl+K)..."
+	if isCompact {
+		searchLabel = "Ctrl+K"
+	}
+	searchBtn := NewShadcnButton(searchLabel, ButtonOutline, ButtonSizeSm, searchIcon, func() {
 		if d.window != nil {
 			ShowToast(d.window, "Omni-Search Triggered", "Global Institutional Search palette active.", AlertDefault, 2*time.Second)
 		}
 	})
 
 	// Right: Academic Term + UDS Heartbeat Ping + Theme Toggle + User Profile Badge + Logout
-	termIcon := ResourceFromSVG("cal.svg", LucideCalendar)
-	termImg := RenderSVGImage(termIcon, 16, 16)
-	termLabel := widget.NewLabel("Fall 2026 • Term A")
-	termPill := container.NewHBox(termImg, termLabel)
-
 	d.pingDot = canvas.NewCircle(color.NRGBA{R: 16, G: 185, B: 129, A: 255})
 	d.pingDot.Resize(fyne.NewSize(8, 8))
-	d.pingLabel = widget.NewLabel("Live (UDS)")
-	pingCluster := container.NewHBox(container.NewCenter(d.pingDot), d.pingLabel)
 
 	themeIcon := ResourceFromSVG("sun.svg", LucideSun)
 	themeBtn := widget.NewButtonWithIcon("", themeIcon, func() {
@@ -211,22 +263,44 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 			roleName = d.session.RoleCode
 		}
 	}
-	roleBadge := NewBadge(fmt.Sprintf("%s (%s)", userName, roleName), BadgeDefault, BadgeShapePill)
 
 	logoutBtn := NewShadcnButton("Sign Out", ButtonOutline, ButtonSizeSm, ResourceFromSVG("logout.svg", LucideLogOut), func() {
 		d.handleLogout()
 	})
 
-	rightCluster := container.NewHBox(
-		termPill,
-		NewShadcnSeparator(false),
-		pingCluster,
-		NewShadcnSeparator(false),
-		themeBtn,
-		NewShadcnSeparator(false),
-		roleBadge,
-		logoutBtn,
-	)
+	var rightCluster *fyne.Container
+	if !isCompact {
+		termIcon := ResourceFromSVG("cal.svg", LucideCalendar)
+		termImg := RenderSVGImage(termIcon, 16, 16)
+		termLabel := widget.NewLabel("Fall 2026 • Term A")
+		termPill := container.NewHBox(termImg, termLabel)
+
+		d.pingLabel = widget.NewLabel("Live (UDS)")
+		pingCluster := container.NewHBox(container.NewCenter(d.pingDot), d.pingLabel)
+		roleBadge := NewBadge(fmt.Sprintf("%s (%s)", userName, roleName), BadgeDefault, BadgeShapePill)
+
+		rightCluster = container.NewHBox(
+			termPill,
+			NewShadcnSeparator(false),
+			pingCluster,
+			NewShadcnSeparator(false),
+			themeBtn,
+			NewShadcnSeparator(false),
+			roleBadge,
+			logoutBtn,
+		)
+	} else {
+		// Compact mode: essentials guaranteed to fit in half-screen width
+		pingCluster := container.NewCenter(d.pingDot)
+		roleBadge := NewBadge(roleName, BadgeDefault, BadgeShapePill)
+
+		rightCluster = container.NewHBox(
+			pingCluster,
+			themeBtn,
+			roleBadge,
+			logoutBtn,
+		)
+	}
 
 	topBarContent := container.NewBorder(
 		nil, nil,
@@ -237,6 +311,7 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 
 	return container.NewStack(bg, container.NewPadded(topBarContent))
 }
+
 
 // buildSidebar creates the responsive navigation:
 // - Expanded (240px width): Grouped categories with titles, full labels, and badges.
@@ -434,7 +509,17 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 	kpi3 := NewMetricCard("Pending Presidential Approvals", "3 Decisions", "• Chairperson Clearance Required", LucideClock, BadgeWarning)
 	kpi4 := NewMetricCard("Staff & Faculty Present", "142 / 148", "• 95.9% Today • 100% Cryptographically Verified", LucideBadgeCheck, BadgeSecondary)
 
-	kpiGrid := container.NewGridWithColumns(4, kpi1, kpi2, kpi3, kpi4)
+	kpiCols := 4
+	panelCols := 2
+	if d.windowWidth > 0 && d.windowWidth < 900 {
+		kpiCols = 2
+		panelCols = 1
+		if d.windowWidth < 550 {
+			kpiCols = 1
+		}
+	}
+
+	kpiGrid := container.NewGridWithColumns(kpiCols, kpi1, kpi2, kpi3, kpi4)
 
 	// Left Panel: Pending Approvals Queue
 	app1Btn := NewShadcnButton("Approve", ButtonDefault, ButtonSizeSm, WhiteResourceFromSVG("app1.svg", LucideCheckCircle2), func() {
@@ -501,7 +586,7 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 		),
 	})
 
-	panelsGrid := container.NewGridWithColumns(2, approvalsCard, activityCard)
+	panelsGrid := container.NewGridWithColumns(panelCols, approvalsCard, activityCard)
 
 	// Quick Actions Bar
 	issueQRBtn := NewShadcnButton("Provision Executive QR Docket", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("qr_act.svg", LucideQrCode), func() {
@@ -517,7 +602,7 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 		d.SetSection(SectionSettings)
 	})
 
-	actionBar := container.NewHBox(issueQRBtn, auditBtn, deptBtn, settingsBtn)
+	actionBar := container.New(NewFlowLayout(8), issueQRBtn, auditBtn, deptBtn, settingsBtn)
 
 	contentBody := container.NewVBox(
 		header,
