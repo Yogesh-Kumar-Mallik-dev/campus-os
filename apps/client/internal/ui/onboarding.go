@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -17,6 +18,21 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
 )
+
+// sanitizeUIError normalizes raw transport/dial errors into clear institutional messages.
+func sanitizeUIError(err error, fallback string) string {
+	if err == nil {
+		return fallback
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "dial unix") || strings.Contains(msg, "transport: Error while dialing") || strings.Contains(msg, "Database Persistence Offline") {
+		return "Database persistence service is unavailable. Please verify the persistence daemon is running."
+	}
+	if strings.Contains(msg, "backend unreachable") || strings.Contains(msg, "connection refused") {
+		return "Backend server is unreachable. Please verify the backend service is running."
+	}
+	return msg
+}
 
 // OnboardingStep enumerates the wizard progression states.
 type OnboardingStep int
@@ -387,11 +403,7 @@ func (w *OnboardingWizard) renderScanStep() {
 					w.SetStep(StepSIMVerify)
 				} else {
 					w.IsError = true
-					if err != nil {
-						w.StatusText = err.Error()
-					} else {
-						w.StatusText = "Invalid Claim Token: The token is expired, consumed, or invalid."
-					}
+					w.StatusText = sanitizeUIError(err, "Invalid Claim Token: The token is expired, consumed, or invalid.")
 					w.toast("Validation Failed", w.StatusText, AlertDestructive)
 					w.render()
 				}
@@ -498,8 +510,8 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 					w.SetStep(StepReviewProfile)
 				} else {
 					w.IsError = true
-					w.StatusText = err.Error()
-					w.toast("Verification Failed", err.Error(), AlertDestructive)
+					w.StatusText = sanitizeUIError(err, "SIM hardware carrier verification failed")
+					w.toast("Verification Failed", w.StatusText, AlertDestructive)
 					w.render()
 				}
 			})
@@ -756,11 +768,7 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 					w.SetStep(StepComplete)
 				} else {
 					w.IsError = true
-					if err != nil {
-						w.StatusText = err.Error()
-					} else {
-						w.StatusText = "Account activation failed"
-					}
+					w.StatusText = sanitizeUIError(err, "Account activation failed")
 					w.toast("Activation Failed", w.StatusText, AlertDestructive)
 					w.render()
 				}

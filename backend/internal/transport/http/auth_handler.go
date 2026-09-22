@@ -6,7 +6,42 @@ import (
 	"strings"
 
 	campusv1 "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/pkg/proto/campus/v1"
+	"google.golang.org/grpc/codes"
+	grpcStatus "google.golang.org/grpc/status"
 )
+
+// mapGRPCError translates gRPC transport and status errors into clean RFC 7807 problem details
+// preventing internal unix domain socket paths or raw transport traces from leaking to clients.
+func mapGRPCError(err error, fallbackCode, fallbackTitle string) (int, string, string, string) {
+	if err == nil {
+		return http.StatusOK, "", "", ""
+	}
+	st, ok := grpcStatus.FromError(err)
+	if ok {
+		switch st.Code() {
+		case codes.Unavailable:
+			return http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "Database Persistence Offline", "Unable to connect to local database persistence layer. Please ensure the database daemon is active."
+		case codes.DeadlineExceeded:
+			return http.StatusGatewayTimeout, "PERSISTENCE_TIMEOUT", "Database Request Timeout", "The database persistence layer timed out processing your request."
+		case codes.NotFound:
+			return http.StatusNotFound, "NOT_FOUND", fallbackTitle, st.Message()
+		case codes.AlreadyExists:
+			return http.StatusConflict, "ALREADY_EXISTS", fallbackTitle, st.Message()
+		case codes.PermissionDenied:
+			return http.StatusForbidden, "PERMISSION_DENIED", fallbackTitle, st.Message()
+		case codes.Unauthenticated:
+			return http.StatusUnauthorized, "UNAUTHENTICATED", fallbackTitle, st.Message()
+		case codes.InvalidArgument:
+			return http.StatusBadRequest, "INVALID_ARGUMENT", fallbackTitle, st.Message()
+		}
+		return http.StatusInternalServerError, fallbackCode, fallbackTitle, st.Message()
+	}
+	errMsg := err.Error()
+	if strings.Contains(errMsg, "dial unix") || strings.Contains(errMsg, "connection error") || strings.Contains(errMsg, "no such file or directory") {
+		return http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "Database Persistence Offline", "Unable to connect to local database persistence layer. Please ensure the database daemon is active."
+	}
+	return http.StatusInternalServerError, fallbackCode, fallbackTitle, errMsg
+}
 
 // AuthHTTPHandler maps incoming HTTP onboarding and login requests to the gRPC AuthService.
 type AuthHTTPHandler struct {
@@ -38,7 +73,8 @@ func (h *AuthHTTPHandler) HandleValidateClaim(w http.ResponseWriter, r *http.Req
 		ClaimToken: body.ClaimToken,
 	})
 	if err != nil {
-		WriteProblem(w, r, http.StatusInternalServerError, "CLAIM_VALIDATION_FAILED", "Claim Validation Error", err.Error(), nil)
+		status, code, title, detail := mapGRPCError(err, "CLAIM_VALIDATION_FAILED", "Claim Validation Error")
+		WriteProblem(w, r, status, code, title, detail, nil)
 		return
 	}
 
@@ -85,7 +121,8 @@ func (h *AuthHTTPHandler) HandleVerifySIM(w http.ResponseWriter, r *http.Request
 		DeviceCarrierPhone: body.DeviceCarrierPhone,
 	})
 	if err != nil {
-		WriteProblem(w, r, http.StatusInternalServerError, "SIM_VERIFY_FAILED", "SIM Verification Error", err.Error(), nil)
+		status, code, title, detail := mapGRPCError(err, "SIM_VERIFY_FAILED", "SIM Verification Error")
+		WriteProblem(w, r, status, code, title, detail, nil)
 		return
 	}
 
@@ -134,7 +171,8 @@ func (h *AuthHTTPHandler) HandleCompleteClaim(w http.ResponseWriter, r *http.Req
 		EnableBiometrics: body.EnableBiometrics,
 	})
 	if err != nil {
-		WriteProblem(w, r, http.StatusBadRequest, "CLAIM_COMPLETION_FAILED", "Claim Failed", err.Error(), nil)
+		status, code, title, detail := mapGRPCError(err, "CLAIM_COMPLETION_FAILED", "Claim Failed")
+		WriteProblem(w, r, status, code, title, detail, nil)
 		return
 	}
 
@@ -173,7 +211,11 @@ func (h *AuthHTTPHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		TotpCode:   body.TOTPCode,
 	})
 	if err != nil {
-		WriteProblem(w, r, http.StatusUnauthorized, "LOGIN_FAILED", "Invalid Credentials", "Incorrect username or password", nil)
+		status, code, title, detail := mapGRPCError(err, "LOGIN_FAILED", "Invalid Credentials")
+		if status == http.StatusInternalServerError {
+			status = http.StatusUnauthorized
+		}
+		WriteProblem(w, r, status, code, title, detail, nil)
 		return
 	}
 
@@ -208,7 +250,11 @@ func (h *AuthHTTPHandler) HandleRefresh(w http.ResponseWriter, r *http.Request) 
 		RefreshToken: body.RefreshToken,
 	})
 	if err != nil {
-		WriteProblem(w, r, http.StatusUnauthorized, "REFRESH_FAILED", "Refresh Failed", err.Error(), nil)
+		status, code, title, detail := mapGRPCError(err, "REFRESH_FAILED", "Refresh Failed")
+		if status == http.StatusInternalServerError {
+			status = http.StatusUnauthorized
+		}
+		WriteProblem(w, r, status, code, title, detail, nil)
 		return
 	}
 
@@ -282,7 +328,8 @@ func (h *AuthHTTPHandler) HandleGenerateExecutiveQR(w http.ResponseWriter, r *ht
 		PhoneNumber: body.PhoneNumber,
 	})
 	if err != nil {
-		WriteProblem(w, r, http.StatusInternalServerError, "EXEC_QR_FAILED", "Failed to generate executive QR", err.Error(), nil)
+		status, code, title, detail := mapGRPCError(err, "EXEC_QR_FAILED", "Failed to generate executive QR")
+		WriteProblem(w, r, status, code, title, detail, nil)
 		return
 	}
 

@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	campusv1 "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/pkg/proto/campus/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	grpcStatus "google.golang.org/grpc/status"
 )
 
 // MockAuthServiceClient implements campusv1.AuthServiceClient for unit testing.
@@ -225,5 +228,40 @@ func TestAuthHTTPHandler_GenerateExecutiveQR(t *testing.T) {
 
 	if vRec.Code != http.StatusOK {
 		t.Fatalf("expected 200 for valid executive QR, got %d: %s", vRec.Code, vRec.Body.String())
+	}
+}
+
+// BLOCK_AUTH_HTTP_TEST_005
+// Purpose: Verifies gRPC Unavailable and socket dial failures map to 503 and do not leak socket paths.
+func TestAuthHTTPHandler_UnavailablePersistence(t *testing.T) {
+	mockClient := &MockAuthServiceClient{
+		ValidateClaimTokenFunc: func(ctx context.Context, in *campusv1.ValidateClaimTokenRequest, opts ...grpc.CallOption) (*campusv1.ValidateClaimTokenResponse, error) {
+			return nil, grpcStatus.Error(codes.Unavailable, "transport: Error while dialing: dial unix /tmp/campus-os-dev.sock: connect: no such file or directory")
+		},
+	}
+	handler := NewAuthHTTPHandler(mockClient)
+
+	reqBody, _ := json.Marshal(map[string]string{"claim_token": "any_tok"})
+	req := httptest.NewRequest("POST", "/api/v1/auth/claim/validate", bytes.NewReader(reqBody))
+	rec := httptest.NewRecorder()
+	handler.HandleValidateClaim(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 for unavailable persistence layer, got %d", rec.Code)
+	}
+
+	var prob ProblemDetails
+	if err := json.NewDecoder(rec.Body).Decode(&prob); err != nil {
+		t.Fatalf("failed to decode problem details: %v", err)
+	}
+
+	if prob.Code != "SERVICE_UNAVAILABLE" {
+		t.Errorf("expected code SERVICE_UNAVAILABLE, got %s", prob.Code)
+	}
+	if prob.Title != "Database Persistence Offline" {
+		t.Errorf("expected title Database Persistence Offline, got %s", prob.Title)
+	}
+	if strings.Contains(prob.Detail, "/tmp/campus-os-dev.sock") {
+		t.Errorf("problem detail must not leak internal socket path, got %s", prob.Detail)
 	}
 }

@@ -11,4 +11,5 @@ export PORT="${PORT:-8080}"
 export ENV="${ENV:-development}"
 
 echo "==> [dev:backend] Launching Go Logical Backend on :$PORT (Socket: $DB_SOCKET_PATH)..."
-(cd "$SCRIPT_DIR/backend" && DB_SOCKET_PATH="$DB_SOCKET_PATH" PORT="$PORT" ENV="$ENV" go run ./cmd/server "$@")
+cd "$SCRIPT_DIR/backend"
+exec go run ./cmd/server "$@"

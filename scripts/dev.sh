@@ -115,8 +115,11 @@ case "$SUBCOMMAND" in
         kill -KILL "$CLIENT_PID" 2>/dev/null || true
       fi
 
-      # 6. Unlink domain socket
+      # 6. Unlink domain socket & reclaim port
       rm -f "$SOCKET_PATH"
+      if lsof -ti:"$PORT" >/dev/null 2>&1; then
+        lsof -ti:"$PORT" | xargs -r kill -9 2>/dev/null || true
+      fi
 
       echo "========================================================================"
       echo "  [dev] Graceful shutdown complete. All resources cleanly released."
@@ -124,6 +127,13 @@ case "$SUBCOMMAND" in
       exit 0
     }
     trap cleanup EXIT INT TERM
+
+    # Ensure port $PORT is free from any previous stale/zombie backend instances
+    if lsof -ti:"$PORT" >/dev/null 2>&1; then
+      echo "==> [dev] Port $PORT is occupied by a stale process. Reclaiming port..."
+      lsof -ti:"$PORT" | xargs -r kill -9 2>/dev/null || true
+      sleep 0.5
+    fi
 
     # 3. Start PostgreSQL Container
     echo "==> [dev] Ensuring Campus OS PostgreSQL database is running (Port: $POSTGRES_PORT)..."
@@ -138,6 +148,11 @@ case "$SUBCOMMAND" in
     # Wait for socket to become ready
     echo "==> [dev] Waiting for DB layer socket to initialize at $SOCKET_PATH..."
     for i in {1..50}; do
+      if ! kill -0 "$DB_PID" 2>/dev/null; then
+        echo "Error: TypeScript DB layer exited prematurely (PID: $DB_PID)."
+        cleanup
+        exit 1
+      fi
       if [ -S "$SOCKET_PATH" ]; then
         break
       fi
@@ -146,6 +161,7 @@ case "$SUBCOMMAND" in
 
     if [ ! -S "$SOCKET_PATH" ]; then
       echo "Error: TypeScript DB layer socket failed to bind at $SOCKET_PATH"
+      cleanup
       exit 1
     fi
     echo "==> [dev] TypeScript DB layer ready."
@@ -157,12 +173,25 @@ case "$SUBCOMMAND" in
 
     # Wait for backend health
     echo "==> [dev] Waiting for HTTP API on ${CAMPUS_BACKEND_URL}/healthz..."
+    BACKEND_READY=false
     for i in {1..50}; do
+      if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+        echo "Error: Go logical backend exited prematurely (PID: $BACKEND_PID)."
+        cleanup
+        exit 1
+      fi
       if curl -s "${CAMPUS_BACKEND_URL}/healthz" >/dev/null 2>&1; then
+        BACKEND_READY=true
         break
       fi
       sleep 0.2
     done
+
+    if [ "$BACKEND_READY" != true ]; then
+      echo "Error: Timed out waiting for Go backend healthz endpoint at ${CAMPUS_BACKEND_URL}/healthz"
+      cleanup
+      exit 1
+    fi
     echo "==> [dev] Go backend ready."
 
     # Check for headless flag

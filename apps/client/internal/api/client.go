@@ -26,6 +26,19 @@ type ProblemDetails struct {
 	Code     string `json:"code"`
 }
 
+// IsPersistenceUnavailable returns true if the error indicates that the database layer is down/unreachable.
+func IsPersistenceUnavailable(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "SERVICE_UNAVAILABLE") ||
+		strings.Contains(msg, "Database Persistence Offline") ||
+		strings.Contains(msg, "persistence layer is currently unreachable") ||
+		strings.Contains(msg, "dial unix") ||
+		strings.Contains(msg, "status 503")
+}
+
 // IsUnreachable returns true if the error indicates network or connection failure to the backend.
 func IsUnreachable(err error) bool {
 	if err == nil {
@@ -35,7 +48,8 @@ func IsUnreachable(err error) bool {
 	return strings.Contains(msg, "backend unreachable") ||
 		strings.Contains(msg, "connection refused") ||
 		strings.Contains(msg, "no such host") ||
-		strings.Contains(msg, "context deadline exceeded")
+		strings.Contains(msg, "context deadline exceeded") ||
+		IsPersistenceUnavailable(err)
 }
 
 func parseHTTPError(resp *http.Response, defaultMsg string) error {
@@ -45,6 +59,9 @@ func parseHTTPError(resp *http.Response, defaultMsg string) error {
 			return fmt.Errorf("%s: %s", prob.Title, prob.Detail)
 		}
 		return fmt.Errorf("%s", prob.Detail)
+	}
+	if resp.StatusCode == http.StatusServiceUnavailable {
+		return fmt.Errorf("Database Persistence Offline: The persistence daemon is unreachable (status 503)")
 	}
 	return fmt.Errorf("%s (status %d)", defaultMsg, resp.StatusCode)
 }
