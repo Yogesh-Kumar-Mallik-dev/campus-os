@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"os"
 	"strings"
 	"testing"
 
@@ -83,5 +84,24 @@ func TestDecodeQRFromImage_RealQRCode(t *testing.T) {
 		t.Errorf("expected 'claim_genesis_valid_12345', got '%s'", token)
 	}
 }
+
+func TestDecodeQRFromImage_GenesisDocketFile(t *testing.T) {
+	file, err := os.Open("../../../../genesis_docket.png")
+	if err != nil {
+		t.Skip("genesis_docket.png not present in repo root")
+	}
+	defer file.Close()
+
+	token, err := DecodeQRFromImage(file)
+	if err != nil {
+		t.Fatalf("failed to decode genesis_docket.png: %v", err)
+	}
+
+	if !strings.HasPrefix(token, "claim_genesis_") {
+		t.Errorf("expected token starting with claim_genesis_, got %q", token)
+	}
+	t.Logf("Successfully decoded genesis_docket.png token: %s", token)
+}
+
 
 

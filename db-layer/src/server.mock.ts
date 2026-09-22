@@ -90,11 +90,6 @@ export function createMockServer(): grpc.Server {
     },
 
     VerifySIMAndSendOTP: (call: any, cb: any) => {
-      const { device_carrier_phone } = call.request;
-      const isMatch = Boolean(device_carrier_phone && device_carrier_phone.endsWith('43210'));
-      if (!isMatch) {
-        return cb(null, { sim_matched: false, otp_challenge_id: '', resend_available_in_seconds: 0 });
-      }
       cb(null, {
         sim_matched: true,
         otp_challenge_id: 'otp_mock_challenge_123',

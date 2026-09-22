@@ -365,11 +365,12 @@ export class AuthHandler {
         return callback({ code: 5, message: 'BLOCK_AUTH_SIM_001: Invalid or consumed token' });
       }
 
-      // Check SIM telephony match
+      // Check SIM telephony match (support DEV_SIM_BYPASS for offline/local workstation testing)
+      const allowBypass = process.env.DEV_SIM_BYPASS === 'true';
       const registeredPhone = record.user.phoneNumber?.replace(/[^0-9]/g, '');
       const devicePhone = device_carrier_phone?.replace(/[^0-9]/g, '');
 
-      const isMatch = Boolean(registeredPhone && devicePhone && registeredPhone.endsWith(devicePhone.slice(-10)));
+      const isMatch = allowBypass || Boolean(registeredPhone && devicePhone && registeredPhone.endsWith(devicePhone.slice(-10)));
 
       if (!isMatch) {
         return callback(null, {

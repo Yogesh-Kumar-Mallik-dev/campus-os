@@ -7,6 +7,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export SOCKET_PATH="${SOCKET_PATH:-/tmp/campus-os-dev.sock}"
+export DEV_SIM_BYPASS="${DEV_SIM_BYPASS:-true}"
 
 echo "==> [dev:db] Launching TypeScript DB Layer with tsx watcher on $SOCKET_PATH..."
-(cd "$SCRIPT_DIR/db-layer" && SOCKET_PATH="$SOCKET_PATH" pnpm run dev "$@")
+(cd "$SCRIPT_DIR/db-layer" && SOCKET_PATH="$SOCKET_PATH" DEV_SIM_BYPASS="$DEV_SIM_BYPASS" pnpm run dev "$@")
+

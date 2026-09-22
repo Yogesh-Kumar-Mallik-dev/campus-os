@@ -502,6 +502,15 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 		}()
 	})
 
+	bypassBtn := NewShadcnButton("Bypass SIM Handshake (Dev Mode)", ButtonGhost, ButtonSizeDefault, ResourceFromSVG("check.svg", LucideCheckCircle2), func() {
+		w.OTPChallengeID = "mock_otp_challenge_123"
+		w.OTPCode = "123456"
+		w.IsError = false
+		w.StatusText = "SIM Handshake bypassed in development mode."
+		w.toast("SIM Bypassed (Dev)", "Proceeding directly to dossier verification.", AlertSuccess)
+		w.SetStep(StepReviewProfile)
+	})
+
 	simCard := NewShadcnCard(CardParts{
 		Badge:       NewBadge("STEP 2 OF 4", BadgeDefault, BadgeShapePill),
 		Title:       "Device SIM & Telephony Handshake",
@@ -514,7 +523,11 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 			NewShadcnSeparator(true),
 			otpField,
 		),
-		Footer: verifyBtn,
+		Footer: container.NewVBox(
+			verifyBtn,
+			NewShadcnSeparator(true),
+			bypassBtn,
+		),
 	})
 
 	w.content.Add(simCard)

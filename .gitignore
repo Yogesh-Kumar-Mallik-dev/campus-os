@@ -64,3 +64,6 @@ pgdata/
 
 # Generated Protobuf / Buf Cache (keep committed stubs if tracked, ignore local caches)
 .buf/
+
+# Generated Runtime Dockets
+*docket.png
