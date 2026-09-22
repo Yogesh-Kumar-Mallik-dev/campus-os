@@ -98,16 +98,29 @@ flowchart TD
   * Active profile pill displaying Full Name and role badge (`SUPER ADMIN`).
   * Logout action trigger.
 
-### 4.2 Sidebar Navigation (Super Admin / Chairperson)
+#### 4.2 Sidebar Navigation (Super Admin / Chairperson)
 
 * **Desktop Geometry:** Fixed width of `220px` with vertical divider.
-* **Compact / Mobile Geometry:** Slides out as an animated drawer when the hamburger icon is tapped.
+* **Compact / Mobile Geometry:** Slides out as a left-docked animated drawer when the hamburger icon is tapped.
+* **Mobile Drawer Accessibility:**
+  * Docked to the left screen edge (no centered floating).
+  * Darkened semi-transparent backdrop overlay (`#00000088`).
+  * Dismissible via clicking the backdrop or pressing the `Escape` key.
 * **Navigation Items:**
   1. **Executive Overview** (`LucideLayoutDashboard`): High-level stats, institutional pulse, quick queues.
   2. **Academic Structure** (`LucideGraduationCap`): Faculties, Departments, Courses, Curriculums, Semesters.
   3. **Governance & Approvals** (`LucideGitPullRequest`): Presidential sign-offs, policy threshold votes, escalations.
   4. **Audit Ledger** (`LucideShieldCheck`): Immutable cryptographic log of enrollments, outpasses, mark changes.
   5. **Executive Credentialing** (`LucideKeyRound` / `LucideQrCode`): Provision sealed access QR tokens for Dean, Registrar, Director, and Executive Director.
+
+### 4.3 Accessible Modal Overlay Architecture (`ShowModal`)
+
+* **Universal Dialog Wrapper:** Standardizes all alert, confirmation, camera, and overflow action dialogs.
+* **Dismissal Ergonomics:**
+  * `CloseOnEsc`: Enabled by default; listening on window keyboard events.
+  * `CloseOnBackdropClick`: Enabled by default; tapping the scrim closes the dialog.
+  * Can be deliberately disabled for mandatory wizard steps.
+* **Responsive Width Clamping:** Automatically scales dialog container width between `min(screenWidth - 32px, 560px)` to avoid clipping on mobile devices.
 
 ---
 
@@ -117,14 +130,14 @@ Below the TopBar and inside the main canvas, the **Executive Overview** presents
 
 ### 5.1 The 4 Primary Executive KPI Cards
 
-Responsive 4-column luminous glass card grid:
+Responsive multi-column luminous glass card grid with dynamic wrapping (`AdaptiveGridLayout` / `FlowLayout`) and `TextWrapWord` subtitles:
 
 1. **Total Scholars:** e.g., `1,420 Enrolled` (`98.4% Active Status`)
 2. **Academic Departments:** e.g., `8 Active` (`34 Hosted Semesters`)
 3. **Pending Presidential Approvals:** e.g., `3 Requiring Chairperson Signature`
 4. **Total Staff & Faculty:** e.g., `142 Active Officers & Educators`
 
-### 5.2 Content Panels
+### 5.2 Content Panels & Quick Actions
 
 * **Panel 1 (Left): Pending Executive Approvals Queue**
   * Displays urgent workflows requiring Chairperson's decisive action (e.g., Department budget requests, faculty appointments, student expulsion hearings).
@@ -133,7 +146,7 @@ Responsive 4-column luminous glass card grid:
 * **Quick Actions Bar:**
   * Shortcuts: *"Provision Executive QR Docket"*, *"Inspect Audit Ledger"*, *"Review Department Status"*.
 
-### 3.3 Optical Camera QR Scanner & Local Permissions
+### 5.3 Optical Camera QR Scanner & Local Permissions
 
 * **Permission Governance:** Before initiating camera hardware capture, the client presents a themed modal dialog in full stylistic alignment with Design System 2026.
 * **Local Persistence:** The user's permission choice (`prompt`, `granted`, or `denied`) is persistently stored on disk in `~/.config/campus-os/preferences.json` (0600 file mode). Once granted, subsequent scans bypass the prompt.
@@ -142,38 +155,16 @@ Responsive 4-column luminous glass card grid:
 
 ---
 
-## 4. Design System 2026 Client Aesthetics
+## 6. Local Development Orchestration & IPC Isolation
 
-(Theme, components, tokens)
-
----
-
-## 5. Base Dashboard Shell Layout (Design System 2026)
-
-### 5.1 Desktop & Responsive Layout
-
-* **TopBar Layout:**
-  * Left: BBDIT institutional logo and application name.
-  * Center: Active page title (e.g. "Executive Overview").
-  * Right: Theme toggle (Dark/Light), backend live status indicator, profile badge, and sign out button.
-  * Mobile / Narrow Screens: Hamburger menu button displayed on the far left to toggle the navigation drawer.
-* **Navigation Sidebar:** Fixed 220px desktop sidebar with institutional navigation routes.
-* **KPI Metrics (4 Cards):**
-  1. Active Students
-  2. Faculty Present
-  3. Real-Time Occupancy
-  4. Total Staff
-
-### 5.2 Content Panels & Quick Actions
-
-* **Panel 1 (Left): Pending Executive Approvals Queue**
-* **Panel 2 (Right): Recent Institutional Activity & Audit Stream**
-* **Quick Actions Bar:**
-  * Action #5: *"Create Access QR Token for Dean, Registrar, Director, and Executive Director"* (Phase 2).
+* **Automated Port Reclamation:** [`scripts/dev.sh`](file:///home/yogesh/campus_os/scripts/dev.sh) detects and cleanly reclaims `$PORT` (`8080`) from stale/zombie processes before bootstrapping services.
+* **Strict Crash Detection:** Backend and DB layer processes are verified synchronously with PID-liveness checks, preventing false-positive readiness reporting.
+* **Process Group Propagation:** [`scripts/dev.backend.sh`](file:///home/yogesh/campus_os/scripts/dev.backend.sh) executes via `exec` for direct POSIX signal handling.
+* **IPC Boundary Error Sanitization:** The Go backend translates internal gRPC dial failures and `codes.Unavailable` into HTTP 503 (`SERVICE_UNAVAILABLE`) RFC 7807 problem details, preventing Unix domain socket paths from ever leaking to clients.
 
 ---
 
-## 6. Implementation Checklist & Quality Standards
+## 7. Implementation Checklist & Quality Standards
 
 * [x] Add printable high-resolution docket file export to `runBootstrapCLI` in `backend/cmd/server/main.go`.
 * [x] Implement `KeyringSessionStore` with OS Keyring integration in `apps/client/internal/auth/`.
@@ -181,6 +172,9 @@ Responsive 4-column luminous glass card grid:
 * [x] Implement `DashboardShell`, `DashboardTopBar`, and fixed `SidebarNav` in `apps/client/internal/ui/dashboard.go`.
 * [x] Implement `MetricCard` and Executive Overview panels in `apps/client/internal/ui/dashboard.go`.
 * [x] Implement live optical camera QR scanner with thematic permission modal and local persistence in `apps/client/internal/ui/camera.go`.
+* [x] Implement left-docked mobile navigation drawer with backdrop and ESC dismissal in `apps/client/internal/ui/dashboard.go`.
+* [x] Implement universal accessible modal overlay architecture (`ShowModal`) in `apps/client/internal/ui/modal.go`.
+* [x] Implement interactive theme toggle switch widget in `apps/client/internal/ui/components.go`.
 * [x] Full monorepo development orchestration with automatic port conflict resolution in `scripts/dev.sh`.
 * [x] Every new Go file accompanied by co-located `*_test.go` unit tests.
 * [x] Zero build or test failures via `./scripts/check.sh && ./scripts/test.sh`.

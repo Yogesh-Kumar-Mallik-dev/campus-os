@@ -98,6 +98,10 @@ All HTTP error responses must adhere to the RFC 7807 specification:
 }
 ```
 
+### 5.3 IPC Error Isolation & UDS Path Concealment
+* **Zero Leakage of Domain Sockets:** Internal socket paths (`/tmp/*.sock`, `/var/run/*.sock`) or raw gRPC dial failure strings must **never** be included in HTTP problem detail payloads or client UI status labels.
+* **Transport-to-Problem Mapping:** All gRPC status codes must pass through `mapGRPCError`, translating transport faults (`codes.Unavailable`) to standard RFC 7807 problem envelopes with HTTP 503 (`SERVICE_UNAVAILABLE`).
+
 ---
 
 ## 6. Git Governance & Commit Discipline
@@ -115,7 +119,7 @@ All HTTP error responses must adhere to the RFC 7807 specification:
 ## 7. Mobile-First & Viewport Resilience (Web & Fyne Clients)
 
 * **Viewport Support Range:** The web client (SvelteKit) and mobile/desktop clients (Fyne) must be fully functional across viewports from **280px to 4K**.
-* **Zero Root Horizontal Overflow:** The root document (`html`, `body`) must never produce a horizontal scrollbar.
+* **Zero Root Horizontal Overflow:** The root document (`html`, `body`) and native canvas must never produce an unintended horizontal scrollbar.
 * **Fluid Spacing & Typography:** Use CSS `clamp()`, `rem`, and container-relative units rather than static pixel breakpoints.
 * **Touch Targets:** Interactive elements (buttons, inputs, links) must meet the minimum touch target dimension of **44x44 CSS pixels** on mobile viewports.
 
@@ -139,4 +143,7 @@ When building native client interfaces in Go Fyne, engineers must adhere to [`.a
 3. **No Raw Status Strings:** Replace `Status: ACTIVE` with scannable visual badges (`● Active`).
 4. **Pure Vector Graphics:** Zero emojis, zero generic raster icons. Utilize pure vector Lucide SVGs with 24×24 geometry and uniform 2px stroke.
 5. **Progressive Disclosure & Clear Hierarchy:** Do not cram all administrative data onto a single screen. Prioritize primary actions, use clear touch targets (min 44×44px), and provide explicit state feedback (loading, empty, success, error).
+6. **Mobile-First Responsive Layouts & Breakpoints:** Enforce adaptive breakpoints (`<640` Mobile, `640..1024` Tablet, `>1024` Desktop). On compact/mobile viewports, navigation drawers must dock cleanly to the left edge with a semi-transparent backdrop overlay and ESC key listener rather than floating in the center.
+7. **Accessible Modals & Overlays:** All modal dialogs (`ShowModal`) must support keyboard `Escape` dismissal and outside-click backdrop dismissal (enabled by default, optionally configurable).
+8. **Responsive Card Grids & Text Wrapping:** Grid layouts must dynamically wrap (`AdaptiveGridLayout`, `FlowLayout`) and card labels must specify `TextWrapWord` to eliminate horizontal canvas clipping.
 

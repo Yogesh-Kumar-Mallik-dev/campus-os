@@ -27,16 +27,18 @@ The native cross-platform application is implemented in Go Fyne, adhering to ins
 
 ### Recreated Native shadcn-Style Primitives & App Views
 All UI components mirror the component architecture of `shadcn-svelte` natively in Go:
-* **`DashboardView`**: Master institutional dashboard shell featuring responsive topbar, 220px fixed navigation sidebar, and executive overview panels.
+* **`DashboardView`**: Master institutional dashboard shell featuring responsive topbar, 220px desktop sidebar, left-docked mobile navigation drawer with backdrop, and executive overview panels.
 * **`LoginView`**: Institutional authentication view with identifier/password inputs and toggle to QR onboarding.
-* **`NewMetricCard`**: Luminous glass KPI metric cards for executive tracking (Scholars, Departments, Approvals, Staff).
+* **`NewMetricCard`**: Luminous glass KPI metric cards with automatic word wrapping (`TextWrapWord`) for executive tracking.
+* **`ShowModal`**: Accessible modal overlay architecture with keyboard `Escape` listener, outside-click backdrop dismissal, and responsive width clamping.
+* **`AdaptiveGridLayout` & `FlowLayout`**: Fluid responsive container engines providing dynamic multi-column grids that adapt across Mobile (`<640px`), Tablet (`640-1024px`), and Desktop (`>1024px`).
 * **`KeyringSessionStore`**: Native OS Keyring session storage via Linux Secret Service D-Bus API (`org.freedesktop.secrets`) with protected `0600` fallback.
 * **`NewShadcnCard`**: Compound card widget with structured header, pill badge, body content, and footer actions.
 * **`NewShadcnButton`**: Modern button with variants (`ButtonDefault`, `ButtonSecondary`, `ButtonOutline`, `ButtonDestructive`, `ButtonGhost`), responsive sizing, and vector SVG icon support.
 * **`NewBadge`**: Visual status tag with variant coloring (`BadgeDefault`, `BadgeSecondary`, `BadgeSuccess`, `BadgeWarning`, `BadgeDestructive`, `BadgeOutline`) and pill/rounded geometry.
 * **`NewShadcnInput` & `NewFormField`**: Clean entry fields with label typography, placeholder tokens, and validation error messages.
 * **`NewShadcnAlert`**: Themed notification and warning banners matching institutional severity tokens.
-* **`NewSwitch`**: Accessible animated toggle switch widget for feature activation (e.g. biometric authentication).
+* **`NewSwitch`**: Accessible animated toggle switch widget for feature activation (e.g. biometric authentication and instant theme toggling).
 * **`ShowToast`**: Non-blocking auto-dismissing floating notification banner overlay.
 * **`ShowAlertDialog`**: Modal confirmation and audit-flagging dialog for high-stakes actions.
 * **`NewEmptyState`**: Full-width dropzone placeholder with centered media, title, and descriptive helper text.

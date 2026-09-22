@@ -120,3 +120,20 @@ networks:
 * **Prometheus:** Exposes scrapable metrics for gRPC latency, active `TxToken` sessions, request throughput, and database connection pool utilization.
 * **Grafana:** Pre-packaged dashboards visualizing domain throughput, slow queries, and active workflows.
 * **Loki:** Centralized aggregation for structured JSON logs tagged with `request_id`, `actor_id`, and `domain`.
+
+---
+
+## 6. IPC Boundary Isolation & Error Sanitization
+
+To preserve security and system encapsulation, internal details of the IPC boundary must never leak through the external HTTP API or to end users:
+
+1. **UDS Path Concealment:** Internal domain socket paths (e.g., `/tmp/campus-os-dev.sock` or `/var/run/campus-os/db.sock`) must **never** appear in HTTP response bodies, error messages, or logs delivered to clients.
+2. **gRPC-to-HTTP Status Code Mapping (`mapGRPCError`):**
+   * `codes.Unavailable` & socket dialing failures $\rightarrow$ HTTP `503 Service Unavailable` (`SERVICE_UNAVAILABLE`: "Database Persistence Offline").
+   * `codes.DeadlineExceeded` $\rightarrow$ HTTP `504 Gateway Timeout` (`PERSISTENCE_TIMEOUT`: "Database Request Timeout").
+   * `codes.NotFound` $\rightarrow$ HTTP `404 Not Found` (`NOT_FOUND`).
+   * `codes.AlreadyExists` $\rightarrow$ HTTP `409 Conflict` (`ALREADY_EXISTS`).
+   * `codes.PermissionDenied` $\rightarrow$ HTTP `403 Forbidden` (`PERMISSION_DENIED`).
+   * `codes.Unauthenticated` $\rightarrow$ HTTP `401 Unauthorized` (`UNAUTHENTICATED`).
+   * `codes.InvalidArgument` $\rightarrow$ HTTP `400 Bad Request` (`INVALID_ARGUMENT`).
+3. **Client-Side Resiliency:** The client intercepts `503` / `SERVICE_UNAVAILABLE` responses (`IsPersistenceUnavailable`), displaying clear, actionable messages ("Database persistence service is unavailable. Please verify the persistence daemon is running.") rather than raw transport stack traces.
