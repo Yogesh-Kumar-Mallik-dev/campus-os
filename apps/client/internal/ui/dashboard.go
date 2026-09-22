@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
@@ -179,11 +180,15 @@ func (d *DashboardView) buildShell() {
 	if sidebar != nil {
 		leftGutter := canvas.NewRectangle(color.Transparent)
 		leftGutter.SetMinSize(fyne.NewSize(8, 1))
-		splitContent = container.NewBorder(nil, nil, sidebar, nil, container.NewBorder(nil, nil, leftGutter, nil, d.workspaceArea))
+		rightGutter := canvas.NewRectangle(color.Transparent)
+		rightGutter.SetMinSize(fyne.NewSize(14, 1))
+		splitContent = container.NewBorder(nil, nil, sidebar, nil, container.NewBorder(nil, nil, leftGutter, rightGutter, d.workspaceArea))
 	} else {
 		leftGutter := canvas.NewRectangle(color.Transparent)
-		leftGutter.SetMinSize(fyne.NewSize(16, 1))
-		splitContent = container.NewBorder(nil, nil, leftGutter, nil, d.workspaceArea)
+		leftGutter.SetMinSize(fyne.NewSize(14, 1))
+		rightGutter := canvas.NewRectangle(color.Transparent)
+		rightGutter.SetMinSize(fyne.NewSize(14, 1))
+		splitContent = container.NewBorder(nil, nil, leftGutter, rightGutter, d.workspaceArea)
 	}
 
 	inner := container.NewBorder(
@@ -231,7 +236,11 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 	})
 	hamburgerBtn.Importance = widget.LowImportance
 
-	logoImg := container.NewCenter(RenderBBDITHeaderLogo(115, 22))
+	logoW, logoH := float32(150), float32(28)
+	if isCompact {
+		logoW, logoH = float32(140), float32(26)
+	}
+	logoImg := container.NewCenter(RenderBBDITHeaderLogo(logoW, logoH))
 
 	leftPad := canvas.NewRectangle(color.Transparent)
 	leftPad.SetMinSize(fyne.NewSize(8, 1))
@@ -395,7 +404,7 @@ func (d *DashboardView) showMobileDrawer() {
 
 	logoPad := canvas.NewRectangle(color.Transparent)
 	logoPad.SetMinSize(fyne.NewSize(8, 1))
-	logoImg := container.NewCenter(RenderBBDITHeaderLogo(115, 22))
+	logoImg := container.NewCenter(RenderBBDITHeaderLogo(140, 26))
 	drawerHeader := container.NewHBox(logoPad, logoImg)
 
 	navCol := container.NewVBox()
@@ -620,14 +629,10 @@ func (d *DashboardView) buildSidebar() fyne.CanvasObject {
 func (d *DashboardView) buildPageHeader(title, description, category string, actions ...fyne.CanvasObject) fyne.CanvasObject {
 	badge := NewBadge(category, BadgeSecondary, BadgeShapePill)
 	titleLabel := widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	titleLabel.Wrapping = fyne.TextWrapWord
 	descLabel := widget.NewLabel(description)
 	descLabel.Wrapping = fyne.TextWrapWord
-
-	headerLeft := container.NewVBox(
-		container.NewHBox(badge),
-		titleLabel,
-		descLabel,
-	)
+	descLabel.Importance = widget.LowImportance
 
 	var actionsBox fyne.CanvasObject
 	if len(actions) > 0 {
@@ -670,18 +675,34 @@ func (d *DashboardView) buildPageHeader(title, description, category string, act
 		actionsBox = container.NewHBox()
 	}
 
-	var headerRow fyne.CanvasObject
-	if d.windowWidth > 0 && d.windowWidth < 850 {
-		headerRow = container.NewVBox(
-			headerLeft,
-			actionsBox,
-		)
+	titleBlock := container.NewVBox(
+		container.NewHBox(badge),
+		titleLabel,
+	)
+
+	var topRow fyne.CanvasObject
+	if len(actions) > 0 {
+		if d.windowWidth > 0 && d.windowWidth < 680 {
+			// On narrow viewports, badge & title on top, action toolbar right-aligned above description
+			topRow = container.NewVBox(
+				titleBlock,
+				container.NewHBox(layout.NewSpacer(), actionsBox),
+			)
+		} else {
+			// Standard desktop/tiled: title block on left, actions docked to the right
+			topRow = container.NewBorder(nil, nil, titleBlock, container.NewVBox(actionsBox))
+		}
 	} else {
-		headerRow = container.NewBorder(nil, nil, nil, container.NewVBox(actionsBox), headerLeft)
+		topRow = titleBlock
 	}
 
+	headerCard := container.NewVBox(
+		topRow,
+		descLabel,
+	)
+
 	return container.NewVBox(
-		container.NewPadded(headerRow),
+		container.NewPadded(headerCard),
 		NewShadcnSeparator(true),
 	)
 }
@@ -1154,8 +1175,9 @@ func NewMetricCard(title, metric, subtitle, svgIcon string, badgeVariant BadgeVa
 	metricLabel.TextSize = 20
 	metricLabel.TextStyle = fyne.TextStyle{Bold: true}
 
-	subLabel := canvas.NewText(subtitle, color.NRGBA{R: 148, G: 163, B: 184, A: 200})
-	subLabel.TextSize = 11
+	subLabel := widget.NewLabel(subtitle)
+	subLabel.Wrapping = fyne.TextWrapWord
+	subLabel.Importance = widget.LowImportance
 
 	topRow := container.NewBorder(nil, nil, titleLabel, container.NewCenter(iconImg))
 
