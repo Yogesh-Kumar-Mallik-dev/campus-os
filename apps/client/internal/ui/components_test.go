@@ -130,6 +130,10 @@ func TestComponents_Render(t *testing.T) {
 	if topBar == nil {
 		t.Fatal("expected non-nil top bar")
 	}
+	topBarNoRole := NewTopBar("CAMPUS OS", "")
+	if topBarNoRole == nil {
+		t.Fatal("expected non-nil top bar without role")
+	}
 }
 
 func TestAssets_LogoRender(t *testing.T) {

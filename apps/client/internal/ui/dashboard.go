@@ -265,11 +265,14 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 	d.pingDot = canvas.NewCircle(color.NRGBA{R: 16, G: 185, B: 129, A: 255})
 	d.pingDot.Resize(fyne.NewSize(8, 8))
 
-	themeSwitch := NewSwitch(d.isDark, func(dark bool) {
-		d.isDark = dark
+	themeSwitch := NewSwitch(IsDarkTheme(), func(dark bool) {
+		if dark != IsDarkTheme() {
+			ToggleTheme()
+		}
+		d.isDark = IsDarkTheme()
 		if d.window != nil {
 			themeName := "Light"
-			if dark {
+			if d.isDark {
 				themeName = "Dark"
 			}
 			ShowToast(d.window, "Theme Switched", fmt.Sprintf("Institutional theme switched to %s mode", themeName), AlertDefault, 2*time.Second)

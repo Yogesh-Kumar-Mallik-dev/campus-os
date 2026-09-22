@@ -24,6 +24,28 @@ import (
 //   --border: oklch(0.72 0.018 225 / 16%)     -> rgb(38, 47, 58)
 type CampusTheme struct {
 	fyne.Theme
+	forcedVariant *fyne.ThemeVariant
+}
+
+var (
+	currentThemeVariant fyne.ThemeVariant = theme.VariantDark
+)
+
+// IsDarkTheme returns whether dark mode is currently active.
+func IsDarkTheme() bool {
+	return currentThemeVariant == theme.VariantDark
+}
+
+// ToggleTheme switches between light and dark institutional themes across the application.
+func ToggleTheme() {
+	if currentThemeVariant == theme.VariantDark {
+		currentThemeVariant = theme.VariantLight
+	} else {
+		currentThemeVariant = theme.VariantDark
+	}
+	if a := fyne.CurrentApp(); a != nil && a.Settings() != nil {
+		a.Settings().SetTheme(NewCampusThemeWithVariant(currentThemeVariant))
+	}
 }
 
 // NewCampusTheme creates an institutional theme with colors from +layout.css.
@@ -33,9 +55,21 @@ func NewCampusTheme() fyne.Theme {
 	}
 }
 
+// NewCampusThemeWithVariant creates an institutional theme forced to a specific variant.
+func NewCampusThemeWithVariant(variant fyne.ThemeVariant) fyne.Theme {
+	return &CampusTheme{
+		Theme:         theme.DefaultTheme(),
+		forcedVariant: &variant,
+	}
+}
+
 // Color returns tailored colors mapped from the institutional +layout.css.
 func (t *CampusTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	if variant == theme.VariantLight {
+	activeVariant := variant
+	if t.forcedVariant != nil {
+		activeVariant = *t.forcedVariant
+	}
+	if activeVariant == theme.VariantLight {
 		switch name {
 		case theme.ColorNameBackground:
 			// --background: oklch(0.978 0.005 240)

@@ -225,7 +225,7 @@ func NewStepIndicator(currentStep int, stepNames []string) fyne.CanvasObject {
 	return container.NewHBox(stepItems...)
 }
 
-// NewTopBar creates the institutional top navigation branding bar with SVG logo.
+// NewTopBar creates the institutional top navigation branding bar with SVG logo and interactive theme toggle.
 func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 	bg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
 	bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
@@ -233,12 +233,27 @@ func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 
 	logoPill := RenderBBDITHeaderLogo(140, 26)
 
-	roleBadge := NewBadge(userRole, BadgeOutline, BadgeShapePill)
+	themeSwitch := NewSwitch(IsDarkTheme(), func(checked bool) {
+		ToggleTheme()
+	})
+	themeRow := container.NewHBox(
+		RenderSVGImage(ResourceFromSVG("sun.svg", LucideSun), 14, 14),
+		themeSwitch,
+		RenderSVGImage(ResourceFromSVG("moon.svg", LucideMoon), 14, 14),
+	)
+
+	var rightSide fyne.CanvasObject
+	if userRole != "" {
+		roleBadge := NewBadge(userRole, BadgeOutline, BadgeShapePill)
+		rightSide = container.NewHBox(roleBadge, themeRow)
+	} else {
+		rightSide = themeRow
+	}
 
 	barContent := container.NewBorder(
 		nil, nil,
 		container.NewCenter(logoPill),
-		container.NewCenter(roleBadge),
+		container.NewCenter(rightSide),
 	)
 
 	return container.NewStack(
