@@ -316,6 +316,18 @@ func WhiteResourceFromSVG(name, svgContent string) fyne.Resource {
 	return fyne.NewStaticResource(name, []byte(re.Replace(svgContent)))
 }
 
+// ColorResourceFromSVG produces a recolored version of an SVG vector by overriding stroke colors.
+func ColorResourceFromSVG(name, svgContent, strokeHex string) fyne.Resource {
+	re := strings.NewReplacer(
+		`stroke="#f45a51"`, `stroke="`+strokeHex+`"`,
+		`stroke="#10b981"`, `stroke="`+strokeHex+`"`,
+		`stroke="#f59e0b"`, `stroke="`+strokeHex+`"`,
+		`stroke="#64748b"`, `stroke="`+strokeHex+`"`,
+		`stroke="#38bdf8"`, `stroke="`+strokeHex+`"`,
+	)
+	return fyne.NewStaticResource(name, []byte(re.Replace(svgContent)))
+}
+
 // RenderSVGImage creates an SVG canvas image with explicit bounding dimensions.
 func RenderSVGImage(res fyne.Resource, width, height float32) *canvas.Image {
 	img := canvas.NewImageFromResource(res)
@@ -323,3 +335,4 @@ func RenderSVGImage(res fyne.Resource, width, height float32) *canvas.Image {
 	img.SetMinSize(fyne.NewSize(width, height))
 	return img
 }
+

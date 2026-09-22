@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"image/color"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -204,7 +205,7 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 	})
 	hamburgerBtn.Importance = widget.LowImportance
 
-	logoImg := RenderBBDITHeaderLogo(120, 24)
+	logoImg := container.NewCenter(RenderBBDITHeaderLogo(115, 22))
 
 	var leftCluster *fyne.Container
 	if !isCompact {
@@ -277,7 +278,7 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 
 		d.pingLabel = widget.NewLabel("Live (UDS)")
 		pingCluster := container.NewHBox(container.NewCenter(d.pingDot), d.pingLabel)
-		roleBadge := NewBadge(fmt.Sprintf("%s (%s)", userName, roleName), BadgeDefault, BadgeShapePill)
+		roleBadge := NewBadge(fmt.Sprintf("%s (%s)", userName, roleName), BadgeSecondary, BadgeShapePill)
 
 		rightCluster = container.NewHBox(
 			termPill,
@@ -292,7 +293,7 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 	} else {
 		// Compact mode: essentials guaranteed to fit in half-screen width
 		pingCluster := container.NewCenter(d.pingDot)
-		roleBadge := NewBadge(roleName, BadgeDefault, BadgeShapePill)
+		roleBadge := NewBadge(roleName, BadgeSecondary, BadgeShapePill)
 
 		rightCluster = container.NewHBox(
 			pingCluster,
@@ -339,15 +340,31 @@ func (d *DashboardView) buildSidebar() fyne.CanvasObject {
 		railCol := container.NewVBox()
 		for _, item := range railItems {
 			sec := item.section
-			icRes := ResourceFromSVG(item.name+".svg", item.icon)
-			variant := ButtonGhost
-			if d.activeSection == sec {
+			isActive := d.activeSection == sec
+
+			var icRes fyne.Resource
+			var variant ButtonVariant
+			if isActive {
+				icRes = WhiteResourceFromSVG(item.name+"_act.svg", item.icon)
 				variant = ButtonSecondary
+			} else {
+				icRes = ColorResourceFromSVG(item.name+"_muted.svg", item.icon, "#94a3b8")
+				variant = ButtonGhost
 			}
+
 			btn := NewShadcnButton("", variant, ButtonSizeDefault, icRes, func() {
 				d.SetSection(sec)
 			})
-			railCol.Add(btn)
+
+			if isActive {
+				indicator := canvas.NewRectangle(color.NRGBA{R: 225, G: 29, B: 72, A: 255})
+				indicator.SetMinSize(fyne.NewSize(3, 20))
+				railCol.Add(container.NewBorder(nil, nil, container.NewCenter(indicator), nil, btn))
+			} else {
+				placeholder := canvas.NewRectangle(color.Transparent)
+				placeholder.SetMinSize(fyne.NewSize(3, 20))
+				railCol.Add(container.NewBorder(nil, nil, placeholder, nil, btn))
+			}
 		}
 
 		railContent := container.NewStack(bg, container.NewPadded(railCol))
@@ -402,11 +419,14 @@ func (d *DashboardView) buildSidebar() fyne.CanvasObject {
 			bdg := item.badge
 
 			variant := ButtonGhost
+			var iconRes fyne.Resource
 			if d.activeSection == sec {
 				variant = ButtonSecondary
+				iconRes = WhiteResourceFromSVG(lbl+"_act.svg", ic)
+			} else {
+				iconRes = ColorResourceFromSVG(lbl+"_muted.svg", ic, "#94a3b8")
 			}
 
-			iconRes := ResourceFromSVG(lbl+".svg", ic)
 			btn := NewShadcnButton(lbl, variant, ButtonSizeDefault, iconRes, func() {
 				d.SetSection(sec)
 			})
@@ -445,7 +465,7 @@ func (d *DashboardView) buildSidebar() fyne.CanvasObject {
 
 // buildPageHeader produces a uniform standard header across all sections
 func (d *DashboardView) buildPageHeader(title, description, category string, actions ...fyne.CanvasObject) fyne.CanvasObject {
-	badge := NewBadge(category, BadgeDefault, BadgeShapePill)
+	badge := NewBadge(category, BadgeSecondary, BadgeShapePill)
 	titleLabel := widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	descLabel := widget.NewLabel(description)
 	descLabel.Wrapping = fyne.TextWrapWord
@@ -463,7 +483,16 @@ func (d *DashboardView) buildPageHeader(title, description, category string, act
 		actionsBox = container.NewHBox()
 	}
 
-	headerRow := container.NewBorder(nil, nil, nil, actionsBox, headerLeft)
+	var headerRow fyne.CanvasObject
+	if d.windowWidth > 0 && d.windowWidth < 850 {
+		headerRow = container.NewVBox(
+			headerLeft,
+			actionsBox,
+		)
+	} else {
+		headerRow = container.NewBorder(nil, nil, nil, container.NewVBox(actionsBox), headerLeft)
+	}
+
 	return container.NewVBox(
 		container.NewPadded(headerRow),
 		NewShadcnSeparator(true),
@@ -864,25 +893,39 @@ func (d *DashboardView) handleLogout() {
 	}
 }
 
-// NewMetricCard constructs an executive KPI card with luminous glass accenting.
+// NewMetricCard constructs an executive KPI card with compact shadcn-style typography and semantic iconography.
 func NewMetricCard(title, metric, subtitle, svgIcon string, badgeVariant BadgeVariant) fyne.CanvasObject {
-	iconRes := ResourceFromSVG(title+".svg", svgIcon)
-	iconImg := RenderSVGImage(iconRes, 28, 28)
+	var strokeColor string
+	switch badgeVariant {
+	case BadgeSuccess:
+		strokeColor = "#10b981" // Emerald
+	case BadgeWarning:
+		strokeColor = "#f59e0b" // Amber
+	case BadgeDestructive:
+		strokeColor = "#f43f5e" // Rose
+	default:
+		strokeColor = "#38bdf8" // Sky / Cyan
+	}
 
-	titleLabel := widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{})
-	titleLabel.Wrapping = fyne.TextWrapWord
+	iconRes := ColorResourceFromSVG(title+".svg", svgIcon, strokeColor)
+	iconImg := RenderSVGImage(iconRes, 22, 22)
 
-	metricLabel := widget.NewLabelWithStyle(metric, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	titleLabel := canvas.NewText(strings.ToUpper(title), color.NRGBA{R: 148, G: 163, B: 184, A: 240})
+	titleLabel.TextSize = 11
+	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
 
-	subLabel := widget.NewLabel(subtitle)
-	subLabel.Wrapping = fyne.TextWrapWord
+	metricLabel := canvas.NewText(metric, color.White)
+	metricLabel.TextSize = 20
+	metricLabel.TextStyle = fyne.TextStyle{Bold: true}
 
-	topRow := container.NewBorder(nil, nil, nil, iconImg, titleLabel)
+	subLabel := canvas.NewText(subtitle, color.NRGBA{R: 148, G: 163, B: 184, A: 200})
+	subLabel.TextSize = 11
+
+	topRow := container.NewBorder(nil, nil, titleLabel, container.NewCenter(iconImg))
 
 	cardContent := container.NewVBox(
 		topRow,
 		metricLabel,
-		NewShadcnSeparator(true),
 		subLabel,
 	)
 

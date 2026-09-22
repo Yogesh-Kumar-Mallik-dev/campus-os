@@ -24,21 +24,23 @@ func RenderLogoImage(width, height float32) *canvas.Image {
 }
 
 // RenderBBDITHeaderLogo renders the official BBDIT institutional logo within a crisp high-contrast pill
-// matching the exact presentation used in BBDIT's web/public layout (bg-white/95 with rounded corners).
+// with subtle border and tight padding, ensuring seamless blending across light and dark themes.
 func RenderBBDITHeaderLogo(width, height float32) fyne.CanvasObject {
 	if width <= 0 {
-		width = 160
+		width = 120
 	}
 	if height <= 0 {
-		height = 28
+		height = 24
 	}
 
 	logoImg := RenderLogoImage(width, height)
-	pillBg := canvas.NewRectangle(color.NRGBA{R: 255, G: 255, B: 255, A: 245})
-	pillBg.CornerRadius = 6
+	pillBg := canvas.NewRectangle(color.NRGBA{R: 255, G: 255, B: 255, A: 235})
+	pillBg.CornerRadius = 4
+	pillBg.StrokeColor = color.NRGBA{R: 203, G: 213, B: 225, A: 160}
+	pillBg.StrokeWidth = 1
 
 	return container.NewStack(
 		pillBg,
-		container.NewPadded(logoImg),
+		container.NewCenter(logoImg),
 	)
 }
