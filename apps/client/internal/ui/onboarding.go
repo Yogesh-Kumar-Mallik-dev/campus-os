@@ -541,6 +541,12 @@ func (w *OnboardingWizard) renderSIMVerifyStep() {
 			verifyBtn,
 			NewShadcnSeparator(true),
 			bypassBtn,
+			NewShadcnSeparator(true),
+			NewShadcnButton("Back to QR Voucher", ButtonGhost, ButtonSizeDefault, ResourceFromSVG("back_step1.svg", LucideArrowLeft), func() {
+				w.IsError = false
+				w.StatusText = ""
+				w.SetStep(StepScan)
+			}),
 		),
 	})
 
@@ -645,6 +651,12 @@ func (w *OnboardingWizard) renderReviewProfileStep() {
 	actionFooter := container.NewVBox(
 		nextBtn,
 		discrepancyBtn,
+		NewShadcnSeparator(true),
+		NewShadcnButton("Back to Carrier Binding", ButtonGhost, ButtonSizeDefault, ResourceFromSVG("back_step2.svg", LucideArrowLeft), func() {
+			w.IsError = false
+			w.StatusText = ""
+			w.SetStep(StepSIMVerify)
+		}),
 	)
 
 	profileCard := NewShadcnCard(CardParts{
@@ -767,7 +779,15 @@ func (w *OnboardingWizard) renderSetPasswordStep() {
 			NewShadcnSeparator(true),
 			biometricRow,
 		),
-		Footer: completeBtn,
+		Footer: container.NewVBox(
+			completeBtn,
+			NewShadcnSeparator(true),
+			NewShadcnButton("Back to Profile Dossier", ButtonGhost, ButtonSizeDefault, ResourceFromSVG("back_step3.svg", LucideArrowLeft), func() {
+				w.IsError = false
+				w.StatusText = ""
+				w.SetStep(StepReviewProfile)
+			}),
+		),
 	})
 
 	w.content.Add(passwordCard)

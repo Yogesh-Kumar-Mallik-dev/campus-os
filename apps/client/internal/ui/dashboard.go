@@ -624,16 +624,31 @@ func (d *DashboardView) buildPageHeader(title, description, category string, act
 			primaryBtn := actions[0]
 			overflowBtn := NewShadcnButton("", ButtonOutline, ButtonSizeSm, ResourceFromSVG("more.svg", LucideMoreHorizontal), func() {
 				if d.window != nil && d.window.Canvas() != nil {
+					var pop *widget.PopUp
 					menuCol := container.NewVBox()
 					for _, secAct := range actions[1:] {
+						if btn, ok := secAct.(*ShadcnButton); ok {
+							origTap := btn.OnTapped
+							btn.OnTapped = func() {
+								if pop != nil {
+									pop.Hide()
+								}
+								if origTap != nil {
+									origTap()
+								}
+							}
+						}
 						menuCol.Add(secAct)
 					}
 					card := NewShadcnCard(CardParts{
 						Title:   "Additional Actions",
 						Content: menuCol,
 					})
-					pop := widget.NewModalPopUp(container.NewGridWrap(fyne.NewSize(260, 140), card), d.window.Canvas())
-					pop.Show()
+					opts := ModalOptions{
+						CloseOnEsc:          true,
+						CloseOnClickOutside: true,
+					}
+					pop = ShowModal(d.window, container.NewGridWrap(fyne.NewSize(260, 160), card), &opts)
 				}
 			})
 			actionsBox = container.NewHBox(primaryBtn, overflowBtn)

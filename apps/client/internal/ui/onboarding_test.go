@@ -65,6 +65,21 @@ func TestOnboardingWizard_Steps(t *testing.T) {
 		t.Fatalf("expected step StepComplete, got %v", wizard.CurrentStep())
 	}
 
+	// Test Step Backward Navigation
+	wizard.SetStep(StepSetPassword)
+	wizard.SetStep(StepReviewProfile)
+	if wizard.CurrentStep() != StepReviewProfile {
+		t.Fatalf("expected step StepReviewProfile after navigating back, got %v", wizard.CurrentStep())
+	}
+	wizard.SetStep(StepSIMVerify)
+	if wizard.CurrentStep() != StepSIMVerify {
+		t.Fatalf("expected step StepSIMVerify after navigating back, got %v", wizard.CurrentStep())
+	}
+	wizard.SetStep(StepScan)
+	if wizard.CurrentStep() != StepScan {
+		t.Fatalf("expected step StepScan after navigating back, got %v", wizard.CurrentStep())
+	}
+
 	// Trigger completion callback
 	if wizard.onComplete != nil {
 		wizard.onComplete()
