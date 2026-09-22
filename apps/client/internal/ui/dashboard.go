@@ -261,31 +261,28 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 		}
 	})
 
-	// Right: Academic Term + UDS Heartbeat Ping + Theme Toggle + User Profile Badge + Logout
+	// Right: Academic Term + UDS Heartbeat Ping + Theme Switch Toggle + Logout
 	d.pingDot = canvas.NewCircle(color.NRGBA{R: 16, G: 185, B: 129, A: 255})
 	d.pingDot.Resize(fyne.NewSize(8, 8))
 
-	themeIcon := ResourceFromSVG("sun.svg", LucideSun)
-	themeBtn := widget.NewButtonWithIcon("", themeIcon, func() {
-		d.isDark = !d.isDark
+	themeSwitch := NewSwitch(d.isDark, func(dark bool) {
+		d.isDark = dark
 		if d.window != nil {
-			ShowToast(d.window, "Theme Switched", "Toggled between dark and light institutional theme", AlertDefault, 2*time.Second)
+			themeName := "Light"
+			if dark {
+				themeName = "Dark"
+			}
+			ShowToast(d.window, "Theme Switched", fmt.Sprintf("Institutional theme switched to %s mode", themeName), AlertDefault, 2*time.Second)
 		}
 	})
-	themeBtn.Importance = widget.LowImportance
 
-	userName := "Chairperson"
-	roleName := "SUPER_ADMIN"
-	if d.session != nil {
-		if d.session.FullName != "" {
-			userName = d.session.FullName
-		} else if d.session.Username != "" {
-			userName = d.session.Username
-		}
-		if d.session.RoleCode != "" {
-			roleName = d.session.RoleCode
-		}
-	}
+	themeSunIcon := RenderSVGImage(ColorResourceFromSVG("theme_sun.svg", LucideSun, "#94a3b8"), 14, 14)
+	themeMoonIcon := RenderSVGImage(ColorResourceFromSVG("theme_moon.svg", LucideMoon, "#94a3b8"), 14, 14)
+	themeToggleCluster := container.NewHBox(
+		container.NewCenter(themeSunIcon),
+		container.NewCenter(themeSwitch),
+		container.NewCenter(themeMoonIcon),
+	)
 
 	logoutBtn := NewShadcnButton("Sign Out", ButtonOutline, ButtonSizeSm, ResourceFromSVG("logout.svg", LucideLogOut), func() {
 		d.handleLogout()
@@ -300,27 +297,23 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 
 		d.pingLabel = widget.NewLabel("Live (UDS)")
 		pingCluster := container.NewHBox(container.NewCenter(d.pingDot), d.pingLabel)
-		roleBadge := NewBadge(fmt.Sprintf("%s (%s)", userName, roleName), BadgeSecondary, BadgeShapePill)
 
 		rightCluster = container.NewHBox(
 			termPill,
 			NewShadcnSeparator(false),
 			pingCluster,
 			NewShadcnSeparator(false),
-			themeBtn,
+			themeToggleCluster,
 			NewShadcnSeparator(false),
-			roleBadge,
 			logoutBtn,
 		)
 	} else {
 		// Compact mode: essentials guaranteed to fit in half-screen width
 		pingCluster := container.NewCenter(d.pingDot)
-		roleBadge := NewBadge(roleName, BadgeSecondary, BadgeShapePill)
 
 		rightCluster = container.NewHBox(
 			pingCluster,
-			themeBtn,
-			roleBadge,
+			container.NewCenter(themeSwitch),
 			logoutBtn,
 		)
 	}
