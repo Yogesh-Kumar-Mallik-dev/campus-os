@@ -177,9 +177,13 @@ func (d *DashboardView) buildShell() {
 	// Split view: Sidebar on left (if wide/medium) or 0px in Off-Canvas Drawer mode (<750px)
 	var splitContent fyne.CanvasObject
 	if sidebar != nil {
-		splitContent = container.NewBorder(nil, nil, sidebar, nil, d.workspaceArea)
+		leftGutter := canvas.NewRectangle(color.Transparent)
+		leftGutter.SetMinSize(fyne.NewSize(8, 1))
+		splitContent = container.NewBorder(nil, nil, sidebar, nil, container.NewBorder(nil, nil, leftGutter, nil, d.workspaceArea))
 	} else {
-		splitContent = d.workspaceArea
+		leftGutter := canvas.NewRectangle(color.Transparent)
+		leftGutter.SetMinSize(fyne.NewSize(16, 1))
+		splitContent = container.NewBorder(nil, nil, leftGutter, nil, d.workspaceArea)
 	}
 
 	inner := container.NewBorder(
@@ -229,6 +233,9 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 
 	logoImg := container.NewCenter(RenderBBDITHeaderLogo(115, 22))
 
+	leftPad := canvas.NewRectangle(color.Transparent)
+	leftPad.SetMinSize(fyne.NewSize(8, 1))
+
 	var leftCluster *fyne.Container
 	if !isCompact {
 		d.breadcrumbPath = widget.NewLabelWithStyle(
@@ -237,6 +244,7 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 			fyne.TextStyle{Bold: true},
 		)
 		leftCluster = container.NewHBox(
+			leftPad,
 			hamburgerBtn,
 			logoImg,
 			NewShadcnSeparator(false),
@@ -244,6 +252,7 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 		)
 	} else {
 		leftCluster = container.NewHBox(
+			leftPad,
 			hamburgerBtn,
 			logoImg,
 		)
@@ -384,8 +393,10 @@ func (d *DashboardView) showMobileDrawer() {
 		drawerHeight = d.window.Canvas().Size().Height
 	}
 
+	logoPad := canvas.NewRectangle(color.Transparent)
+	logoPad.SetMinSize(fyne.NewSize(8, 1))
 	logoImg := container.NewCenter(RenderBBDITHeaderLogo(115, 22))
-	drawerHeader := container.NewHBox(logoImg)
+	drawerHeader := container.NewHBox(logoPad, logoImg)
 
 	navCol := container.NewVBox()
 	groups := d.getNavGroups()
@@ -456,7 +467,7 @@ func (d *DashboardView) showMobileDrawer() {
 		container.NewPadded(drawerHeader),
 		container.NewPadded(bottomCard),
 		nil, nil,
-		container.NewVScroll(navCol),
+		container.NewVScroll(container.NewPadded(navCol)),
 	)
 
 	drawerCard := container.NewStack(drawerBg, drawerBody)
@@ -598,7 +609,7 @@ func (d *DashboardView) buildSidebar() fyne.CanvasObject {
 		nil,
 		container.NewPadded(bottomCard),
 		nil, nil,
-		container.NewVScroll(sidebarNav),
+		container.NewVScroll(container.NewPadded(sidebarNav)),
 	)
 
 	fixedWidth := container.NewStack(bg, sidebarLayout)

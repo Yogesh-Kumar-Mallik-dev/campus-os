@@ -250,9 +250,12 @@ func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 		rightSide = themeRow
 	}
 
+	leftPad := canvas.NewRectangle(color.Transparent)
+	leftPad.SetMinSize(fyne.NewSize(8, 1))
+
 	barContent := container.NewBorder(
 		nil, nil,
-		container.NewCenter(logoPill),
+		container.NewHBox(leftPad, container.NewCenter(logoPill)),
 		container.NewCenter(rightSide),
 	)
 

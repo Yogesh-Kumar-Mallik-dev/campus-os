@@ -42,7 +42,10 @@ func (r *responsiveCardLayout) Layout(objects []fyne.CanvasObject, size fyne.Siz
 
 		var posX float32 = r.margin
 		if size.Width > targetW {
-			posX = (size.Width - targetW) / 2
+			calculatedX := (size.Width - targetW) / 2
+			if calculatedX > r.margin {
+				posX = calculatedX
+			}
 		}
 
 		// Ensure child is given targetW before computing wrapped height
