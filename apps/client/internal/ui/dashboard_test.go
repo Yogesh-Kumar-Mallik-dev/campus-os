@@ -159,6 +159,27 @@ func TestDashboardView_ResponsiveBreakpoints(t *testing.T) {
 	if dashboard.sidebarOpen {
 		t.Errorf("expected user manual sidebar toggle to be respected regardless of viewport width")
 	}
+
+	// Case 6: Mobile Viewport (< 750px) - Off-Canvas Drawer Mode
+	// Sidebar must completely drop from the screen (buildSidebar returns nil)
+	dashboard.handleWindowResize(fyne.NewSize(650, 700))
+	if sidebar := dashboard.buildSidebar(); sidebar != nil {
+		t.Errorf("expected sidebar to be nil in off-canvas drawer mode (<750px)")
+	}
+
+	// Case 7: Trigger Mobile Drawer Sheet
+	dashboard.showMobileDrawer()
+	if dashboard.mobileDrawerPopup == nil {
+		t.Errorf("expected mobileDrawerPopup to be instantiated when showMobileDrawer is called")
+	}
+	dashboard.mobileDrawerPopup.Hide()
+
+	// Case 8: Segmented Tab Switcher interaction in Overview
+	dashboard.overviewActiveTab = 1
+	dashboard.renderWorkspace()
+	if dashboard.workspaceArea == nil || len(dashboard.workspaceArea.Objects) == 0 {
+		t.Errorf("expected workspace to render active tab content")
+	}
 }
 
 // BLOCK_UI_DASHBOARD_TEST_004

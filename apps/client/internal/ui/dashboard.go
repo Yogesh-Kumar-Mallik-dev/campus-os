@@ -57,6 +57,8 @@ type DashboardView struct {
 	sidebarOpen        bool
 	userToggledSidebar bool
 	windowWidth        float32
+	overviewActiveTab  int
+	mobileDrawerPopup  *widget.PopUp
 	isDark             bool
 	rootContainer      *fyne.Container
 	workspaceArea      *fyne.Container
@@ -105,8 +107,22 @@ func (d *DashboardView) handleWindowResize(sz fyne.Size) {
 	prevWidth := d.windowWidth
 	d.windowWidth = sz.Width
 
-	wasCompact := prevWidth > 0 && prevWidth < 950
-	isCompact := sz.Width < 950
+	// Detect architectural breakpoint crossings:
+	// 1. Off-Canvas Drawer: 750px
+	// 2. Compact TopBar & Rail: 950px
+	// 3. Side-by-side split panels vs Segmented Tab Switcher: 1100px
+	// 4. Ultra-narrow 1-col KPI: 550px
+	b1Prev := prevWidth > 0 && prevWidth < 750
+	b1Curr := sz.Width < 750
+
+	b2Prev := prevWidth > 0 && prevWidth < 950
+	b2Curr := sz.Width < 950
+
+	b3Prev := prevWidth > 0 && prevWidth < 1100
+	b3Curr := sz.Width < 1100
+
+	b4Prev := prevWidth > 0 && prevWidth < 550
+	b4Curr := sz.Width < 550
 
 	shouldCollapseSidebar := sz.Width < 950
 	sidebarStateChanged := false
@@ -120,10 +136,7 @@ func (d *DashboardView) handleWindowResize(sz fyne.Size) {
 		}
 	}
 
-	wasVeryNarrow := prevWidth > 0 && prevWidth < 550
-	isVeryNarrow := sz.Width < 550
-
-	if wasCompact != isCompact || sidebarStateChanged || wasVeryNarrow != isVeryNarrow || prevWidth == 0 {
+	if b1Prev != b1Curr || b2Prev != b2Curr || b3Prev != b3Curr || b4Prev != b4Curr || sidebarStateChanged || prevWidth == 0 {
 		d.buildShell()
 		if d.window != nil && d.window.Canvas() != nil {
 			d.window.Canvas().Refresh(d.rootContainer)
@@ -161,8 +174,13 @@ func (d *DashboardView) buildShell() {
 	sidebar := d.buildSidebar()
 	d.renderWorkspace()
 
-	// Split view: Sidebar on left (rail or expanded), workspace taking the rest
-	splitContent := container.NewBorder(nil, nil, sidebar, nil, d.workspaceArea)
+	// Split view: Sidebar on left (if wide/medium) or 0px in Off-Canvas Drawer mode (<750px)
+	var splitContent fyne.CanvasObject
+	if sidebar != nil {
+		splitContent = container.NewBorder(nil, nil, sidebar, nil, d.workspaceArea)
+	} else {
+		splitContent = d.workspaceArea
+	}
 
 	inner := container.NewBorder(
 		topBar,
@@ -196,6 +214,10 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 	// Left: Hamburger toggle + BBDIT Header Logo (+ Breadcrumb on desktop)
 	hamburgerIcon := ResourceFromSVG("menu.svg", LucideMenu)
 	hamburgerBtn := widget.NewButtonWithIcon("", hamburgerIcon, func() {
+		if d.windowWidth > 0 && d.windowWidth < 750 {
+			d.showMobileDrawer()
+			return
+		}
 		d.userToggledSidebar = true
 		d.sidebarOpen = !d.sidebarOpen
 		d.buildShell()
@@ -314,10 +336,137 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 }
 
 
+type navEntry struct {
+	section DashboardSection
+	label   string
+	icon    string
+	badge   string
+}
+
+type navGroup struct {
+	header  string
+	entries []navEntry
+}
+
+func (d *DashboardView) getNavGroups() []navGroup {
+	return []navGroup{
+		{
+			header: "EXECUTIVE & GOVERNANCE",
+			entries: []navEntry{
+				{SectionOverview, "Executive Overview", LucideLayoutDashboard, ""},
+				{SectionGovernance, "Approval Queue", LucideGitPullRequest, "3"},
+			},
+		},
+		{
+			header: "ACADEMIC OPERATIONS",
+			entries: []navEntry{
+				{SectionAcademicStructure, "Academic Hierarchy", LucideGraduationCap, ""},
+				{SectionExecutiveCredentialing, "Executive QRs", LucideQrCode, "NEW"},
+			},
+		},
+		{
+			header: "SECURITY & LEDGER",
+			entries: []navEntry{
+				{SectionAuditLedger, "Audit Ledger", LucideFileText, ""},
+				{SectionSettings, "System Settings", LucideSettings, ""},
+			},
+		},
+	}
+}
+
+func (d *DashboardView) showMobileDrawer() {
+	if d.window == nil || d.window.Canvas() == nil {
+		return
+	}
+
+	drawerWidth := float32(280)
+	if d.windowWidth > 0 && d.windowWidth-40 < drawerWidth {
+		drawerWidth = d.windowWidth - 40
+	}
+	drawerHeight := float32(520)
+	if d.window.Canvas().Size().Height > 0 {
+		drawerHeight = d.window.Canvas().Size().Height - 60
+	}
+
+	closeBtn := widget.NewButtonWithIcon("", ResourceFromSVG("close.svg", LucideX), func() {
+		if d.mobileDrawerPopup != nil {
+			d.mobileDrawerPopup.Hide()
+			d.mobileDrawerPopup = nil
+		}
+	})
+	closeBtn.Importance = widget.LowImportance
+
+	logoImg := container.NewCenter(RenderBBDITHeaderLogo(115, 22))
+	drawerHeader := container.NewBorder(nil, nil, logoImg, closeBtn)
+
+	navCol := container.NewVBox()
+	groups := d.getNavGroups()
+	for _, g := range groups {
+		hdrLabel := widget.NewLabelWithStyle(g.header, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+		navCol.Add(container.NewPadded(hdrLabel))
+
+		for _, item := range g.entries {
+			sec := item.section
+			lbl := item.label
+			ic := item.icon
+			bdg := item.badge
+
+			isActive := d.activeSection == sec
+			variant := ButtonGhost
+			var iconRes fyne.Resource
+			if isActive {
+				variant = ButtonSecondary
+				iconRes = WhiteResourceFromSVG(lbl+"_act.svg", ic)
+			} else {
+				iconRes = ColorResourceFromSVG(lbl+"_muted.svg", ic, "#94a3b8")
+			}
+
+			btn := NewShadcnButton(lbl, variant, ButtonSizeDefault, iconRes, func() {
+				if d.mobileDrawerPopup != nil {
+					d.mobileDrawerPopup.Hide()
+					d.mobileDrawerPopup = nil
+				}
+				d.SetSection(sec)
+			})
+
+			if bdg != "" {
+				badgePill := NewBadge(bdg, BadgeWarning, BadgeShapePill)
+				row := container.NewBorder(nil, nil, nil, badgePill, btn)
+				navCol.Add(row)
+			} else {
+				navCol.Add(btn)
+			}
+		}
+		navCol.Add(NewShadcnSeparator(true))
+	}
+
+	drawerBg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
+	drawerBg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
+	drawerBg.StrokeWidth = 1
+	drawerBg.CornerRadius = 10
+
+	drawerBody := container.NewBorder(
+		container.NewPadded(drawerHeader),
+		nil, nil, nil,
+		container.NewVScroll(container.NewPadded(navCol)),
+	)
+
+	drawerCard := container.NewStack(drawerBg, drawerBody)
+	wrapped := container.NewGridWrap(fyne.NewSize(drawerWidth, drawerHeight), drawerCard)
+
+	d.mobileDrawerPopup = widget.NewModalPopUp(wrapped, d.window.Canvas())
+	d.mobileDrawerPopup.Show()
+}
+
 // buildSidebar creates the responsive navigation:
 // - Expanded (240px width): Grouped categories with titles, full labels, and badges.
 // - Collapsed (64px width rail): Icons only in a compact vertical rail.
+// - Off-Canvas Drawer (< 750px): returns nil so workspace occupies 100% width.
 func (d *DashboardView) buildSidebar() fyne.CanvasObject {
+	if d.windowWidth > 0 && d.windowWidth < 750 {
+		return nil
+	}
+
 	bg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
 	bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
 	bg.StrokeWidth = 1
@@ -372,40 +521,7 @@ func (d *DashboardView) buildSidebar() fyne.CanvasObject {
 	}
 
 	// Expanded Mode (240px) with Grouped Categories
-	type navEntry struct {
-		section DashboardSection
-		label   string
-		icon    string
-		badge   string
-	}
-
-	groups := []struct {
-		header  string
-		entries []navEntry
-	}{
-		{
-			header: "EXECUTIVE & GOVERNANCE",
-			entries: []navEntry{
-				{SectionOverview, "Executive Overview", LucideLayoutDashboard, ""},
-				{SectionGovernance, "Approval Queue", LucideGitPullRequest, "3"},
-			},
-		},
-		{
-			header: "ACADEMIC OPERATIONS",
-			entries: []navEntry{
-				{SectionAcademicStructure, "Academic Hierarchy", LucideGraduationCap, ""},
-				{SectionExecutiveCredentialing, "Executive QRs", LucideQrCode, "NEW"},
-			},
-		},
-		{
-			header: "SECURITY & LEDGER",
-			entries: []navEntry{
-				{SectionAuditLedger, "Audit Ledger", LucideFileText, ""},
-				{SectionSettings, "System Settings", LucideSettings, ""},
-			},
-		},
-	}
-
+	groups := d.getNavGroups()
 	sidebarNav := container.NewVBox()
 
 	for _, g := range groups {
@@ -478,7 +594,26 @@ func (d *DashboardView) buildPageHeader(title, description, category string, act
 
 	var actionsBox fyne.CanvasObject
 	if len(actions) > 0 {
-		actionsBox = container.NewHBox(actions...)
+		if len(actions) > 1 && d.windowWidth > 0 && d.windowWidth < 900 {
+			primaryBtn := actions[0]
+			overflowBtn := NewShadcnButton("", ButtonOutline, ButtonSizeSm, ResourceFromSVG("more.svg", LucideMoreHorizontal), func() {
+				if d.window != nil && d.window.Canvas() != nil {
+					menuCol := container.NewVBox()
+					for _, secAct := range actions[1:] {
+						menuCol.Add(secAct)
+					}
+					card := NewShadcnCard(CardParts{
+						Title:   "Additional Actions",
+						Content: menuCol,
+					})
+					pop := widget.NewModalPopUp(container.NewGridWrap(fyne.NewSize(260, 140), card), d.window.Canvas())
+					pop.Show()
+				}
+			})
+			actionsBox = container.NewHBox(primaryBtn, overflowBtn)
+		} else {
+			actionsBox = container.NewHBox(actions...)
+		}
 	} else {
 		actionsBox = container.NewHBox()
 	}
@@ -539,10 +674,8 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 	kpi4 := NewMetricCard("Staff & Faculty Present", "142 / 148", "• 95.9% Today • 100% Cryptographically Verified", LucideBadgeCheck, BadgeSecondary)
 
 	kpiCols := 4
-	panelCols := 2
 	if d.windowWidth > 0 && d.windowWidth < 900 {
 		kpiCols = 2
-		panelCols = 1
 		if d.windowWidth < 550 {
 			kpiCols = 1
 		}
@@ -615,7 +748,58 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 		),
 	})
 
-	panelsGrid := container.NewGridWithColumns(panelCols, approvalsCard, activityCard)
+	var workloadContainer fyne.CanvasObject
+	if d.windowWidth >= 1100 || d.windowWidth == 0 {
+		workloadContainer = container.NewGridWithColumns(2, approvalsCard, activityCard)
+	} else {
+		tab1Variant := ButtonSecondary
+		tab1Icon := WhiteResourceFromSVG("tab_app.svg", LucideGitPullRequest)
+		tab2Variant := ButtonGhost
+		tab2Icon := ColorResourceFromSVG("tab_act.svg", LucideFileText, "#94a3b8")
+
+		if d.overviewActiveTab == 1 {
+			tab1Variant = ButtonGhost
+			tab1Icon = ColorResourceFromSVG("tab_app.svg", LucideGitPullRequest, "#94a3b8")
+			tab2Variant = ButtonSecondary
+			tab2Icon = WhiteResourceFromSVG("tab_act.svg", LucideFileText)
+		}
+
+		tabApprovalsBtn := NewShadcnButton("Pending Approvals (3)", tab1Variant, ButtonSizeSm, tab1Icon, func() {
+			d.overviewActiveTab = 0
+			d.renderWorkspace()
+			if d.window != nil && d.window.Canvas() != nil {
+				d.window.Canvas().Refresh(d.rootContainer)
+			}
+		})
+
+		tabActivityBtn := NewShadcnButton("Recent Activity Ledger", tab2Variant, ButtonSizeSm, tab2Icon, func() {
+			d.overviewActiveTab = 1
+			d.renderWorkspace()
+			if d.window != nil && d.window.Canvas() != nil {
+				d.window.Canvas().Refresh(d.rootContainer)
+			}
+		})
+
+		tabTrackBg := canvas.NewRectangle(color.NRGBA{R: 24, G: 24, B: 27, A: 255})
+		tabTrackBg.CornerRadius = 6
+		tabTrackBg.StrokeColor = color.NRGBA{R: 39, G: 39, B: 42, A: 255}
+		tabTrackBg.StrokeWidth = 1
+
+		tabBar := container.NewStack(
+			tabTrackBg,
+			container.NewHBox(tabApprovalsBtn, tabActivityBtn),
+		)
+
+		var activePanel fyne.CanvasObject = approvalsCard
+		if d.overviewActiveTab == 1 {
+			activePanel = activityCard
+		}
+
+		workloadContainer = container.NewVBox(
+			container.NewHBox(tabBar),
+			activePanel,
+		)
+	}
 
 	// Quick Actions Bar
 	issueQRBtn := NewShadcnButton("Provision Executive QR Docket", ButtonDefault, ButtonSizeDefault, WhiteResourceFromSVG("qr_act.svg", LucideQrCode), func() {
@@ -637,7 +821,7 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 		header,
 		container.NewPadded(kpiGrid),
 		NewShadcnSeparator(true),
-		container.NewPadded(panelsGrid),
+		container.NewPadded(workloadContainer),
 		NewShadcnSeparator(true),
 		container.NewPadded(container.NewBorder(nil, nil, widget.NewLabelWithStyle("EXECUTIVE QUICK ACTIONS:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), nil, actionBar)),
 	)
