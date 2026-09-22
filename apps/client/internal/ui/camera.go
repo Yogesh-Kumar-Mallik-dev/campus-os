@@ -133,7 +133,9 @@ func ShowCameraPermissionModal(window fyne.Window, onAllow func(), onDeny func()
 	rememberCheck := widget.NewCheck("Remember my choice on this device", nil)
 	rememberCheck.SetChecked(true)
 
+	actionChosen := false
 	denyBtn := NewShadcnButton("Don't Allow", ButtonOutline, ButtonSizeDefault, nil, func() {
+		actionChosen = true
 		if rememberCheck.Checked {
 			_ = SetCameraPermission(PermissionDenied)
 		}
@@ -146,6 +148,7 @@ func ShowCameraPermissionModal(window fyne.Window, onAllow func(), onDeny func()
 	})
 
 	allowBtn := NewShadcnButton("Allow Camera Access", ButtonDefault, ButtonSizeDefault, ResourceFromSVG("check.svg", LucideCheckCircle2), func() {
+		actionChosen = true
 		if rememberCheck.Checked {
 			_ = SetCameraPermission(PermissionGranted)
 		}
@@ -178,13 +181,28 @@ func ShowCameraPermissionModal(window fyne.Window, onAllow func(), onDeny func()
 
 	cardMin := card.MinSize()
 	targetWidth := float32(480)
+	if window != nil && window.Canvas() != nil && window.Canvas().Size().Width > 0 {
+		avail := window.Canvas().Size().Width - 32
+		if avail < targetWidth {
+			targetWidth = avail
+		}
+	}
 	targetHeight := cardMin.Height
 	if targetHeight < 380 {
 		targetHeight = 380
 	}
 
-	popup = widget.NewModalPopUp(container.NewGridWrap(fyne.NewSize(targetWidth, targetHeight), card), window.Canvas())
-	popup.Show()
+	opts := ModalOptions{
+		CloseOnEsc:          true,
+		CloseOnClickOutside: true,
+		OnDismiss: func() {
+			if !actionChosen && onDeny != nil {
+				onDeny()
+			}
+		},
+	}
+
+	popup = ShowModal(window, container.NewGridWrap(fyne.NewSize(targetWidth, targetHeight), card), &opts)
 	return popup
 }
 
@@ -215,19 +233,38 @@ func ShowCameraScannerModal(window fyne.Window, onTokenScanned func(token string
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	actionDone := false
+
+	targetWidth := float32(520)
+	if window != nil && window.Canvas() != nil && window.Canvas().Size().Width > 0 {
+		avail := window.Canvas().Size().Width - 32
+		if avail < targetWidth {
+			targetWidth = avail
+		}
+	}
+
+	vfWidth := float32(480)
+	if targetWidth-40 < vfWidth {
+		vfWidth = targetWidth - 40
+	}
+	vfHeight := vfWidth * 9 / 16
+	if vfHeight < 200 {
+		vfHeight = 200
+	}
 
 	// Viewfinder frame image
 	frameImg := canvas.NewImageFromImage(nil)
 	frameImg.FillMode = canvas.ImageFillContain
-	frameImg.SetMinSize(fyne.NewSize(480, 270))
+	frameImg.SetMinSize(fyne.NewSize(vfWidth, vfHeight))
 
 	// Dark placeholder backdrop
 	bgRect := canvas.NewRectangle(color.NRGBA{R: 15, G: 23, B: 42, A: 255})
-	bgRect.SetMinSize(fyne.NewSize(480, 270))
+	bgRect.SetMinSize(fyne.NewSize(vfWidth, vfHeight))
 
 	statusLabel := widget.NewLabelWithStyle("Initializing camera sensor...", fyne.TextAlignCenter, fyne.TextStyle{Italic: true})
 
 	closeBtn := NewShadcnButton("Cancel / Switch to File", ButtonOutline, ButtonSizeDefault, nil, func() {
+		actionDone = true
 		cancel()
 		if popup != nil {
 			popup.Hide()
@@ -260,20 +297,33 @@ func ShowCameraScannerModal(window fyne.Window, onTokenScanned func(token string
 	})
 
 	cardMin := card.MinSize()
-	targetWidth := float32(520)
 	targetHeight := cardMin.Height
 	if targetHeight < 440 {
 		targetHeight = 440
 	}
 
-	popup = widget.NewModalPopUp(container.NewGridWrap(fyne.NewSize(targetWidth, targetHeight), card), window.Canvas())
-	popup.Show()
+	opts := ModalOptions{
+		CloseOnEsc:          true,
+		CloseOnClickOutside: true,
+		OnDismiss: func() {
+			if !actionDone {
+				actionDone = true
+				cancel()
+				if onCancel != nil {
+					onCancel()
+				}
+			}
+		},
+	}
+
+	popup = ShowModal(window, container.NewGridWrap(fyne.NewSize(targetWidth, targetHeight), card), &opts)
+
+	runner := getMockCameraRunner()
 
 	// Launch live camera capture routine
 	go func() {
 		defer cancel()
 
-		runner := getMockCameraRunner()
 		if runner != nil {
 			_ = runner(ctx, func(img image.Image) {
 				fyne.Do(func() {
@@ -282,6 +332,8 @@ func ShowCameraScannerModal(window fyne.Window, onTokenScanned func(token string
 				})
 			}, func(tok string) {
 				fyne.Do(func() {
+					actionDone = true
+					cancel()
 					if popup != nil {
 						popup.Hide()
 					}
@@ -359,6 +411,7 @@ func ShowCameraScannerModal(window fyne.Window, onTokenScanned func(token string
 						// QR scanning
 						token, err := DecodeQRFromLoadedImage(img)
 						if err == nil && token != "" {
+							actionDone = true
 							cancel()
 							fyne.Do(func() {
 								if popup != nil {

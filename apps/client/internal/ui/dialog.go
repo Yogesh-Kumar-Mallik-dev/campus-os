@@ -252,6 +252,12 @@ func ShowAlertDialogWithOptions(w fyne.Window, title, description, confirmText s
 
 	cardMin := card.MinSize()
 	targetWidth := float32(440)
+	if w != nil && w.Canvas() != nil && w.Canvas().Size().Width > 0 {
+		avail := w.Canvas().Size().Width - 32
+		if avail < targetWidth {
+			targetWidth = avail
+		}
+	}
 	targetHeight := cardMin.Height
 	if targetHeight < 180 {
 		targetHeight = 180

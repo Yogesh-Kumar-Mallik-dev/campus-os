@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/test"
 )
 
@@ -124,5 +125,55 @@ func TestDetectCameraDevice(t *testing.T) {
 		if _, err := os.Stat(dev); err != nil {
 			t.Fatalf("detected device %s does not exist on disk: %v", dev, err)
 		}
+	}
+}
+
+func TestCameraModal_DismissalWithEscAndBackdrop(t *testing.T) {
+	testApp := test.NewApp()
+	defer testApp.Quit()
+	win := testApp.NewWindow("Test Dismissals")
+	defer win.Close()
+
+	// 1. Test Camera Permission Modal dismisses on ESC
+	deniedByEsc := false
+	pop := ShowCameraPermissionModal(win, func() {}, func() {
+		deniedByEsc = true
+	})
+	if pop == nil {
+		t.Fatal("expected modal popup to be non-nil")
+	}
+	// Simulate ESC key press
+	if win.Canvas().OnTypedKey() != nil {
+		win.Canvas().OnTypedKey()(&fyne.KeyEvent{Name: fyne.KeyEscape})
+	}
+	if !deniedByEsc {
+		t.Errorf("expected ESC key to dismiss permission modal and trigger onDeny")
+	}
+
+	// 2. Test Camera Scanner Modal dismisses on ESC
+	cancelledByEsc := false
+	runnerExited := make(chan struct{})
+	SetMockCameraRunnerForTest(func(ctx context.Context, onFrame func(image.Image), onQRFound func(string)) error {
+		<-ctx.Done()
+		close(runnerExited)
+		return nil
+	})
+	defer SetMockCameraRunnerForTest(nil)
+
+	scannerPop := ShowCameraScannerModal(win, func(tok string) {}, func() {
+		cancelledByEsc = true
+	})
+	if scannerPop == nil {
+		t.Fatal("expected scanner popup to be non-nil")
+	}
+	if win.Canvas().OnTypedKey() != nil {
+		win.Canvas().OnTypedKey()(&fyne.KeyEvent{Name: fyne.KeyEscape})
+	}
+	if !cancelledByEsc {
+		t.Errorf("expected ESC key to dismiss scanner modal and trigger onCancel")
+	}
+	select {
+	case <-runnerExited:
+	case <-time.After(500 * time.Millisecond):
 	}
 }
