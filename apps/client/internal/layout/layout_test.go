@@ -470,3 +470,100 @@ func TestAppShell_TransitionsAndDrawer(t *testing.T) {
 		t.Errorf("Expected Compact shell, got %v", shell.CurrentSizeClass())
 	}
 }
+
+// 12. Fluid Container Text-Wrap Pre-Resize & No Left-Clipping
+func TestContainer_SymmetricCenteringAndNoLeftClipping(t *testing.T) {
+	lbl := widget.NewLabel("Header Title")
+	cont := layout.Container(lbl, layout.ContainerOptions{
+		MinWidth:      240,
+		MaxWidth:      600,
+		Padding:       16,
+		AutoCenter:    true,
+		ResponsivePad: true,
+	})
+
+	// Scenario A: Screen narrower than MinWidth (e.g. 200px)
+	// Must NOT produce negative posX or clip left side of element
+	cont.Resize(fyne.NewSize(200, 400))
+	if lbl.Position().X < 0 {
+		t.Errorf("Expected posX >= 0 on narrow screen, got %v", lbl.Position().X)
+	}
+
+	// Scenario B: Ultrawide screen (2560px)
+	// Must be symmetrically centered with equal left and right margins
+	cont.Resize(fyne.NewSize(2560, 1080))
+	if lbl.Size().Width != 600 {
+		t.Errorf("Expected child width clamped to MaxWidth 600, got %v", lbl.Size().Width)
+	}
+	expectedX := float32(2560-600) / 2
+	if lbl.Position().X != expectedX {
+		t.Errorf("Expected symmetrical posX %v, got %v", expectedX, lbl.Position().X)
+	}
+	rightMargin := 2560 - lbl.Position().X - lbl.Size().Width
+	if lbl.Position().X != rightMargin {
+		t.Errorf("Expected left margin == right margin, got left=%v, right=%v", lbl.Position().X, rightMargin)
+	}
+}
+
+// 13. Dynamic Grid Height Reflow inside Scrollable/Vertical Containers
+func TestGrid_DynamicHeightReflow(t *testing.T) {
+	c1 := widget.NewLabel("Card 1")
+	c2 := widget.NewLabel("Card 2")
+	c3 := widget.NewLabel("Card 3")
+	c4 := widget.NewLabel("Card 4")
+
+	grid := layout.Grid(layout.GridOptions{
+		MinItemWidth:  260,
+		Gap:           16,
+		UniformHeight: true,
+	}, c1, c2, c3, c4)
+
+	// Desktop width 1200px -> 4 items fit in 1 row (4 columns)
+	grid.Resize(fyne.NewSize(1200, 400))
+	desktopMin := grid.MinSize()
+
+	// Mobile width 360px -> 4 items wrap into 4 rows (1 column)
+	grid.Resize(fyne.NewSize(360, 800))
+	mobileMin := grid.MinSize()
+
+	if mobileMin.Height <= desktopMin.Height {
+		t.Errorf("Expected mobile 4-row height to be strictly greater than desktop 1-row height, got mobile=%v, desktop=%v",
+			mobileMin.Height, desktopMin.Height)
+	}
+}
+
+// 14. Flow Layout Multi-Row MinSize Calculation
+func TestFlow_MultiRowMinSize(t *testing.T) {
+	b1 := layout.FixedSpacer(120, 36)
+	b2 := layout.FixedSpacer(120, 36)
+	b3 := layout.FixedSpacer(120, 36)
+
+	flow := layout.Flow(8, b1, b2, b3)
+
+	// Wide viewport: all fit in 1 row
+	flow.Resize(fyne.NewSize(500, 100))
+	singleRowMin := flow.MinSize()
+
+	// Narrow viewport: wraps into multiple rows
+	flow.Resize(fyne.NewSize(200, 200))
+	multiRowMin := flow.MinSize()
+
+	if multiRowMin.Height <= singleRowMin.Height {
+		t.Errorf("Expected multi-row wrapped height > single-row height, got multi=%v, single=%v",
+			multiRowMin.Height, singleRowMin.Height)
+	}
+}
+
+// 15. FixedWidth Layout Container
+func TestFixedWidth_FluidHeight(t *testing.T) {
+	content := widget.NewLabel("Sidebar Nav")
+	side := layout.FixedWidth(240, content)
+
+	side.Resize(fyne.NewSize(240, 900))
+	if content.Size().Width != 240 {
+		t.Errorf("Expected content width 240, got %v", content.Size().Width)
+	}
+	if content.Size().Height != 900 {
+		t.Errorf("Expected content to fluidly expand to full height 900, got %v", content.Size().Height)
+	}
+}

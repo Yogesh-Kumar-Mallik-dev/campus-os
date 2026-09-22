@@ -134,6 +134,26 @@ func TestComponents_Render(t *testing.T) {
 	if topBarNoRole == nil {
 		t.Fatal("expected non-nil top bar without role")
 	}
+
+	// Metric Cards across semantic variants
+	for _, v := range []BadgeVariant{BadgeSuccess, BadgeWarning, BadgeDestructive, BadgeSecondary, BadgeDefault} {
+		m := NewMetricCard("Active Users", "1,234", "+5% this week", LucideUserCheck, v)
+		if m == nil {
+			t.Fatalf("expected non-nil metric card for variant %v", v)
+		}
+	}
+
+	// Approval Queue Item
+	appItem := NewApprovalQueueItem("Title", "Subtitle", "HIGH", BadgeWarning, "Approve", LucideCheckCircle2, true, func() {})
+	if appItem == nil {
+		t.Fatal("expected non-nil approval queue item")
+	}
+
+	// Activity Ledger Item
+	actItem := NewActivityLedgerItem("12:00 PM", "Headline", "Detail", LucideShieldCheck, true)
+	if actItem == nil {
+		t.Fatal("expected non-nil activity ledger item")
+	}
 }
 
 func TestAssets_LogoRender(t *testing.T) {

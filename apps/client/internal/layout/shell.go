@@ -7,15 +7,18 @@ import (
 
 // AppShellOptions configures components for the multi-mode adaptive application shell.
 type AppShellOptions struct {
-	Header      fyne.CanvasObject
-	Sidebar     fyne.CanvasObject
-	Content     fyne.CanvasObject
-	BottomNav   fyne.CanvasObject
-	Drawer      fyne.CanvasObject
-	Breakpoints Breakpoints
+	Header       fyne.CanvasObject
+	Sidebar      fyne.CanvasObject
+	Rail         fyne.CanvasObject
+	Content      fyne.CanvasObject
+	BottomNav    fyne.CanvasObject
+	Drawer       fyne.CanvasObject
+	Breakpoints  Breakpoints
 
-	// SidebarWidth sets the fixed desktop sidebar width (default: 220dp).
+	// SidebarWidth sets the fixed desktop sidebar width (default: 240dp).
 	SidebarWidth float32
+	// RailWidth sets the fixed medium collapsed rail width (default: 64dp).
+	RailWidth float32
 }
 
 // ResponsiveAppShell manages seamless structural adaptation between Desktop, Tablet, and Mobile shells.
@@ -29,7 +32,10 @@ type ResponsiveAppShell struct {
 // NewResponsiveAppShell constructs an adaptive application shell adhering to Design System 2026.
 func NewResponsiveAppShell(opts AppShellOptions) *ResponsiveAppShell {
 	if opts.SidebarWidth <= 0 {
-		opts.SidebarWidth = 220
+		opts.SidebarWidth = 240
+	}
+	if opts.RailWidth <= 0 {
+		opts.RailWidth = 64
 	}
 	if opts.Breakpoints.Medium <= 0 {
 		opts.Breakpoints = DefaultBreakpoints()
@@ -50,11 +56,11 @@ func NewResponsiveAppShell(opts AppShellOptions) *ResponsiveAppShell {
 	)
 
 	// 2. Build Medium (Tablet / Split-screen) View:
-	// Header at top, Content in center (Sidebar collapses into toggleable drawer).
+	// Header at top, Collapsed Icon Rail or full width in center.
 	mediumView := container.NewBorder(
 		opts.Header,
 		nil,
-		nil,
+		opts.Rail,
 		nil,
 		opts.Content,
 	)

@@ -23,14 +23,16 @@ type GridOptions struct {
 
 // responsiveGridLayout dynamically derives column count from available width.
 type responsiveGridLayout struct {
-	opts     GridOptions
-	lastCols int
+	opts      GridOptions
+	lastCols  int
+	lastWidth float32
+	container *fyne.Container
 }
 
 // NewResponsiveGridLayout constructs a fyne.Layout for adaptive grid arrangements.
 func NewResponsiveGridLayout(opts GridOptions) fyne.Layout {
 	if opts.MinItemWidth <= 0 {
-		opts.MinItemWidth = 240
+		opts.MinItemWidth = 260
 	}
 	if opts.Gap <= 0 {
 		opts.Gap = 16
@@ -62,9 +64,15 @@ func (g *responsiveGridLayout) Layout(objects []fyne.CanvasObject, size fyne.Siz
 	if cols < 1 {
 		cols = 1
 	}
+
+	colsChanged := g.lastCols != cols
 	g.lastCols = cols
+	g.lastWidth = size.Width
 
 	colW := (size.Width - float32(cols-1)*g.opts.Gap) / float32(cols)
+	if colW < 0 {
+		colW = size.Width
+	}
 	if g.opts.MaxItemWidth > 0 && colW > g.opts.MaxItemWidth {
 		colW = g.opts.MaxItemWidth
 	}
@@ -76,6 +84,7 @@ func (g *responsiveGridLayout) Layout(objects []fyne.CanvasObject, size fyne.Siz
 
 	for i, o := range visible {
 		r := i / cols
+		o.Resize(fyne.NewSize(colW, o.MinSize().Height))
 		h := o.MinSize().Height
 		if h > rowHeights[r] {
 			rowHeights[r] = h
@@ -107,6 +116,12 @@ func (g *responsiveGridLayout) Layout(objects []fyne.CanvasObject, size fyne.Siz
 		}
 		rowY += currentH + g.opts.RowGap
 	}
+
+	if colsChanged && g.container != nil {
+		fyne.Do(func() {
+			g.container.Refresh()
+		})
+	}
 }
 
 func (g *responsiveGridLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
@@ -123,10 +138,21 @@ func (g *responsiveGridLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
 	if visible == 0 {
 		return fyne.NewSize(0, 0)
 	}
+
 	cols := g.lastCols
+	if g.lastWidth > 0 {
+		cols = Columns(g.lastWidth, g.opts.MinItemWidth, g.opts.Gap)
+		if g.opts.MaxCols > 0 && cols > g.opts.MaxCols {
+			cols = g.opts.MaxCols
+		}
+		if cols > visible {
+			cols = visible
+		}
+	}
 	if cols < 1 {
 		cols = 1
 	}
+
 	rows := (visible + cols - 1) / cols
 	totalH := float32(rows)*maxChildH + float32(rows-1)*g.opts.RowGap
 	return fyne.NewSize(g.opts.MinItemWidth, totalH)
@@ -134,5 +160,10 @@ func (g *responsiveGridLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
 
 // Grid creates a responsive grid container that dynamically calculates column count from available width.
 func Grid(opts GridOptions, objects ...fyne.CanvasObject) *fyne.Container {
-	return container.New(NewResponsiveGridLayout(opts), objects...)
+	l := NewResponsiveGridLayout(opts)
+	c := container.New(l, objects...)
+	if rl, ok := l.(*responsiveGridLayout); ok {
+		rl.container = c
+	}
+	return c
 }

@@ -16,6 +16,17 @@ func DefaultBreakpoints() Breakpoints {
 	}
 }
 
+// CampusOSBreakpoints returns institutional responsive breakpoints matching Design System 2026:
+// - Compact (< 750dp): Mobile view with off-canvas drawer and single-column cards
+// - Medium (750dp - 1050dp): Tablet view with collapsed 64dp icon rail and 2-column cards
+// - Expanded (>= 1050dp): Desktop view with full 240dp sidebar and 4-column cards
+func CampusOSBreakpoints() Breakpoints {
+	return Breakpoints{
+		Medium:   750,
+		Expanded: 1050,
+	}
+}
+
 // HeightBreakpoints configures vertical thresholds separating Short, Normal, and Tall viewports.
 type HeightBreakpoints struct {
 	// Short is the vertical threshold separating Short from Normal (default: 450dp).

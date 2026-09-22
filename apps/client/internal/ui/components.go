@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image/color"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -225,7 +226,8 @@ func NewStepIndicator(currentStep int, stepNames []string) fyne.CanvasObject {
 	return container.NewHBox(stepItems...)
 }
 
-// NewTopBar creates the institutional top navigation branding bar with SVG logo and interactive theme toggle.
+// NewTopBar creates the institutional top navigation branding bar with SVG logo and integrated theme toggle.
+// Eliminates redundant role badges from the header for an uncluttered, modern enterprise layout.
 func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 	bg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
 	bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
@@ -236,19 +238,13 @@ func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 	themeSwitch := NewSwitch(IsDarkTheme(), func(checked bool) {
 		ToggleTheme()
 	})
-	themeRow := container.NewHBox(
-		RenderSVGImage(ResourceFromSVG("sun.svg", LucideSun), 14, 14),
-		themeSwitch,
-		RenderSVGImage(ResourceFromSVG("moon.svg", LucideMoon), 14, 14),
+	sunIcon := RenderSVGImage(ColorResourceFromSVG("sun_topbar.svg", LucideSun, "#94a3b8"), 14, 14)
+	moonIcon := RenderSVGImage(ColorResourceFromSVG("moon_topbar.svg", LucideMoon, "#94a3b8"), 14, 14)
+	themeCluster := container.NewHBox(
+		container.NewCenter(sunIcon),
+		container.NewCenter(themeSwitch),
+		container.NewCenter(moonIcon),
 	)
-
-	var rightSide fyne.CanvasObject
-	if userRole != "" {
-		roleBadge := NewBadge(userRole, BadgeOutline, BadgeShapePill)
-		rightSide = container.NewHBox(roleBadge, themeRow)
-	} else {
-		rightSide = themeRow
-	}
 
 	leftPad := canvas.NewRectangle(color.Transparent)
 	leftPad.SetMinSize(fyne.NewSize(8, 1))
@@ -256,7 +252,7 @@ func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 	barContent := container.NewBorder(
 		nil, nil,
 		container.NewHBox(leftPad, container.NewCenter(logoPill)),
-		container.NewCenter(rightSide),
+		container.NewCenter(themeCluster),
 	)
 
 	return container.NewStack(
@@ -264,3 +260,164 @@ func NewTopBar(institutionName, userRole string) fyne.CanvasObject {
 		container.NewPadded(barContent),
 	)
 }
+
+// NewMetricCard constructs an executive KPI card with modern shadcn/ui typography,
+// high-contrast dark/light theme values, semantic iconography, and subtle background tints.
+func NewMetricCard(title, metric, subtitle, svgIcon string, badgeVariant BadgeVariant) fyne.CanvasObject {
+	var strokeHex string
+	var tintBg color.Color
+	var tintBorder color.Color
+	var cardWash color.Color
+
+	switch badgeVariant {
+	case BadgeSuccess:
+		strokeHex = "#10b981" // Emerald
+		tintBg = color.NRGBA{R: 16, G: 185, B: 129, A: 28}
+		tintBorder = color.NRGBA{R: 16, G: 185, B: 129, A: 70}
+		cardWash = color.NRGBA{R: 16, G: 185, B: 129, A: 8}
+	case BadgeWarning:
+		strokeHex = "#f59e0b" // Amber
+		tintBg = color.NRGBA{R: 245, G: 158, B: 11, A: 28}
+		tintBorder = color.NRGBA{R: 245, G: 158, B: 11, A: 70}
+		cardWash = color.NRGBA{R: 245, G: 158, B: 11, A: 8}
+	case BadgeDestructive:
+		strokeHex = "#f43f5e" // Rose
+		tintBg = color.NRGBA{R: 244, G: 63, B: 94, A: 28}
+		tintBorder = color.NRGBA{R: 244, G: 63, B: 94, A: 70}
+		cardWash = color.NRGBA{R: 244, G: 63, B: 94, A: 8}
+	default:
+		strokeHex = "#38bdf8" // Sky / Cyan
+		tintBg = color.NRGBA{R: 56, G: 189, B: 248, A: 28}
+		tintBorder = color.NRGBA{R: 56, G: 189, B: 248, A: 70}
+		cardWash = color.NRGBA{R: 56, G: 189, B: 248, A: 8}
+	}
+
+	// 32x32 rounded icon tile with tinted surface and semantic border
+	iconRes := ColorResourceFromSVG(title+"_kpi.svg", svgIcon, strokeHex)
+	iconImg := RenderSVGImage(iconRes, 16, 16)
+
+	iconTileBg := canvas.NewRectangle(tintBg)
+	iconTileBg.CornerRadius = 8
+	iconTileBg.StrokeColor = tintBorder
+	iconTileBg.StrokeWidth = 1
+
+	iconBadge := container.NewGridWrap(fyne.NewSize(32, 32), container.NewStack(
+		iconTileBg,
+		container.NewCenter(iconImg),
+	))
+
+	// Title label: uppercase tracking, muted foreground, word-wrapped
+	titleLabel := widget.NewLabelWithStyle(strings.ToUpper(title), fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	titleLabel.Wrapping = fyne.TextWrapWord
+	titleLabel.Importance = widget.LowImportance
+
+	// Top row: Title on left taking all width, Icon badge on right
+	topRow := container.NewBorder(nil, nil, nil, container.NewCenter(iconBadge), titleLabel)
+
+	// High-contrast metric number adhering to theme (white in dark mode, dark slate in light mode)
+	metricLabel := canvas.NewText(metric, theme.Color(theme.ColorNameForeground))
+	metricLabel.TextSize = 24
+	metricLabel.TextStyle = fyne.TextStyle{Bold: true}
+
+	// Contextual subtitle / trend with word wrapping
+	subLabel := widget.NewLabel(subtitle)
+	subLabel.Wrapping = fyne.TextWrapWord
+	subLabel.Importance = widget.LowImportance
+
+	cardBody := container.NewVBox(
+		topRow,
+		container.NewPadded(metricLabel),
+		subLabel,
+	)
+
+	// Card Surface: Dark/Light base + 10dp radius + 1px border + subtle tinted wash
+	cardBg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
+	cardBg.CornerRadius = 10
+	cardBg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
+	cardBg.StrokeWidth = 1
+
+	washBg := canvas.NewRectangle(cardWash)
+	washBg.CornerRadius = 10
+
+	return container.NewStack(
+		cardBg,
+		washBg,
+		container.NewPadded(cardBody),
+	)
+}
+
+// NewApprovalQueueItem renders an executive approval workload card with a crisp border,
+// clear priority pill badge, descriptive initiator metadata, and an action trigger.
+func NewApprovalQueueItem(title, subtitle, priorityText string, priorityVariant BadgeVariant, actionText, actionIcon string, isPrimary bool, onAction func()) fyne.CanvasObject {
+	var btnVariant ButtonVariant = ButtonOutline
+	var iconRes fyne.Resource
+	if isPrimary {
+		btnVariant = ButtonDefault
+		iconRes = WhiteResourceFromSVG(actionText+".svg", actionIcon)
+	} else {
+		iconRes = ResourceFromSVG(actionText+".svg", actionIcon)
+	}
+
+	btn := NewShadcnButton(actionText, btnVariant, ButtonSizeSm, iconRes, onAction)
+	badge := NewBadge(priorityText, priorityVariant, BadgeShapePill)
+
+	titleLabel := widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	titleLabel.Wrapping = fyne.TextWrapWord
+
+	descLabel := widget.NewLabel(subtitle)
+	descLabel.Wrapping = fyne.TextWrapWord
+	descLabel.Importance = widget.LowImportance
+
+	metaRow := container.NewHBox(badge, descLabel)
+	textCol := container.NewVBox(titleLabel, metaRow)
+
+	content := container.NewBorder(nil, nil, nil, container.NewCenter(btn), textCol)
+
+	tileBg := canvas.NewRectangle(color.NRGBA{R: 24, G: 32, B: 42, A: 140})
+	tileBg.CornerRadius = 8
+	tileBg.StrokeColor = color.NRGBA{R: 46, G: 56, B: 68, A: 120}
+	tileBg.StrokeWidth = 1
+
+	return container.NewStack(tileBg, container.NewPadded(content))
+}
+
+// NewActivityLedgerItem renders a real-time ledger stream item pairing an exact timestamp pill,
+// semantic event icon, bold event headline, metadata detail, and a verification badge.
+func NewActivityLedgerItem(timeStr, headline, detail, icon string, verified bool) fyne.CanvasObject {
+	timeBadge := NewBadge(timeStr, BadgeSecondary, BadgeShapePill)
+
+	iconRes := ColorResourceFromSVG(timeStr+"_act.svg", icon, "#94a3b8")
+	iconImg := RenderSVGImage(iconRes, 16, 16)
+
+	iconBg := canvas.NewRectangle(color.NRGBA{R: 30, G: 40, B: 52, A: 160})
+	iconBg.CornerRadius = 6
+	iconBg.StrokeColor = color.NRGBA{R: 46, G: 56, B: 68, A: 120}
+	iconBg.StrokeWidth = 1
+
+	iconBadge := container.NewGridWrap(fyne.NewSize(28, 28), container.NewStack(iconBg, container.NewCenter(iconImg)))
+
+	titleLabel := widget.NewLabelWithStyle(headline, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	titleLabel.Wrapping = fyne.TextWrapWord
+
+	detailLabel := widget.NewLabel(detail)
+	detailLabel.Wrapping = fyne.TextWrapWord
+	detailLabel.Importance = widget.LowImportance
+
+	textCol := container.NewVBox(titleLabel, detailLabel)
+
+	var statusObj fyne.CanvasObject
+	if verified {
+		statusObj = NewBadge("VERIFIED ✓", BadgeSuccess, BadgeShapePill)
+	}
+
+	leftCluster := container.NewHBox(timeBadge, iconBadge)
+	inner := container.NewBorder(nil, nil, leftCluster, container.NewCenter(statusObj), textCol)
+
+	tileBg := canvas.NewRectangle(color.NRGBA{R: 24, G: 32, B: 42, A: 100})
+	tileBg.CornerRadius = 8
+	tileBg.StrokeColor = color.NRGBA{R: 46, G: 56, B: 68, A: 80}
+	tileBg.StrokeWidth = 1
+
+	return container.NewStack(tileBg, container.NewPadded(inner))
+}
+

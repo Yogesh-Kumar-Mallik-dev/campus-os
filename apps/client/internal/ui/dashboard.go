@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"image/color"
-	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -92,7 +91,7 @@ func NewDashboardView(
 	if window != nil && window.Canvas() != nil {
 		sz := window.Canvas().Size()
 		d.windowWidth = sz.Width
-		if sz.Width > 0 && sz.Width < 950 {
+		if sz.Width > 0 && sz.Width < 1050 {
 			d.sidebarOpen = false
 		}
 	}
@@ -108,21 +107,21 @@ func (d *DashboardView) handleWindowResize(sz fyne.Size) {
 	prevWidth := d.windowWidth
 	d.windowWidth = sz.Width
 
-	vp := layout.DefaultEngine.Viewport(sz)
+	vp := layout.ViewportFromSize(sz, layout.CampusOSBreakpoints(), layout.DefaultHeightBreakpoints())
 	sc := vp.SizeClass()
 
 	// Detect architectural breakpoint crossings using Viewport SizeClass:
 	// 1. Off-Canvas Drawer: Compact (< 750px)
-	// 2. Compact TopBar & Rail: Medium (< 950px)
-	// 3. Side-by-side split panels vs Segmented Tab Switcher: 1100px
+	// 2. Compact TopBar & Rail: Medium (< 1050px)
+	// 3. Side-by-side split panels vs Segmented Tab Switcher: (< 1050px)
 	b1Prev := prevWidth > 0 && prevWidth < 750
 	b1Curr := sz.Width < 750
 
-	b2Prev := prevWidth > 0 && prevWidth < 950
-	b2Curr := sz.Width < 950
+	b2Prev := prevWidth > 0 && prevWidth < 1050
+	b2Curr := sz.Width < 1050
 
-	b3Prev := prevWidth > 0 && prevWidth < 1100
-	b3Curr := sz.Width < 1100
+	b3Prev := prevWidth > 0 && prevWidth < 1050
+	b3Curr := sz.Width < 1050
 
 	shouldCollapseSidebar := sc != layout.Expanded
 	sidebarStateChanged := false
@@ -174,19 +173,11 @@ func (d *DashboardView) buildShell() {
 	sidebar := d.buildSidebar()
 	d.renderWorkspace()
 
-	// Wrap workspace in fluid container with auto-centering on ultrawide displays
-	fluidWorkspace := layout.Container(d.workspaceArea, layout.ContainerOptions{
-		MaxWidth:      1400,
-		AutoCenter:    true,
-		Padding:       12,
-		ResponsivePad: true,
-	})
-
 	var splitContent fyne.CanvasObject
 	if sidebar != nil {
-		splitContent = container.NewBorder(nil, nil, sidebar, nil, fluidWorkspace)
+		splitContent = container.NewBorder(nil, nil, sidebar, nil, d.workspaceArea)
 	} else {
-		splitContent = fluidWorkspace
+		splitContent = d.workspaceArea
 	}
 
 	inner := container.NewBorder(
@@ -216,7 +207,7 @@ func (d *DashboardView) buildTopBar() fyne.CanvasObject {
 	bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
 	bg.StrokeWidth = 1
 
-	isCompact := d.windowWidth > 0 && d.windowWidth < 950
+	isCompact := d.windowWidth > 0 && d.windowWidth < 1050
 
 	// Left: Hamburger toggle + BBDIT Header Logo (+ Breadcrumb on desktop)
 	hamburgerIcon := ResourceFromSVG("menu.svg", LucideMenu)
@@ -403,7 +394,19 @@ func (d *DashboardView) showMobileDrawer() {
 	logoPad := canvas.NewRectangle(color.Transparent)
 	logoPad.SetMinSize(fyne.NewSize(8, 1))
 	logoImg := container.NewCenter(RenderBBDITHeaderLogo(140, 26))
-	drawerHeader := container.NewHBox(logoPad, logoImg)
+
+	closeBtn := NewShadcnButton("", ButtonGhost, ButtonSizeSm, ResourceFromSVG("drawer_close.svg", LucideX), func() {
+		if d.mobileDrawerPopup != nil {
+			d.mobileDrawerPopup.Hide()
+			d.mobileDrawerPopup = nil
+		}
+	})
+
+	drawerHeader := container.NewBorder(
+		nil, nil,
+		container.NewHBox(logoPad, logoImg),
+		closeBtn,
+	)
 
 	navCol := container.NewVBox()
 	groups := d.getNavGroups()
@@ -550,7 +553,7 @@ func (d *DashboardView) buildSidebar() fyne.CanvasObject {
 		}
 
 		railContent := container.NewStack(bg, container.NewPadded(railCol))
-		return container.NewHBox(container.NewGridWrap(fyne.NewSize(64, 600), railContent), NewShadcnSeparator(false))
+		return container.NewHBox(layout.FixedWidth(64, railContent), NewShadcnSeparator(false))
 	}
 
 	// Expanded Mode (240px) with Grouped Categories
@@ -620,7 +623,7 @@ func (d *DashboardView) buildSidebar() fyne.CanvasObject {
 	)
 
 	fixedWidth := container.NewStack(bg, sidebarLayout)
-	return container.NewHBox(container.NewGridWrap(fyne.NewSize(240, 600), fixedWidth), NewShadcnSeparator(false))
+	return container.NewHBox(layout.FixedWidth(240, fixedWidth), NewShadcnSeparator(false))
 }
 
 // buildPageHeader produces a uniform standard header across all sections
@@ -634,7 +637,7 @@ func (d *DashboardView) buildPageHeader(title, description, category string, act
 
 	var actionsBox fyne.CanvasObject
 	if len(actions) > 0 {
-		if len(actions) > 1 && d.windowWidth > 0 && d.windowWidth < 900 {
+		if len(actions) > 1 && d.windowWidth > 0 && d.windowWidth < 550 {
 			primaryBtn := actions[0]
 			overflowBtn := NewShadcnButton("", ButtonOutline, ButtonSizeSm, ResourceFromSVG("more.svg", LucideMoreHorizontal), func() {
 				if d.window != nil && d.window.Canvas() != nil {
@@ -687,8 +690,8 @@ func (d *DashboardView) buildPageHeader(title, description, category string, act
 				layout.Row(8, layout.Spacer(), actionsBox),
 			)
 		} else {
-			// Standard desktop/tiled: title block on left, actions docked to the right
-			topRow = container.NewBorder(nil, nil, titleBlock, container.NewVBox(actionsBox))
+			// Standard desktop/tiled: title block in center taking all available width, actions docked to the right
+			topRow = container.NewBorder(nil, nil, nil, container.NewCenter(actionsBox), titleBlock)
 		}
 	} else {
 		topRow = titleBlock
@@ -705,22 +708,37 @@ func (d *DashboardView) buildPageHeader(title, description, category string, act
 	)
 }
 
+func (d *DashboardView) wrapWorkspaceContent(content fyne.CanvasObject) fyne.CanvasObject {
+	fluidContent := layout.Container(content, layout.ContainerOptions{
+		MaxWidth:      1400,
+		AutoCenter:    true,
+		Padding:       16,
+		ResponsivePad: true,
+	})
+	return container.NewVScroll(fluidContent)
+}
+
 func (d *DashboardView) renderWorkspace() {
 	d.workspaceArea.Objects = nil
 
+	var content fyne.CanvasObject
 	switch d.activeSection {
 	case SectionOverview:
-		d.workspaceArea.Add(d.buildOverviewSection())
+		content = d.buildOverviewSection()
 	case SectionAcademicStructure:
-		d.workspaceArea.Add(d.buildAcademicStructureSection())
+		content = d.buildAcademicStructureSection()
 	case SectionGovernance:
-		d.workspaceArea.Add(d.buildGovernanceSection())
+		content = d.buildGovernanceSection()
 	case SectionAuditLedger:
-		d.workspaceArea.Add(d.buildAuditSection())
+		content = d.buildAuditSection()
 	case SectionExecutiveCredentialing:
-		d.workspaceArea.Add(d.buildCredentialingSection())
+		content = d.buildCredentialingSection()
 	case SectionSettings:
-		d.workspaceArea.Add(d.buildSettingsSection())
+		content = d.buildSettingsSection()
+	}
+
+	if content != nil {
+		d.workspaceArea.Add(d.wrapWorkspaceContent(content))
 	}
 }
 
@@ -745,38 +763,40 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 	kpi4 := NewMetricCard("Staff & Faculty Present", "142 / 148", "• 95.9% Today • 100% Cryptographically Verified", LucideBadgeCheck, BadgeSecondary)
 
 	kpiGrid := layout.Grid(layout.GridOptions{
-		MinItemWidth:  220,
-		Gap:           12,
+		MinItemWidth:  260,
+		Gap:           16,
 		UniformHeight: true,
 	}, kpi1, kpi2, kpi3, kpi4)
 
 	// Left Panel: Pending Approvals Queue
-	app1Btn := NewShadcnButton("Approve", ButtonDefault, ButtonSizeSm, WhiteResourceFromSVG("app1.svg", LucideCheckCircle2), func() {
-		if d.window != nil {
-			ShowToast(d.window, "Action Approved", "CSE Semester 4 curriculum amendment signed and published.", AlertSuccess, 3*time.Second)
-		}
-	})
-	app1 := container.NewBorder(
-		nil, nil, nil, app1Btn,
-		container.NewVBox(
-			widget.NewLabelWithStyle("Computer Science & Engineering: Semester 4 Curriculum Update", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			widget.NewLabel("Initiated by Dean Academics • Requires Presidential Sign-Off"),
-			NewBadge("HIGH PRIORITY", BadgeWarning, BadgeShapePill),
-		),
+	app1 := NewApprovalQueueItem(
+		"Computer Science & Engineering: Semester 4 Curriculum Update",
+		"Initiated by Dean Academics • Requires Presidential Sign-Off",
+		"HIGH PRIORITY",
+		BadgeWarning,
+		"Approve",
+		LucideCheckCircle2,
+		true,
+		func() {
+			if d.window != nil {
+				ShowToast(d.window, "Action Approved", "CSE Semester 4 curriculum amendment signed and published.", AlertSuccess, 3*time.Second)
+			}
+		},
 	)
 
-	app2Btn := NewShadcnButton("Review Dossier", ButtonOutline, ButtonSizeSm, ResourceFromSVG("app2.svg", LucideFileText), func() {
-		if d.window != nil {
-			ShowToast(d.window, "Review Modal", "Opening Chief Warden disciplinary dossier...", AlertDefault, 2*time.Second)
-		}
-	})
-	app2 := container.NewBorder(
-		nil, nil, nil, app2Btn,
-		container.NewVBox(
-			widget.NewLabelWithStyle("Hostel Block B Warden Disciplinary Escalation", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			widget.NewLabel("Initiated by Chief Warden • Student Sabbatical Review"),
-			NewBadge("PRESIDENTIAL VETO / CONFIRM", BadgeDestructive, BadgeShapePill),
-		),
+	app2 := NewApprovalQueueItem(
+		"Hostel Block B Warden Disciplinary Escalation",
+		"Initiated by Chief Warden • Student Sabbatical Review",
+		"PRESIDENTIAL VETO / CONFIRM",
+		BadgeDestructive,
+		"Review Dossier",
+		LucideFileText,
+		false,
+		func() {
+			if d.window != nil {
+				ShowToast(d.window, "Review Modal", "Opening Chief Warden disciplinary dossier...", AlertDefault, 2*time.Second)
+			}
+		},
 	)
 
 	approvalsCard := NewShadcnCard(CardParts{
@@ -785,20 +805,39 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 		Description: "Decisive institutional actions requiring single-signature Chairperson clearance",
 		Content: container.NewVBox(
 			app1,
-			NewShadcnSeparator(true),
 			app2,
 		),
 	})
 
 	// Right Panel: Recent Institutional Activity & Audit Stream
-	evt1 := widget.NewLabel("• 10:14 AM — Lateral Entry Scholar (Yogesh Kumar Mallik) claimed admission docket via SIM Slot 1")
-	evt1.Wrapping = fyne.TextWrapWord
-	evt2 := widget.NewLabel("• 09:45 AM — Academic Registrar published AKTU Semester 3 result manifest (382 records verified)")
-	evt2.Wrapping = fyne.TextWrapWord
-	evt3 := widget.NewLabel("• 08:30 AM — Automated night audit completed. All UDS persistence sockets intact.")
-	evt3.Wrapping = fyne.TextWrapWord
-	evt4 := widget.NewLabel("• 07:15 AM — Daily biometric attendance synchronization passed with 0 discrepancies.")
-	evt4.Wrapping = fyne.TextWrapWord
+	evt1 := NewActivityLedgerItem(
+		"10:14 AM",
+		"Lateral Entry Docket Claimed",
+		"Scholar Yogesh Kumar Mallik claimed admission docket via SIM Slot 1",
+		LucideUserCheck,
+		true,
+	)
+	evt2 := NewActivityLedgerItem(
+		"09:45 AM",
+		"AKTU Semester 3 Result Manifest Published",
+		"Academic Registrar published AKTU Semester 3 result manifest • 382 records verified",
+		LucideFileCheck,
+		true,
+	)
+	evt3 := NewActivityLedgerItem(
+		"08:30 AM",
+		"Automated Night Audit Completed",
+		"All Prisma 8 UDS persistence sockets verified and intact",
+		LucideShieldCheck,
+		true,
+	)
+	evt4 := NewActivityLedgerItem(
+		"07:15 AM",
+		"Biometric Attendance Synchronized",
+		"Daily facial & fingerprint synchronization passed with 0 discrepancies",
+		LucideBadgeCheck,
+		true,
+	)
 
 	activityCard := NewShadcnCard(CardParts{
 		Badge:       NewBadge("AUDIT TRACE", BadgeDefault, BadgeShapePill),
@@ -806,17 +845,14 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 		Description: "Real-time cryptographically chained event ledger",
 		Content: container.NewVBox(
 			evt1,
-			NewShadcnSeparator(true),
 			evt2,
-			NewShadcnSeparator(true),
 			evt3,
-			NewShadcnSeparator(true),
 			evt4,
 		),
 	})
 
 	var workloadContainer fyne.CanvasObject
-	if d.windowWidth >= 1100 || d.windowWidth == 0 {
+	if d.windowWidth >= 1050 || d.windowWidth == 0 {
 		workloadContainer = container.NewGridWithColumns(2, approvalsCard, activityCard)
 	} else {
 		tab1Variant := ButtonSecondary
@@ -847,14 +883,14 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 			}
 		})
 
-		tabTrackBg := canvas.NewRectangle(color.NRGBA{R: 24, G: 24, B: 27, A: 255})
-		tabTrackBg.CornerRadius = 6
-		tabTrackBg.StrokeColor = color.NRGBA{R: 39, G: 39, B: 42, A: 255}
+		tabTrackBg := canvas.NewRectangle(color.NRGBA{R: 20, G: 26, B: 34, A: 255})
+		tabTrackBg.CornerRadius = 8
+		tabTrackBg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
 		tabTrackBg.StrokeWidth = 1
 
 		tabBar := container.NewStack(
 			tabTrackBg,
-			container.NewHBox(tabApprovalsBtn, tabActivityBtn),
+			container.NewPadded(container.NewHBox(tabApprovalsBtn, tabActivityBtn)),
 		)
 
 		var activePanel fyne.CanvasObject = approvalsCard
@@ -893,7 +929,7 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 		container.NewPadded(container.NewBorder(nil, nil, widget.NewLabelWithStyle("EXECUTIVE QUICK ACTIONS:", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), nil, actionBar)),
 	)
 
-	return container.NewVScroll(contentBody)
+	return contentBody
 }
 
 func (d *DashboardView) buildAcademicStructureSection() fyne.CanvasObject {
@@ -928,7 +964,7 @@ func (d *DashboardView) buildAcademicStructureSection() fyne.CanvasObject {
 		),
 	})
 
-	return container.NewVScroll(container.NewVBox(header, container.NewPadded(card)))
+	return container.NewVBox(header, container.NewPadded(card))
 }
 
 func (d *DashboardView) buildGovernanceSection() fyne.CanvasObject {
@@ -958,7 +994,7 @@ func (d *DashboardView) buildGovernanceSection() fyne.CanvasObject {
 		),
 	})
 
-	return container.NewVScroll(container.NewVBox(header, container.NewPadded(card)))
+	return container.NewVBox(header, container.NewPadded(card))
 }
 
 func (d *DashboardView) buildAuditSection() fyne.CanvasObject {
@@ -993,7 +1029,7 @@ func (d *DashboardView) buildAuditSection() fyne.CanvasObject {
 		),
 	})
 
-	return container.NewVScroll(container.NewVBox(header, container.NewPadded(card)))
+	return container.NewVBox(header, container.NewPadded(card))
 }
 
 func (d *DashboardView) buildCredentialingSection() fyne.CanvasObject {
@@ -1096,7 +1132,7 @@ func (d *DashboardView) buildCredentialingSection() fyne.CanvasObject {
 		container.NewPadded(outputContainer),
 	)
 
-	return container.NewVScroll(body)
+	return body
 }
 
 func (d *DashboardView) buildSettingsSection() fyne.CanvasObject {
@@ -1126,7 +1162,7 @@ func (d *DashboardView) buildSettingsSection() fyne.CanvasObject {
 		),
 	})
 
-	return container.NewVScroll(container.NewVBox(header, container.NewPadded(sysCard)))
+	return container.NewVBox(header, container.NewPadded(sysCard))
 }
 
 // handleLogout executes clean dual-revocation: clears OS Keyring and invalidates server session.
@@ -1144,47 +1180,3 @@ func (d *DashboardView) handleLogout() {
 	}
 }
 
-// NewMetricCard constructs an executive KPI card with compact shadcn-style typography and semantic iconography.
-func NewMetricCard(title, metric, subtitle, svgIcon string, badgeVariant BadgeVariant) fyne.CanvasObject {
-	var strokeColor string
-	switch badgeVariant {
-	case BadgeSuccess:
-		strokeColor = "#10b981" // Emerald
-	case BadgeWarning:
-		strokeColor = "#f59e0b" // Amber
-	case BadgeDestructive:
-		strokeColor = "#f43f5e" // Rose
-	default:
-		strokeColor = "#38bdf8" // Sky / Cyan
-	}
-
-	iconRes := ColorResourceFromSVG(title+".svg", svgIcon, strokeColor)
-	iconImg := RenderSVGImage(iconRes, 22, 22)
-
-	titleLabel := canvas.NewText(strings.ToUpper(title), color.NRGBA{R: 148, G: 163, B: 184, A: 240})
-	titleLabel.TextSize = 11
-	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
-
-	metricLabel := canvas.NewText(metric, color.White)
-	metricLabel.TextSize = 20
-	metricLabel.TextStyle = fyne.TextStyle{Bold: true}
-
-	subLabel := widget.NewLabel(subtitle)
-	subLabel.Wrapping = fyne.TextWrapWord
-	subLabel.Importance = widget.LowImportance
-
-	topRow := container.NewBorder(nil, nil, titleLabel, container.NewCenter(iconImg))
-
-	cardContent := container.NewVBox(
-		topRow,
-		metricLabel,
-		subLabel,
-	)
-
-	bg := canvas.NewRectangle(theme.Color(theme.ColorNameMenuBackground))
-	bg.StrokeColor = theme.Color(theme.ColorNameInputBorder)
-	bg.StrokeWidth = 1
-	bg.CornerRadius = 8
-
-	return container.NewStack(bg, container.NewPadded(cardContent))
-}
