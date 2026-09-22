@@ -286,3 +286,42 @@ func (c *Client) RevokeSession(ctx context.Context, refreshToken string) error {
 	}
 	return nil
 }
+
+// ExecutiveQRResponse represents credentials returned for an executive claim token.
+type ExecutiveQRResponse struct {
+	ClaimToken      string `json:"claim_token"`
+	SealedQRPayload string `json:"sealed_qr_payload"`
+	ExpiresAtUnix   int64  `json:"expires_at_unix"`
+}
+
+// BLOCK_CLIENT_API_EXEC_QR_001
+// Purpose: Provisions a sealed single-use QR credential for Tier-1 institutional leadership.
+func (c *Client) GenerateExecutiveQR(ctx context.Context, role, fullName, email, phone string) (*ExecutiveQRResponse, error) {
+	reqBody, _ := json.Marshal(map[string]string{
+		"role":         role,
+		"full_name":    fullName,
+		"email":        email,
+		"phone_number": phone,
+	})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/v1/auth/executive-qr", bytes.NewReader(reqBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("backend unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, parseHTTPError(resp, "executive QR provisioning failed")
+	}
+
+	var res ExecutiveQRResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}

@@ -226,3 +226,30 @@ func TestClientRevokeSession(t *testing.T) {
 		t.Fatalf("expected revoke success, got %v", err)
 	}
 }
+
+// BLOCK_API_CLIENT_TEST_008
+// Purpose: Verifies GenerateExecutiveQR client method.
+func TestClientGenerateExecutiveQR(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/auth/executive-qr" {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"claim_token": "claim_exec_12345",
+			"sealed_qr_payload": "CAMPUS_OS:CLAIM:v1:claim_exec_12345",
+			"expires_at_unix": 1791234567
+		}`))
+	}))
+	defer ts.Close()
+
+	client := NewClient(ts.URL)
+	resp, err := client.GenerateExecutiveQR(context.Background(), "DIRECTOR", "Dr. Rajesh Sharma", "director@campus.edu", "+919876543210")
+	if err != nil {
+		t.Fatalf("expected success, got %v", err)
+	}
+	if resp.ClaimToken != "claim_exec_12345" {
+		t.Errorf("expected claim_exec_12345, got %s", resp.ClaimToken)
+	}
+}

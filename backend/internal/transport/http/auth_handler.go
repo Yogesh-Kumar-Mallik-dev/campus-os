@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	campusv1 "github.com/Yogesh-Kumar-Mallik-dev/campus-os/backend/pkg/proto/campus/v1"
 )
@@ -237,6 +238,58 @@ func (h *AuthHTTPHandler) HandleRevoke(w http.ResponseWriter, r *http.Request) {
 
 	WriteJSON(w, http.StatusOK, map[string]any{
 		"revoked": true,
+	})
+}
+
+// BLOCK_AUTH_HTTP_EXEC_QR_001
+// Purpose: Provisions a sealed single-use QR credential for Tier-1 institutional executives.
+func (h *AuthHTTPHandler) HandleGenerateExecutiveQR(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Role        string `json:"role"`
+		FullName    string `json:"full_name"`
+		Email       string `json:"email"`
+		PhoneNumber string `json:"phone_number"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.FullName == "" || body.Email == "" || body.PhoneNumber == "" {
+		WriteProblem(w, r, http.StatusBadRequest, "INVALID_EXEC_REQUEST", "Invalid Request", "role, full_name, email, and phone_number are required", nil)
+		return
+	}
+
+	var execRole campusv1.ExecutiveRole
+	normalized := strings.ToUpper(strings.ReplaceAll(body.Role, " ", "_"))
+	switch {
+	case strings.Contains(normalized, "EXECUTIVE_DIRECTOR"):
+		execRole = campusv1.ExecutiveRole_EXECUTIVE_ROLE_EXECUTIVE_DIRECTOR
+	case strings.Contains(normalized, "DIRECTOR"):
+		execRole = campusv1.ExecutiveRole_EXECUTIVE_ROLE_DIRECTOR
+	case strings.Contains(normalized, "DEAN"):
+		execRole = campusv1.ExecutiveRole_EXECUTIVE_ROLE_DEAN
+	case strings.Contains(normalized, "REGISTRAR"):
+		execRole = campusv1.ExecutiveRole_EXECUTIVE_ROLE_REGISTRAR
+	default:
+		execRole = campusv1.ExecutiveRole_EXECUTIVE_ROLE_DIRECTOR
+	}
+
+	if h.client == nil {
+		WriteProblem(w, r, http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "Auth Service Unavailable", "Backend persistence link is uninitialized", nil)
+		return
+	}
+
+	resp, err := h.client.GenerateExecutiveQR(r.Context(), &campusv1.GenerateExecutiveQRRequest{
+		Role:        execRole,
+		FullName:    body.FullName,
+		Email:       body.Email,
+		PhoneNumber: body.PhoneNumber,
+	})
+	if err != nil {
+		WriteProblem(w, r, http.StatusInternalServerError, "EXEC_QR_FAILED", "Failed to generate executive QR", err.Error(), nil)
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"claim_token":       resp.ClaimToken,
+		"sealed_qr_payload": resp.SealedQrPayload,
+		"expires_at_unix":   resp.ExpiresAtUnix,
 	})
 }
 

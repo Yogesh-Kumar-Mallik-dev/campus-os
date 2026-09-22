@@ -19,13 +19,17 @@ type MockAuthServiceClient struct {
 	VerifyOTPAndClaimAccountFunc func(ctx context.Context, in *campusv1.VerifyOTPAndClaimAccountRequest, opts ...grpc.CallOption) (*campusv1.VerifyOTPAndClaimAccountResponse, error)
 	LoginFunc                    func(ctx context.Context, in *campusv1.LoginRequest, opts ...grpc.CallOption) (*campusv1.LoginResponse, error)
 	RefreshTokenFunc             func(ctx context.Context, in *campusv1.RefreshTokenRequest, opts ...grpc.CallOption) (*campusv1.RefreshTokenResponse, error)
+	GenerateExecutiveQRFunc      func(ctx context.Context, in *campusv1.GenerateExecutiveQRRequest, opts ...grpc.CallOption) (*campusv1.GenerateExecutiveQRResponse, error)
 }
 
 func (m *MockAuthServiceClient) BootstrapSuperAdmin(ctx context.Context, in *campusv1.BootstrapSuperAdminRequest, opts ...grpc.CallOption) (*campusv1.BootstrapSuperAdminResponse, error) {
 	return nil, nil
 }
 func (m *MockAuthServiceClient) GenerateExecutiveQR(ctx context.Context, in *campusv1.GenerateExecutiveQRRequest, opts ...grpc.CallOption) (*campusv1.GenerateExecutiveQRResponse, error) {
-	return nil, nil
+	if m.GenerateExecutiveQRFunc != nil {
+		return m.GenerateExecutiveQRFunc(ctx, in, opts...)
+	}
+	return &campusv1.GenerateExecutiveQRResponse{ClaimToken: "claim_exec_test", SealedQrPayload: "CAMPUS_OS:CLAIM:v1:claim_exec_test", ExpiresAtUnix: 1790000000}, nil
 }
 func (m *MockAuthServiceClient) GenerateBulkStudentQR(ctx context.Context, in *campusv1.GenerateBulkStudentQRRequest, opts ...grpc.CallOption) (*campusv1.GenerateBulkStudentQRResponse, error) {
 	return nil, nil
@@ -191,5 +195,35 @@ func TestAuthHTTPHandler_CompleteClaim(t *testing.T) {
 
 	if vRec.Code != http.StatusOK {
 		t.Fatalf("expected 200 for valid claim, got %d", vRec.Code)
+	}
+}
+
+// BLOCK_AUTH_HTTP_TEST_004
+// Purpose: Verifies HandleGenerateExecutiveQR HTTP endpoint.
+func TestAuthHTTPHandler_GenerateExecutiveQR(t *testing.T) {
+	client := &MockAuthServiceClient{}
+	handler := NewAuthHTTPHandler(client)
+
+	// Invalid empty body
+	req := httptest.NewRequest("POST", "/api/v1/auth/executive-qr", bytes.NewReader([]byte(`{}`)))
+	rec := httptest.NewRecorder()
+	handler.HandleGenerateExecutiveQR(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for empty body, got %d", rec.Code)
+	}
+
+	// Valid request
+	validBody, _ := json.Marshal(map[string]any{
+		"role":         "DIRECTOR",
+		"full_name":    "Dr. Rajesh Sharma",
+		"email":        "director@campus.edu",
+		"phone_number": "+919876543210",
+	})
+	vReq := httptest.NewRequest("POST", "/api/v1/auth/executive-qr", bytes.NewReader(validBody))
+	vRec := httptest.NewRecorder()
+	handler.HandleGenerateExecutiveQR(vRec, vReq)
+
+	if vRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for valid executive QR, got %d: %s", vRec.Code, vRec.Body.String())
 	}
 }

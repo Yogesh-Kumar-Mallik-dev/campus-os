@@ -9,7 +9,7 @@ import (
 )
 
 // BLOCK_UI_DASHBOARD_TEST_001
-// Purpose: Verifies DashboardView layout rendering, section switching, and logout trigger.
+// Purpose: Verifies DashboardView layout rendering, section switching, sidebar toggle, and logout trigger.
 func TestDashboardView_SectionsAndLogout(t *testing.T) {
 	testApp := test.NewApp()
 	defer testApp.Quit()
@@ -48,12 +48,13 @@ func TestDashboardView_SectionsAndLogout(t *testing.T) {
 		t.Errorf("expected initial section to be SectionOverview, got %v", dashboard.ActiveSection())
 	}
 
-	// Test section transitions across all 5 navigation destinations
+	// Test section transitions across all navigation destinations
 	sections := []DashboardSection{
 		SectionAcademicStructure,
 		SectionGovernance,
 		SectionAuditLedger,
 		SectionExecutiveCredentialing,
+		SectionSettings,
 		SectionOverview,
 	}
 
@@ -62,6 +63,19 @@ func TestDashboardView_SectionsAndLogout(t *testing.T) {
 		if dashboard.ActiveSection() != s {
 			t.Errorf("expected active section %v, got %v", s, dashboard.ActiveSection())
 		}
+	}
+
+	// Test sidebar collapsing into compact icon rail mode
+	dashboard.sidebarOpen = false
+	dashboard.buildShell()
+	if dashboard.CanvasObject() == nil {
+		t.Fatal("expected non-nil canvas object when sidebar is collapsed")
+	}
+
+	dashboard.sidebarOpen = true
+	dashboard.buildShell()
+	if dashboard.CanvasObject() == nil {
+		t.Fatal("expected non-nil canvas object when sidebar is expanded")
 	}
 
 	// Test Logout action

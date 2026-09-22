@@ -49,6 +49,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/login", authHandler.HandleLogin)
 	mux.HandleFunc("POST /api/v1/auth/refresh", authHandler.HandleRefresh)
 	mux.HandleFunc("POST /api/v1/auth/revoke", authHandler.HandleRevoke)
+	mux.HandleFunc("POST /api/v1/auth/executive-qr", authHandler.HandleGenerateExecutiveQR)
 
 	// Wrap mux with standard middleware stack
 	handler := RecoveryMiddleware(mux)
