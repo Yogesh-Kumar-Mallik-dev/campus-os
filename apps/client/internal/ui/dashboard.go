@@ -10,11 +10,11 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/api"
 	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/auth"
+	"github.com/Yogesh-Kumar-Mallik-dev/campus-os/apps/client/internal/layout"
 )
 
 // DashboardSection represents an active navigation destination.
@@ -108,11 +108,13 @@ func (d *DashboardView) handleWindowResize(sz fyne.Size) {
 	prevWidth := d.windowWidth
 	d.windowWidth = sz.Width
 
-	// Detect architectural breakpoint crossings:
-	// 1. Off-Canvas Drawer: 750px
-	// 2. Compact TopBar & Rail: 950px
+	vp := layout.DefaultEngine.Viewport(sz)
+	sc := vp.SizeClass()
+
+	// Detect architectural breakpoint crossings using Viewport SizeClass:
+	// 1. Off-Canvas Drawer: Compact (< 750px)
+	// 2. Compact TopBar & Rail: Medium (< 950px)
 	// 3. Side-by-side split panels vs Segmented Tab Switcher: 1100px
-	// 4. Ultra-narrow 1-col KPI: 550px
 	b1Prev := prevWidth > 0 && prevWidth < 750
 	b1Curr := sz.Width < 750
 
@@ -122,10 +124,7 @@ func (d *DashboardView) handleWindowResize(sz fyne.Size) {
 	b3Prev := prevWidth > 0 && prevWidth < 1100
 	b3Curr := sz.Width < 1100
 
-	b4Prev := prevWidth > 0 && prevWidth < 550
-	b4Curr := sz.Width < 550
-
-	shouldCollapseSidebar := sz.Width < 950
+	shouldCollapseSidebar := sc != layout.Expanded
 	sidebarStateChanged := false
 	if !d.userToggledSidebar {
 		if shouldCollapseSidebar && d.sidebarOpen {
@@ -137,7 +136,7 @@ func (d *DashboardView) handleWindowResize(sz fyne.Size) {
 		}
 	}
 
-	if b1Prev != b1Curr || b2Prev != b2Curr || b3Prev != b3Curr || b4Prev != b4Curr || sidebarStateChanged || prevWidth == 0 {
+	if b1Prev != b1Curr || b2Prev != b2Curr || b3Prev != b3Curr || sidebarStateChanged || prevWidth == 0 {
 		d.buildShell()
 		if d.window != nil && d.window.Canvas() != nil {
 			d.window.Canvas().Refresh(d.rootContainer)
@@ -175,20 +174,19 @@ func (d *DashboardView) buildShell() {
 	sidebar := d.buildSidebar()
 	d.renderWorkspace()
 
-	// Split view: Sidebar on left (if wide/medium) or 0px in Off-Canvas Drawer mode (<750px)
+	// Wrap workspace in fluid container with auto-centering on ultrawide displays
+	fluidWorkspace := layout.Container(d.workspaceArea, layout.ContainerOptions{
+		MaxWidth:      1400,
+		AutoCenter:    true,
+		Padding:       12,
+		ResponsivePad: true,
+	})
+
 	var splitContent fyne.CanvasObject
 	if sidebar != nil {
-		leftGutter := canvas.NewRectangle(color.Transparent)
-		leftGutter.SetMinSize(fyne.NewSize(8, 1))
-		rightGutter := canvas.NewRectangle(color.Transparent)
-		rightGutter.SetMinSize(fyne.NewSize(14, 1))
-		splitContent = container.NewBorder(nil, nil, sidebar, nil, container.NewBorder(nil, nil, leftGutter, rightGutter, d.workspaceArea))
+		splitContent = container.NewBorder(nil, nil, sidebar, nil, fluidWorkspace)
 	} else {
-		leftGutter := canvas.NewRectangle(color.Transparent)
-		leftGutter.SetMinSize(fyne.NewSize(14, 1))
-		rightGutter := canvas.NewRectangle(color.Transparent)
-		rightGutter.SetMinSize(fyne.NewSize(14, 1))
-		splitContent = container.NewBorder(nil, nil, leftGutter, rightGutter, d.workspaceArea)
+		splitContent = fluidWorkspace
 	}
 
 	inner := container.NewBorder(
@@ -686,7 +684,7 @@ func (d *DashboardView) buildPageHeader(title, description, category string, act
 			// On narrow viewports, badge & title on top, action toolbar right-aligned above description
 			topRow = container.NewVBox(
 				titleBlock,
-				container.NewHBox(layout.NewSpacer(), actionsBox),
+				layout.Row(8, layout.Spacer(), actionsBox),
 			)
 		} else {
 			// Standard desktop/tiled: title block on left, actions docked to the right
@@ -746,15 +744,11 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 	kpi3 := NewMetricCard("Pending Presidential Approvals", "3 Decisions", "• Chairperson Clearance Required", LucideClock, BadgeWarning)
 	kpi4 := NewMetricCard("Staff & Faculty Present", "142 / 148", "• 95.9% Today • 100% Cryptographically Verified", LucideBadgeCheck, BadgeSecondary)
 
-	kpiCols := 4
-	if d.windowWidth > 0 && d.windowWidth < 900 {
-		kpiCols = 2
-		if d.windowWidth < 550 {
-			kpiCols = 1
-		}
-	}
-
-	kpiGrid := container.NewGridWithColumns(kpiCols, kpi1, kpi2, kpi3, kpi4)
+	kpiGrid := layout.Grid(layout.GridOptions{
+		MinItemWidth:  220,
+		Gap:           12,
+		UniformHeight: true,
+	}, kpi1, kpi2, kpi3, kpi4)
 
 	// Left Panel: Pending Approvals Queue
 	app1Btn := NewShadcnButton("Approve", ButtonDefault, ButtonSizeSm, WhiteResourceFromSVG("app1.svg", LucideCheckCircle2), func() {
@@ -888,7 +882,7 @@ func (d *DashboardView) buildOverviewSection() fyne.CanvasObject {
 		d.SetSection(SectionSettings)
 	})
 
-	actionBar := container.New(NewFlowLayout(8), issueQRBtn, auditBtn, deptBtn, settingsBtn)
+	actionBar := layout.Flow(8, issueQRBtn, auditBtn, deptBtn, settingsBtn)
 
 	contentBody := container.NewVBox(
 		header,
