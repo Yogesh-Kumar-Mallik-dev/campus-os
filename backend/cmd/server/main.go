@@ -137,7 +137,11 @@ func runBootstrapCLI(cfg *config.Config) {
 
 	fmt.Println("\n  SCAN THIS SEALED CLAIM QR CODE USING CAMPUS OS CLIENT:")
 	fmt.Println()
-	fmt.Println(resp.AsciiQr)
+	if qr, err := qrcode.New(resp.ClaimToken, qrcode.Medium); err == nil {
+		fmt.Println(qr.ToSmallString(false))
+	} else if resp.AsciiQr != "" {
+		fmt.Println(resp.AsciiQr)
+	}
 	fmt.Println()
 	fmt.Printf("  Single-Use Claim Token : %s\n", resp.ClaimToken)
 	fmt.Printf("  Expires At (Unix)      : %d\n", resp.ExpiresAtUnix)

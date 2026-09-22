@@ -33,6 +33,7 @@ describe('AuthHandler', () => {
         findUnique: vi.fn(),
         create: vi.fn(),
         update: vi.fn(),
+        updateMany: vi.fn(),
       },
       refreshToken: {
         findUnique: vi.fn(),
@@ -49,8 +50,12 @@ describe('AuthHandler', () => {
     handler = new AuthHandler(mockPrisma);
   });
 
-  it('BLOCK_AUTH_TEST_001: bootstrapSuperAdmin prevents duplicate superadmin seats', async () => {
-    mockPrisma.superAdminSeat.findFirst.mockResolvedValue({ id: 'singleton', activeUserId: 'u-123' });
+  it('BLOCK_AUTH_TEST_001: bootstrapSuperAdmin prevents duplicate superadmin seats when already active', async () => {
+    mockPrisma.superAdminSeat.findFirst.mockResolvedValue({
+      id: 'singleton',
+      activeUserId: 'u-123',
+      activeUser: { isActive: true },
+    });
 
     const call = {
       request: {
@@ -67,6 +72,31 @@ describe('AuthHandler', () => {
       code: 6, // ALREADY_EXISTS
       message: expect.stringContaining('already occupied'),
     });
+  });
+
+  it('BLOCK_AUTH_TEST_001b: bootstrapSuperAdmin reissues claim docket when seat exists but is unactivated', async () => {
+    mockPrisma.superAdminSeat.findFirst.mockResolvedValue({
+      id: 'singleton',
+      activeUserId: 'u-123',
+      activeUser: { isActive: false },
+    });
+    mockPrisma.claimToken.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.claimToken.create.mockResolvedValue({});
+
+    const call = {
+      request: {
+        chairperson_name: 'Dr. Sharma',
+        chairperson_email: 'sharma@trust.edu',
+        chairperson_phone: '+919876543210',
+      },
+    };
+
+    const callback = vi.fn();
+    await handler.bootstrapSuperAdmin(call, callback);
+
+    expect(callback).toHaveBeenCalledWith(null, expect.objectContaining({
+      claim_token: expect.stringMatching(/^claim_genesis_/),
+    }));
   });
 
   it('BLOCK_AUTH_TEST_002: bootstrapSuperAdmin creates user, seat, and claim token when vacant', async () => {

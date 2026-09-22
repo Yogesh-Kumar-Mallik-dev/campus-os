@@ -44,12 +44,42 @@ export class AuthHandler {
       // 1. Check singleton SuperAdminSeat
       const existingSeat = await this.prisma.superAdminSeat.findFirst({
         where: { retiredAt: null },
+        include: { activeUser: true },
       });
 
       if (existingSeat) {
-        return callback({
-          code: 6, // ALREADY_EXISTS
-          message: 'BLOCK_AUTH_BOOTSTRAP_002: Super Admin seat is already occupied',
+        if (existingSeat.activeUser?.isActive) {
+          return callback({
+            code: 6, // ALREADY_EXISTS
+            message: 'BLOCK_AUTH_BOOTSTRAP_002: Super Admin seat is already occupied and activated',
+          });
+        }
+
+        // Chairperson seat is provisioned but still unactivated (pending claim).
+        // Revoke any prior pending tokens and issue a fresh claim docket.
+        await this.prisma.claimToken.updateMany({
+          where: { userId: existingSeat.activeUserId, status: 'PENDING' },
+          data: { status: 'REVOKED' },
+        });
+
+        const rawClaimToken = `claim_genesis_${crypto.randomBytes(24).toString('hex')}`;
+        const tokenHash = this.hashToken(rawClaimToken);
+        const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
+
+        await this.prisma.claimToken.create({
+          data: {
+            tokenHash,
+            userId: existingSeat.activeUserId,
+            targetRole: 'SUPER_ADMIN',
+            status: 'PENDING',
+            expiresAt,
+          },
+        });
+
+        return callback(null, {
+          claim_token: rawClaimToken,
+          ascii_qr: '',
+          expires_at_unix: Math.floor(expiresAt.getTime() / 1000),
         });
       }
 
